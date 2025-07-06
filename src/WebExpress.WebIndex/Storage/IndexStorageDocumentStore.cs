@@ -190,7 +190,7 @@ namespace WebExpress.WebIndex.Storage
             var segment = list.SkipWhile(x => x.Id != item.Id).FirstOrDefault();
 
             HashMap.Remove(segment);
-            foreach (var chunk in segment.ChunkSegments)
+            foreach (var chunk in segment?.ChunkSegments ?? [])
             {
                 Allocator.Free(chunk);
             }

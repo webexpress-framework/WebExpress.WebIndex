@@ -204,6 +204,11 @@ namespace WebExpress.WebIndex.Storage
         /// found in the list.</returns>
         public bool Remove(IndexStorageSegmentItem segment)
         {
+            if (segment == null)
+            {
+                return false;
+            }
+
             var hash = segment.Id.GetHashCode();
             var index = (uint)hash % BucketCount;
             var bucket = GetBucket(index);
