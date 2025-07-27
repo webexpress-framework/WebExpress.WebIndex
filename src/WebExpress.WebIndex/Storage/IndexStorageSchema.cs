@@ -15,7 +15,7 @@ namespace WebExpress.WebIndex.Storage
         where TIndexItem : IIndexItem
     {
         private readonly string _extentions = "ws";
-        private readonly int _version = 1;
+        //private readonly int _version = 1;
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
         private static readonly JsonSerializerOptions _jsonDeserializerOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -111,7 +111,7 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         /// <param name="property">The property info.</param>
         /// <returns>The name of the type.</returns>
-        private object GetType(PropertyInfo property)
+        private static string GetType(PropertyInfo property)
         {
             if (property.PropertyType.IsPrimitive)
             {

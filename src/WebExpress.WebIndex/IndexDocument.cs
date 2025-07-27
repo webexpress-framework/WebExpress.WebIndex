@@ -434,7 +434,7 @@ namespace WebExpress.WebIndex
         /// Returns the number of items.
         /// </summary>
         /// <returns>The number of items.</returns>
-        public new uint Count()
+        public uint Count()
         {
             return DocumentStore.Count();
         }
@@ -506,7 +506,7 @@ namespace WebExpress.WebIndex
         /// <summary>
         /// Removed all data from the index.
         /// </summary>
-        public virtual new void Clear()
+        public virtual void Clear()
         {
             foreach (var fielld in Fields)
             {
