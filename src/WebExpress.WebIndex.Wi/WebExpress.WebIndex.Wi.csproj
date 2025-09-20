@@ -9,7 +9,7 @@
     <AssemblyName>wi</AssemblyName>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/ReneSchwarzer/WebExpress.WebIndex</RepositoryUrl>
+    <RepositoryUrl>https://github.com/webexpress-framework/WebExpress.WebIndex</RepositoryUrl>
     <PackageTags>reverse index webexpress</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
