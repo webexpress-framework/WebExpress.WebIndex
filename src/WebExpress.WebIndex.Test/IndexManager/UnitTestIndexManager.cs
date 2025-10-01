@@ -36,7 +36,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
         protected void Preconditions()
         {
             var context = new IndexContext();
-            context.IndexDirectory = Path.Combine(context.IndexDirectory, Path.GetFileNameWithoutExtension(Path.GetRandomFileName()));
+            context.IndexDirectory = Path.Combine(context.IndexDirectory, Guid.NewGuid().ToString());
             IndexManager = new IndexManagerTest();
 
             // use reflection to call the protected Initialization method
