@@ -6,22 +6,24 @@ using System.Text;
 namespace WebExpress.WebIndex.Term
 {
     /// <summary>
-    /// A whitespace tokenizer for breaking down a document into terms.
+    /// Tokenizes text into terms by whitespace and punctuation with culture-aware number and infinity 
+    /// detection. Ensures robust handling for null culture, HTML entities, surrogate pairs (emoji), 
+    /// and multi-character symbols.
     /// </summary>
     public static class IndexTermTokenizer
     {
         /// <summary>
-        /// Enumeration of wildcards.
+        /// Returns the default wildcard characters used to keep wildcard punctuation as part of tokens.
         /// </summary>
-        public static char[] Wildcards { get; } = { '?', '*' };
+        public static char[] Wildcards { get; } = ['?', '*'];
 
         /// <summary>
-        /// Tokenize an input string into an enumeration of terms.
+        /// Tokenizes an input string into an enumeration of terms.
         /// </summary>
         /// <param name="input">The input string.</param>
-        /// <param name="culture">The culture.</param>
-        /// <param name="wildcards">An enumeration of wildcards.</param>
-        /// <returns>An enumeration of terms.</returns>
+        /// <param name="culture">The culture; falls back to invariant culture if null.</param>
+        /// <param name="wildcards">Optional wildcard characters that should not split tokens.</param>
+        /// <returns>An enumeration of term tokens including position and value (string or double).</returns>
         public static IEnumerable<IndexTermToken> Tokenize(string input, CultureInfo culture, char[] wildcards = null)
         {
             if (string.IsNullOrEmpty(input))
@@ -199,27 +201,63 @@ namespace WebExpress.WebIndex.Term
         }
 
         /// <summary>
-        /// Converts the content to its appropriate data type.
+        /// Converts a token buffer to its appropriate data type based on parsing outcome.
+        /// Returns a double if numeric parsing succeeds or the token denotes (±)infinity; 
+        /// otherwise returns the string.
         /// </summary>
-        /// <param name="sb">The object containing the string to convert.</param>
-        /// <param name="isNumber">A flag indicating whether the string represents a numeric value.</param>
-        /// <param name="culture">The culture.</param>
-        /// <returns>
-        /// Returns a double if the string represents a numeric value and conversion is successful; otherwise, returns the string itself.
-        /// </returns>
+        /// <param name="sb">the string builder containing the token's characters.</param>
+        /// <param name="isNumber">whether the token buffer is considered a number.</param>
+        /// <param name="culture">the culture for numeric parsing.</param>
+        /// <returns>double or string depending on parse result.</returns>
         private static object Convert(StringBuilder sb, bool isNumber, CultureInfo culture)
         {
             var res = sb.ToString();
+            var trimmed = res.Trim();
 
+            // handle unicode infinity and culture infinity symbols
+            if (trimmed == "∞" || trimmed == "+∞")
+            {
+                return double.PositiveInfinity;
+            }
+
+            if (trimmed == "-∞")
+            {
+                return double.NegativeInfinity;
+            }
+
+            var nf = (culture ?? CultureInfo.InvariantCulture).NumberFormat;
+            var posInf = nf.PositiveInfinitySymbol;
+            var negInf = nf.NegativeInfinitySymbol;
+
+            if
+            (
+                !string.IsNullOrEmpty(posInf) &&
+                string.Equals(trimmed, posInf, System.StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return double.PositiveInfinity;
+            }
+
+            if
+            (
+                !string.IsNullOrEmpty(negInf) &&
+                string.Equals(trimmed, negInf, System.StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return double.NegativeInfinity;
+            }
+
+            // numeric parsing path
             if (isNumber)
             {
-                if (double.TryParse(res, NumberStyles.Any, culture, out double number))
+                if (double.TryParse(res, NumberStyles.Any, culture ?? CultureInfo.InvariantCulture, out double number))
                 {
                     return number;
                 }
-                else if (double.TryParse(res, NumberStyles.Any, CultureInfo.InvariantCulture, out double number1))
+
+                if (double.TryParse(res, NumberStyles.Any, CultureInfo.InvariantCulture, out double numberInvariant))
                 {
-                    return number1;
+                    return numberInvariant;
                 }
             }
 

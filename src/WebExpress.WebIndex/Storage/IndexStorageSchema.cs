@@ -3,24 +3,36 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Represents a index schema file.
+    /// Represents a schema file stored on disk for the given index item type.
+    /// Generates a deterministic schema representation and migrates the stored schema when it changes.
     /// </summary>
-    /// <typeparam name="TIndexItem">The data type. This must have the IIndexItem interface.</typeparam>
+    /// <typeparam name="TIndexItem">The index item type, must implement IIndexItem and be non-nullable.</typeparam>
     public class IndexStorageSchema<TIndexItem> : IIndexSchema<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        private readonly string _extentions = "ws";
-        //private readonly int _version = 1;
-        private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
-        private static readonly JsonSerializerOptions _jsonDeserializerOptions = new() { PropertyNameCaseInsensitive = true };
+        // file extension for schema files
+        private const string _extension = "ws";
+
+        // deterministic serializer options
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            WriteIndented = true
+        };
+
+        // case insensitive deserializer options for compatibility
+        private static readonly JsonSerializerOptions _jsonDeserializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         /// <summary>
-        /// Returns the file name.
+        /// Returns the file name of the schema file.
         /// </summary>
         public string FileName { get; private set; }
 
@@ -30,18 +42,36 @@ namespace WebExpress.WebIndex.Storage
         public IIndexContext Context { get; private set; }
 
         /// <summary>
-        /// Return the index field data.
+        /// Returns the index fields discovered for the type parameter.
         /// </summary>
-        public IEnumerable<IndexFieldData> Fields => GetFieldData(typeof(TIndexItem));
+        public IEnumerable<IndexFieldData> Fields
+        {
+            get
+            {
+                return GetFieldData(typeof(TIndexItem));
+            }
+        }
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Initializes a new instance of the schema manager.
         /// </summary>
         /// <param name="context">The index context.</param>
+        /// <exception cref="ArgumentNullException">Thrown when context or its IndexDirectory is null/empty.</exception>
         public IndexStorageSchema(IIndexContext context)
         {
+            ArgumentNullException.ThrowIfNull(context);
+
+            if (string.IsNullOrWhiteSpace(context.IndexDirectory))
+            {
+                throw new ArgumentNullException(nameof(context), "Index directory must be provided.");
+            }
+
             Context = context;
-            FileName = Path.Combine(Context.IndexDirectory, $"{typeof(TIndexItem).Name}.{_extentions}");
+
+            // ensure directory exists
+            Directory.CreateDirectory(Context.IndexDirectory);
+
+            FileName = Path.Combine(Context.IndexDirectory, $"{typeof(TIndexItem).Name}.{_extension}");
 
             if (!File.Exists(FileName))
             {
@@ -50,14 +80,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Checks if the schema of the object has changed.
+        /// Determines whether the schema has changed compared to the stored one.
         /// </summary>
-        /// <returns>
-        /// True if the schema has changed, otherwise false.
-        /// </returns>
-        /// <remarks>
-        /// This function compares the current schema of an object with the stored schema and returns true if there are changes, and false otherwise.
-        /// </remarks>
+        /// <returns>True when the schema has changed; otherwise false.</returns>
         public bool HasSchemaChanged()
         {
             if (!File.Exists(FileName))
@@ -65,17 +90,48 @@ namespace WebExpress.WebIndex.Storage
                 return true;
             }
 
-            var currentSchema = GetSchema();
-            var storedSchema = Read();
+            var current = BuildSchemaModel();
+            var stored = ReadSchemaModel();
 
-            var currentJson = JsonSerializer.Serialize(currentSchema, _jsonSerializerOptions);
-            var storedJson = JsonSerializer.Serialize(storedSchema, _jsonSerializerOptions);
+            if (stored == null)
+            {
+                // unreadable or incompatible stored schema -> trigger migration
+                return true;
+            }
 
-            return !currentJson.Equals(storedJson);
+            NormalizeSchemaModel(current);
+            NormalizeSchemaModel(stored);
+
+            // compare schema models structurally
+            if (!string.Equals(current.Type, stored.Type, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (current.Fields.Count != stored.Fields.Count)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < current.Fields.Count; i++)
+            {
+                var a = current.Fields[i];
+                var b = stored.Fields[i];
+
+                if (!string.Equals(a.Name, b.Name, StringComparison.Ordinal) ||
+                    !string.Equals(a.Type, b.Type, StringComparison.Ordinal) ||
+                    a.Ignore != b.Ignore ||
+                    a.Abstract != b.Abstract)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
-        /// Migrates the schema if it has changed.
+        /// Migrates the stored schema file if it differs from the current schema.
         /// </summary>
         public void Migrate()
         {
@@ -86,103 +142,183 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Gets the schema of the object.
-        /// </summary>
-        /// <returns>
-        /// The schema of the object as an anonymous type.
-        /// </returns>
-        private dynamic GetSchema()
-        {
-            var objectType = typeof(TIndexItem);
-            var fields = Fields.Select(x => new
-            {
-                x.Name,
-                Type = GetType(x.PropertyInfo),
-                Ignore = !x.Enabled,
-                Abstract = x.PropertyInfo.GetGetMethod().IsAbstract
-            });
-            var schema = new { objectType.Name, Fields = fields };
-
-            return schema;
-        }
-
-        /// <summary>
-        /// Returns the type.
-        /// </summary>
-        /// <param name="property">The property info.</param>
-        /// <returns>The name of the type.</returns>
-        private static string GetType(PropertyInfo property)
-        {
-            if (property.PropertyType.IsPrimitive)
-            {
-                return property.PropertyType.Name;
-            }
-            else if (property.PropertyType == typeof(string))
-            {
-                return property.PropertyType.Name;
-            }
-            else if (property.PropertyType == typeof(Guid))
-            {
-                return property.PropertyType.Name;
-            }
-            else if (property.PropertyType == typeof(DateTime))
-            {
-                return property.PropertyType.Name;
-            }
-
-            return "Object";
-        }
-
-        /// <summary>
-        /// Writes the schema of the object to the storage medium.
+        /// Writes the current schema to disk atomically.
         /// </summary>
         private void Write()
         {
-            var schema = GetSchema();
+            var schema = BuildSchemaModel();
+            NormalizeSchemaModel(schema);
+
             var json = JsonSerializer.Serialize(schema, _jsonSerializerOptions);
 
-            File.WriteAllText(FileName, json);
+            // ensure directory exists (defensive)
+            var dir = Path.GetDirectoryName(FileName);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            // atomic write via temp file
+            var tmp = FileName + ".tmp";
+            try
+            {
+                File.WriteAllText(tmp, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                File.Replace(tmp, FileName, null);
+            }
+            catch
+            {
+                // fallback to non-atomic write on failure
+                try
+                {
+                    File.WriteAllText(FileName, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                }
+                catch
+                {
+                    // swallow to avoid throwing during initialization paths
+                }
+                finally
+                {
+                    // cleanup
+                    try
+                    {
+                        if (File.Exists(tmp))
+                        {
+                            File.Delete(tmp);
+                        }
+                    }
+                    catch
+                    {
+                        // ignore cleanup failures
+                    }
+                }
+            }
         }
 
         /// <summary>
-        /// Reads the object schema from the storage medium.
+        /// Reads and deserializes the stored schema model from disk.
+        /// Returns null when unreadable or incompatible.
         /// </summary>
-        /// <returns>
-        /// The deserialized schema as an dynamic object.
-        /// </returns>
-        private dynamic Read()
+        private SchemaModel ReadSchemaModel()
         {
-            var json = File.ReadAllText(FileName);
-            var schema = JsonSerializer.Deserialize<dynamic>(json, _jsonDeserializerOptions);
+            try
+            {
+                var json = File.ReadAllText(FileName);
+                var model = JsonSerializer.Deserialize<SchemaModel>(json, _jsonDeserializerOptions);
 
-            return schema;
+                return model;
+            }
+            catch
+            {
+                // unreadable or incompatible schema file
+                return null;
+            }
         }
 
         /// <summary>
-        /// Delete this file from storage.
+        /// Returns a deterministic schema model for the current type.
         /// </summary>
-        public void Drop()
+        private SchemaModel BuildSchemaModel()
         {
-            Dispose();
+            var objectType = typeof(TIndexItem);
 
-            File.Delete(FileName);
+            // build fields with deterministic type names and flags
+            var fields = Fields
+                .Select(x => new FieldModel
+                {
+                    Name = x.Name,
+                    Type = GetStableTypeName(x.PropertyInfo),
+                    Ignore = !x.Enabled,
+                    Abstract = x.PropertyInfo.GetMethod?.IsAbstract ?? false
+                })
+                .ToList();
+
+            // wrap into schema model
+            return new SchemaModel
+            {
+                Type = objectType.FullName ?? objectType.Name,
+                Fields = fields
+            };
         }
 
         /// <summary>
-        /// Is called to free up resources.
+        /// Normalizes a schema model: sorts fields by name to ensure deterministic order.
         /// </summary>
-        public virtual void Dispose()
+        private static void NormalizeSchemaModel(SchemaModel model)
         {
-            GC.SuppressFinalize(this);
+            if (model == null)
+            {
+                return;
+            }
+
+            model.Fields = [.. (model.Fields ?? [])
+                .OrderBy(f => f.Name, StringComparer.Ordinal)];
         }
 
         /// <summary>
-        /// Recursively retrieves the field names of the specified type.
+        /// Produces a stable type name for a property, unwrapping Nullable&lt;T&gt; and classifying common primitives.
         /// </summary>
-        /// <param name="type">The type whose field names to retrieve.</param>
-        /// <param name="prefix">The prefix to prepend to each field name.</param>
-        /// <param name="processedTypes">A set of types that have already been processed to avoid circular references.</param>
-        /// <returns>An enumerable collection of field names.</returns>
+        private static string GetStableTypeName(PropertyInfo property)
+        {
+            if (property == null)
+            {
+                return "Object";
+            }
+
+            var t = property.PropertyType;
+
+            // unwrap Nullable<T>
+            var underlying = Nullable.GetUnderlyingType(t);
+            if (underlying != null)
+            {
+                t = underlying;
+            }
+
+            if (t.IsPrimitive)
+            {
+                return t.Name;
+            }
+
+            if (t == typeof(string))
+            {
+                return t.Name;
+            }
+
+            if (t == typeof(decimal))
+            {
+                return t.Name;
+            }
+
+            if (t == typeof(Guid))
+            {
+                return t.Name;
+            }
+
+            if (t == typeof(DateTime) || t == typeof(DateTimeOffset) || t == typeof(TimeSpan))
+            {
+                return t.Name;
+            }
+
+            if (t.IsEnum)
+            {
+                return "Enum";
+            }
+
+            // collections and arrays
+            if (t.IsArray)
+            {
+                return $"{t.GetElementType()?.Name ?? "Object"}[]";
+            }
+
+            // fallback to simple name to keep schema readable
+            return t.Name ?? "Object";
+        }
+
+        /// <summary>
+        /// Recursively retrieves field descriptors for the given type.
+        /// </summary>
+        /// <param name="type">The type to inspect.</param>
+        /// <param name="prefix">An optional prefix for nested properties.</param>
+        /// <param name="processedTypes">Visited types to avoid cycles.</param>
         private static IEnumerable<IndexFieldData> GetFieldData(Type type, string prefix = "", HashSet<Type> processedTypes = null)
         {
             processedTypes ??= [];
@@ -194,10 +330,17 @@ namespace WebExpress.WebIndex.Storage
 
             processedTypes.Add(type);
 
-            foreach (var property in type.GetProperties())
+            // only consider public instance properties; skip indexers
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
+                if (property.GetIndexParameters().Length > 0)
+                {
+                    continue;
+                }
+
                 var propertyName = string.IsNullOrEmpty(prefix) ? property.Name : $"{prefix}.{property.Name}";
 
+                // leaf when not a class or is string
                 if (!property.PropertyType.IsClass || property.PropertyType == typeof(string))
                 {
                     yield return new IndexFieldData
@@ -208,6 +351,7 @@ namespace WebExpress.WebIndex.Storage
                     };
                 }
 
+                // recurse into nested classes (excluding string)
                 if (property.PropertyType.IsClass && property.PropertyType != typeof(string))
                 {
                     foreach (var subProperty in GetFieldData(property.PropertyType, propertyName, processedTypes))
@@ -216,6 +360,54 @@ namespace WebExpress.WebIndex.Storage
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Deletes the schema file from disk.
+        /// </summary>
+        public void Drop()
+        {
+            Dispose();
+
+            try
+            {
+                if (File.Exists(FileName))
+                {
+                    File.Delete(FileName);
+                }
+            }
+            catch
+            {
+                // ignore file system errors during drop
+            }
+        }
+
+        /// <summary>
+        /// Disposes this instance (no unmanaged resources).
+        /// </summary>
+        public virtual void Dispose()
+        {
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Simple schema model used for deterministic serialization and comparison.
+        /// </summary>
+        private sealed class SchemaModel
+        {
+            public string Type { get; set; } = string.Empty;
+            public List<FieldModel> Fields { get; set; } = [];
+        }
+
+        /// <summary>
+        /// Field descriptor used within the schema model.
+        /// </summary>
+        private sealed class FieldModel
+        {
+            public string Name { get; set; } = string.Empty;
+            public string Type { get; set; } = "Object";
+            public bool Ignore { get; set; }
+            public bool Abstract { get; set; }
         }
     }
 }

@@ -8,12 +8,11 @@ using WebExpress.WebIndex.WebAttribute;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Each node is a numeric value stored in a binary tree. Each node has additional 
-    /// information about the value, such as its frequency, position in the document, and other relevant information that can be
-    /// useful in search queries.
+    /// Represents a numeric value stored in a binary search tree. Each node also references a posting tree
+    /// which contains frequency and positional information per document.
     /// </summary>
     /// <param name="context">The reference to the context of the index.</param>
-    /// <param name="addr">The adress of the segment.</param>
+    /// <param name="addr">The address of the segment.</param>
     [SegmentCached]
     public class IndexStorageSegmentNumericNode(IndexStorageContext context, ulong addr) : IndexStorageSegment(context, addr)
     {
@@ -40,12 +39,12 @@ namespace WebExpress.WebIndex.Storage
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the number of times the term is used (postings).
+        /// Returns or sets the number of times the value is used (postings).
         /// </summary>
         public uint Fequency { get; set; }
 
         /// <summary>
-        /// Returns the adress of the first posting element of a sorted list or 0 if there is no element.
+        /// Returns the address of the first posting element of a sorted list or 0 if there is no element.
         /// </summary>
         public ulong PostingAddr { get; private set; }
 
@@ -91,7 +90,13 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Returns the balance factor of the tree.
         /// </summary>
-        private int BalanceFactor => (int)(GetHeight(Left) - GetHeight(Right));
+        private int BalanceFactor
+        {
+            get
+            {
+                return (int)(GetHeight(Left) - GetHeight(Right));
+            }
+        }
 
         /// <summary>
         /// Returns the height of the given node.
@@ -100,7 +105,7 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>The height of the node.</returns>
         private static uint GetHeight(IndexStorageSegmentNumericNode node)
         {
-            return node?.Height ?? 0;
+            return node?.Height ?? 0u;
         }
 
         /// <summary>
@@ -108,7 +113,7 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         private void UpdateHeight()
         {
-            Height = (uint)(Math.Max(GetHeight(Left), GetHeight(Right)) + 1);
+            Height = Math.Max(GetHeight(Left), GetHeight(Right)) + 1u;
         }
 
         /// <summary>
@@ -139,7 +144,7 @@ namespace WebExpress.WebIndex.Storage
         /// Returns all document ids.
         /// </summary>
         public IEnumerable<Guid> All => PostOrder
-            .SelectMany(x => x.Posting?.All);
+            .SelectMany(x => x.Posting?.All ?? []);
 
         /// <summary>
         /// Returns the root element of the posting tree.
@@ -159,10 +164,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the value in the tree.
+        /// Returns the node for the given value in the tree.
         /// </summary>
-        /// <param name="subterm">A subterm that is shortened by the first character at each tree level.</param>
-        /// <returns>The leaf of the term.</returns>
+        /// <param name="value">The numeric value.</param>
         public IndexStorageSegmentNumericNode this[decimal value]
         {
             get
@@ -195,9 +199,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Add a posting segments.
+        /// Add a posting segment.
         /// </summary>
-        /// <param name="id">The document id.</params>
+        /// <param name="id">The document id.</param>
         /// <returns>The posting node segment.</returns>
         public IndexStorageSegmentNumericPostingNode AddPosting(Guid id)
         {
@@ -235,10 +239,10 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Remove a posting segments.
+        /// Remove a posting segment.
         /// </summary>
-        /// <param name="id">The document id.</params>
-        /// <returns>The posting segment.</returns>
+        /// <param name="id">The document id.</param>
+        /// <returns>True if removed, otherwise false.</returns>
         public bool RemovePosting(Guid id)
         {
             if (PostingAddr == 0)
@@ -248,79 +252,41 @@ namespace WebExpress.WebIndex.Storage
 
             lock (_guard)
             {
-                if (PostingAddr != 0)
+                if (PostingAddr == 0)
                 {
-                    var root = Posting;
+                    return false;
+                }
 
-                    if (id.CompareTo(root.DocumentID) < 0)
+                var root = Posting;
+
+                if (id.CompareTo(root.DocumentID) < 0)
+                {
+                    if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
                     {
-                        if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
-                        {
-                            Fequency--;
-
-                            Context.IndexFile.Write(this);
-
-                            return true;
-                        }
-
-                        return false;
-                    }
-                    else if (id.CompareTo(root.DocumentID) > 0)
-                    {
-                        if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
-                        {
-                            Fequency--;
-
-                            Context.IndexFile.Write(this);
-
-                            return true;
-                        }
-
-                        return false;
-                    }
-
-                    // node with only one child or no child
-                    if (root.LeftAddr == 0)
-                    {
-                        PostingAddr = root.RightAddr;
-
-                        Context.Allocator.Free(root);
-
                         Fequency--;
-
                         Context.IndexFile.Write(this);
-
-                        return true;
-                    }
-                    else if (root.RightAddr == 0)
-                    {
-                        PostingAddr = root.LeftAddr;
-
-                        Context.Allocator.Free(root);
-
-                        Fequency--;
-
-                        Context.IndexFile.Write(this);
-
                         return true;
                     }
 
-                    // node with two children: get the inorder successor (most left child in the right subtree)
-                    var leftmostChild = root.Right.LeftmostChild;
-                    var inorderSuccessor = leftmostChild?.Leftmost;
-                    var inorderSuccessorParent = leftmostChild?.Parent;
-
-                    inorderSuccessor.LeftAddr = root.LeftAddr;
-                    inorderSuccessor.RightAddr = inorderSuccessorParent?.Addr ?? 0ul;
-                    Context.IndexFile.Write(inorderSuccessor);
-
-                    if (inorderSuccessorParent != null)
+                    return false;
+                }
+                else if (id.CompareTo(root.DocumentID) > 0)
+                {
+                    if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
                     {
-                        inorderSuccessorParent.LeftAddr = 0ul;
-                        Context.IndexFile.Write(inorderSuccessorParent);
+                        Fequency--;
+                        Context.IndexFile.Write(this);
+                        return true;
                     }
 
-                    PostingAddr = inorderSuccessor?.Addr ?? 0ul;
+                    return false;
+                }
+
+                // node with only one child or no child
+                if (root.LeftAddr == 0 || root.RightAddr == 0)
+                {
+                    PostingAddr = root.LeftAddr != 0 ? root.LeftAddr : root.RightAddr;
+
                     Context.Allocator.Free(root);
 
                     Fequency--;
@@ -329,9 +295,44 @@ namespace WebExpress.WebIndex.Storage
 
                     return true;
                 }
-            }
 
-            return false;
+                // node with two children: replace root with inorder successor (leftmost of right subtree)
+                var rightRoot = root.Right;
+                var leftmostPack = rightRoot.LeftmostChild;
+                var successor = leftmostPack.Leftmost as IndexStorageSegmentNumericPostingNode;
+
+                var oldLeft = root.LeftAddr;
+                var oldRight = root.RightAddr;
+
+                if (leftmostPack.Parent is IndexStorageSegmentNumericPostingNode successorParent)
+                {
+                    // detach successor: parent.left = successor.right
+                    successorParent.LeftAddr = successor.RightAddr;
+                    Context.IndexFile.Write(successorParent);
+                }
+
+                // transplant successor in place of root
+                successor.LeftAddr = oldLeft;
+
+                if (successor.Addr != oldRight)
+                {
+                    // if successor is not the immediate right child, hook up old right subtree
+                    successor.RightAddr = oldRight;
+                }
+
+                Context.IndexFile.Write(successor);
+
+                // update head to new root
+                PostingAddr = successor.Addr;
+
+                Context.Allocator.Free(root);
+
+                Fequency--;
+
+                Context.IndexFile.Write(this);
+
+                return true;
+            }
         }
 
         /// <summary>
@@ -345,143 +346,157 @@ namespace WebExpress.WebIndex.Storage
             switch (options.Method)
             {
                 case IndexRetrieveMethod.Phrase:
-                    // searches the binary tree for the value that is equals with the specified value
-                    if (Value == search)
                     {
-                        foreach (var documentId in Posting?.All ?? [])
+                        // searches the binary tree for the value that is equal to the specified value
+                        if (Value == search)
                         {
-                            yield return documentId;
+                            foreach (var documentId in Posting?.All ?? [])
+                            {
+                                yield return documentId;
+                            }
                         }
+
+                        if (Left != null && search < Value)
+                        {
+                            // recurse on the left subtree
+                            foreach (var value in Left.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        if (Right != null && search > Value)
+                        {
+                            // recurse on the right subtree
+                            foreach (var value in Right.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        break;
                     }
 
-                    if (Left != null && search < Value)
-                    {
-                        // recurse on the left subtree
-                        foreach (var value in Left.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    if (Right != null && search > Value)
-                    {
-                        // recurse on the right subtree
-                        foreach (var value in Right.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    break;
                 case IndexRetrieveMethod.GratherThan:
-                    if (Value > search)
                     {
-                        foreach (var documentId in Posting?.All ?? [])
+                        if (Value > search)
                         {
-                            yield return documentId;
+                            foreach (var documentId in Posting?.All ?? [])
+                            {
+                                yield return documentId;
+                            }
                         }
+
+                        if (Left != null)
+                        {
+                            foreach (var value in Left.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        if (Right != null)
+                        {
+                            foreach (var value in Right.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        break;
                     }
 
-                    if (Left != null)
-                    {
-                        foreach (var value in Left.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    if (Right != null)
-                    {
-                        foreach (var value in Right.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    break;
                 case IndexRetrieveMethod.GratherThanOrEqual:
-                    // searches the binary tree for the largest value that is less or equals than the specified value
-                    if (Value >= search)
                     {
-                        foreach (var documentId in Posting?.All ?? [])
+                        if (Value >= search)
                         {
-                            yield return documentId;
+                            foreach (var documentId in Posting?.All ?? [])
+                            {
+                                yield return documentId;
+                            }
                         }
+
+                        if (Left != null)
+                        {
+                            foreach (var value in Left.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        if (Right != null)
+                        {
+                            foreach (var value in Right.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        break;
                     }
 
-                    if (Left != null)
-                    {
-                        foreach (var value in Left.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    if (Right != null)
-                    {
-                        foreach (var value in Right.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    break;
                 case IndexRetrieveMethod.LessThan:
-                    // searches the binary tree for the smallest value that is greater than the specified value
-                    if (Value < search)
                     {
-                        foreach (var documentId in Posting?.All ?? [])
+                        if (Value < search)
                         {
-                            yield return documentId;
+                            foreach (var documentId in Posting?.All ?? [])
+                            {
+                                yield return documentId;
+                            }
                         }
+
+                        if (Left != null)
+                        {
+                            foreach (var value in Left.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        if (Right != null && search > Value)
+                        {
+                            foreach (var value in Right.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        break;
                     }
 
-                    if (Left != null)
-                    {
-                        foreach (var value in Left.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    if (Right != null && search > Value)
-                    {
-                        foreach (var value in Right.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    break;
                 case IndexRetrieveMethod.LessThanOrEqual:
-                    // searches the binary tree for the smallest value that is greater or equals than the specified value
-                    if (Value <= search)
                     {
-                        foreach (var documentId in Posting?.All ?? [])
+                        if (Value <= search)
                         {
-                            yield return documentId;
+                            foreach (var documentId in Posting?.All ?? [])
+                            {
+                                yield return documentId;
+                            }
                         }
+
+                        if (Left != null)
+                        {
+                            foreach (var value in Left.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        if (Right != null && search >= Value)
+                        {
+                            foreach (var value in Right.Retrieve(search, options))
+                            {
+                                yield return value;
+                            }
+                        }
+
+                        break;
                     }
 
-                    if (Left != null)
-                    {
-                        foreach (var value in Left.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    if (Right != null && search >= Value)
-                    {
-                        foreach (var value in Right.Retrieve(search, options))
-                        {
-                            yield return value;
-                        }
-                    }
-
-                    break;
                 default:
-                    yield break;
+                    {
+                        yield break;
+                    }
             }
         }
 
@@ -493,6 +508,11 @@ namespace WebExpress.WebIndex.Storage
         internal virtual IEnumerable<IndexStorageSegmentNumericPostingNode> GetPostings(decimal value)
         {
             var node = this[value];
+
+            if (node == null)
+            {
+                yield break;
+            }
 
             foreach (var posting in node.Posting?.PreOrder ?? [])
             {
@@ -538,7 +558,6 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Performs a right rotation on the current node.
         /// </summary>
-        /// <returns>The new root after the rotation.</returns>
         private void RotateRight()
         {
             var value = Value;
@@ -551,6 +570,7 @@ namespace WebExpress.WebIndex.Storage
             PostingAddr = newRight.PostingAddr;
             LeftAddr = newRight.LeftAddr;
             RightAddr = newRight.Addr;
+
             newRight.Value = value;
             newRight.PostingAddr = postingAddr;
             newRight.LeftAddr = rightAddr1;
@@ -575,6 +595,7 @@ namespace WebExpress.WebIndex.Storage
             PostingAddr = newLeft.PostingAddr;
             LeftAddr = newLeft.Addr;
             RightAddr = newLeft.RightAddr;
+
             newLeft.Value = value;
             newLeft.PostingAddr = postingAddr;
             newLeft.LeftAddr = leftAddr;
@@ -597,6 +618,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     Left.RotateLeft();
                 }
+
                 RotateRight();
             }
             else if (BalanceFactor < -1)
@@ -605,6 +627,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     Right.RotateRight();
                 }
+
                 RotateLeft();
             }
         }
@@ -616,7 +639,7 @@ namespace WebExpress.WebIndex.Storage
         /// <remarks>
         /// Works recursively and inserts the value into the tree.
         /// </remarks>
-        /// <param name="id">The document id.</params>
+        /// <param name="id">The document id.</param>
         /// <param name="value">The value to be added to the tree.</param>
         /// <returns>The node where the value was added.</returns>
         private IndexStorageSegmentNumericNode Add(Guid id, decimal value)

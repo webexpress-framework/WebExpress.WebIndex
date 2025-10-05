@@ -20,8 +20,8 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("description='lorem ipsum'")]
         [InlineData("description=\"lorem ipsum\"")]
         [InlineData("description=lorem")]
-        [InlineData("Adress.Street  =  lorem")]
-        [InlineData("adress.street=lorem")]
+        [InlineData("Address.Street  =  lorem")]
+        [InlineData("address.street=lorem")]
         public void ParseValidWql(string wqlString)
         {
             // test execution
@@ -38,7 +38,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("description='lorem ipsum")]
         [InlineData("description='lorem ipsum\"")]
         [InlineData("='lorem ipsum'")]
-        [InlineData("Adress,Street=lorem")]
+        [InlineData("Address,Street=lorem")]
         public void ParseInvalidWql(string wqlString)
         {
             // test execution

@@ -27,7 +27,7 @@ namespace WebExpress.WebIndex.Test.Document
         /// <summary>
         /// Class representing an address with street, city, and zip code.
         /// </summary>
-        public class AdressClass
+        public class AddressClass
         {
             /// <summary>
             /// Returns or sets the country.
@@ -82,9 +82,9 @@ namespace WebExpress.WebIndex.Test.Document
         public bool New { get; set; }
 
         /// <summary>
-        /// Returns or sets the adress attribute.
+        /// Returns or sets the address attribute.
         /// </summary>
-        public AdressClass Adress { get; set; }
+        public AddressClass Address { get; set; }
 
         /// <summary>
         /// Convert the object into a string representation. 

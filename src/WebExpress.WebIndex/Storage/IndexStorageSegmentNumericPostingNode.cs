@@ -14,7 +14,7 @@ namespace WebExpress.WebIndex.Storage
     /// </remarks>
     /// <typeparam name="T">The data type. This must have the IIndexData interface.</typeparam>
     /// <param name="context">The reference to the context of the index.</param>
-    /// <param name="addr">The adress of the segment.</param>
+    /// <param name="addr">The address of the segment.</param>
     public class IndexStorageSegmentNumericPostingNode(IndexStorageContext context, ulong addr) : IndexStorageSegment(context, addr)
     {
         private readonly Lock _guard = new();

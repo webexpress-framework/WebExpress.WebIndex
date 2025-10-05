@@ -8,9 +8,9 @@ using WebExpress.WebIndex.Term;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Implementation of the web reverse index, which stores the key-value pairs on disk.
+    /// Implements a reverse index for terms persisted on disk.
     /// </summary>
-    /// <typeparam name="TIndexItem">The data type. This must have the IIndexItem interface.</typeparam>
+    /// <typeparam name="TIndexItem">The data type implementing IIndexItem.</typeparam>
     public class IndexStorageReverseTerm<TIndexItem> : IndexStorageReverse<TIndexItem>, IIndexStorage
         where TIndexItem : IIndexItem
     {
@@ -18,20 +18,20 @@ namespace WebExpress.WebIndex.Storage
         private readonly int _version = 1;
 
         /// <summary>
-        /// Returns or sets the term tree.
+        /// Returns the term tree root segment.
         /// </summary>
         public IndexStorageSegmentTerm Term { get; private set; }
 
         /// <summary>
-        /// Returns all items.
+        /// Returns all document ids contained in the reverse index.
         /// </summary>
         public override IEnumerable<Guid> All => Term.All.Distinct();
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Initializes a new instance of the reverse term storage.
         /// </summary>
         /// <param name="context">The index context.</param>
-        /// <param name="field">The field that makes up the index.</param>
+        /// <param name="field">The index field definition.</param>
         /// <param name="culture">The culture.</param>
         public IndexStorageReverseTerm(IIndexDocumemntContext context, IndexFieldData field, CultureInfo culture)
             : base(context, field, culture)
@@ -41,7 +41,11 @@ namespace WebExpress.WebIndex.Storage
             var exists = File.Exists(FileName);
 
             IndexFile = new IndexStorageFile(FileName);
-            Header = new IndexStorageSegmentHeader(new IndexStorageContext(this)) { Identifier = _extentions, Version = (byte)_version };
+            Header = new IndexStorageSegmentHeader(new IndexStorageContext(this))
+            {
+                Identifier = _extentions,
+                Version = (byte)_version
+            };
             Allocator = new IndexStorageSegmentAllocatorReverseIndex(new IndexStorageContext(this));
             Statistic = new IndexStorageSegmentStatistic(new IndexStorageContext(this));
             Term = new IndexStorageSegmentTerm(new IndexStorageContext(this));
@@ -55,10 +59,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds a single item to the reverse index.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexItem interface.</typeparam>
-        /// <param name="item">The data to be added to the index.</param>
+        /// <param name="item">The item to add.</param>
         public override void Add(TIndexItem item)
         {
             var value = Field.GetPropertyValue(item)?.ToString();
@@ -68,14 +71,15 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds the specified terms of an item to the reverse index.
         /// </summary>
-        /// <param name="item">The data to be added to the index.</param>
-        /// <param name="terms">The terms to add to the reverse index for the given item.</param>
+        /// <param name="item">The item to add.</param>
+        /// <param name="terms">The tokenized terms of the item.</param>
         public override void Add(TIndexItem item, IEnumerable<IndexTermToken> terms)
         {
             foreach (var term in terms)
             {
+                // add term posting and position if available
                 Term.Add(term.Value.ToString())?
                     .AddPosting(item.Id)?
                     .AddPosition(term.Position);
@@ -86,10 +90,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// The data to be removed from the index.
+        /// Deletes a single item from the reverse index.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexData interface.</typeparam>
-        /// <param name="item">The data to be removed from the field.</param>
+        /// <param name="item">The item to delete.</param>
         public override void Delete(TIndexItem item)
         {
             var value = Field.GetPropertyValue(item)?.ToString();
@@ -99,10 +102,10 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// The data to be removed from the index.
+        /// Deletes the specified terms of an item from the reverse index.
         /// </summary>
-        /// <param name="item">The data to be removed from the field.</param>
-        /// <param name="terms">The terms to add to the reverse index for the given item.</param>
+        /// <param name="item">The item to delete.</param>
+        /// <param name="terms">The tokenized terms of the item.</param>
         public override void Delete(TIndexItem item, IEnumerable<IndexTermToken> terms)
         {
             foreach (var term in terms)
@@ -121,7 +124,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Removed all data from the index.
+        /// Clears and reinitializes the reverse index storage.
         /// </summary>
         public override void Clear()
         {
@@ -143,7 +146,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Drop the reverse index.
+        /// Drops the reverse index storage file.
         /// </summary>
         public override void Drop()
         {
@@ -151,11 +154,11 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Return all items for a given input.
+        /// Retrieves documents for a given input and retrieval options.
         /// </summary>
-        /// <param name="term">The input.</param>
-        /// <param name="options">The retrieve options.</param>
-        /// <returns>An enumeration of the data ids.</returns>
+        /// <param name="input">The input text.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>A distinct set of matching document ids.</returns>
         public override IEnumerable<Guid> Retrieve(object input, IndexRetrieveOptions options)
         {
             var tokens = Context.TokenAnalyzer.Analyze(input?.ToString(), Culture, true);
@@ -172,11 +175,19 @@ namespace WebExpress.WebIndex.Storage
                 case IndexRetrieveMethod.Phrase:
                     {
                         var firstTerm = tokens.Take(1).FirstOrDefault();
+                        var firstValue = firstTerm?.Value?.ToString();
+
+                        if (string.IsNullOrEmpty(firstValue))
+                        {
+                            return distinct;
+                        }
+
                         var nextTerms = tokens.Skip(1);
 
-                        foreach (var posting in Term.GetPostings(firstTerm.Value.ToString()))
+                        foreach (var posting in Term.GetPostings(firstValue))
                         {
-                            foreach (var position in posting.Positions)
+                            // positions enumeration may be null; guard with empty
+                            foreach (var position in posting.Positions ?? [])
                             {
                                 if (CheckForPhraseMatch(posting.DocumentID, position.Position, firstTerm.Position, options.Distance, nextTerms))
                                 {
@@ -187,26 +198,35 @@ namespace WebExpress.WebIndex.Storage
 
                         break;
                     }
+
                 default:
                     {
                         if (options.Distance == 0)
                         {
+                            // accumulate results for the first token
                             foreach (var document in tokens.Take(1).SelectMany(x => Term.Retrieve(x.Value.ToString(), options)))
                             {
-                                if (distinct.Add(document) && count++ >= options.MaxResults)
+                                if (distinct.Add(document))
                                 {
-                                    break;
+                                    count++;
+
+                                    if (count >= options.MaxResults)
+                                    {
+                                        break;
+                                    }
                                 }
                             }
 
+                            // intersect with the remaining tokens
                             foreach (var normalized in tokens.Skip(1))
                             {
                                 var temp = new HashSet<Guid>(distinct.Count);
 
                                 foreach (var document in Term.Retrieve(normalized.Value.ToString(), options))
                                 {
-                                    if (distinct.Contains(document) && temp.Add(document))
+                                    if (distinct.Contains(document))
                                     {
+                                        temp.Add(document);
                                     }
                                 }
 
@@ -216,11 +236,18 @@ namespace WebExpress.WebIndex.Storage
                         else
                         {
                             var firstTerm = tokens.Take(1).FirstOrDefault();
+                            var firstValue = firstTerm?.Value?.ToString();
+
+                            if (string.IsNullOrEmpty(firstValue))
+                            {
+                                return distinct;
+                            }
+
                             var nextTerms = tokens.Skip(1);
 
-                            foreach (var posting in Term.GetPostings(firstTerm.Value.ToString()))
+                            foreach (var posting in Term.GetPostings(firstValue))
                             {
-                                foreach (var position in posting.Positions)
+                                foreach (var position in posting.Positions ?? [])
                                 {
                                     if (CheckForProximityMatch(posting.DocumentID, position.Position, options.Distance, nextTerms))
                                     {
@@ -238,13 +265,14 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Checks whether there is an exact match.
+        /// Checks whether the subsequent terms match exactly in phrase order with allowed distance.
         /// </summary>
-        /// <param name="document">The document id to check.</param>
-        /// <param name="position">The position of the term within the document.</param>
-        /// <param name="offset">The position within the search term.</param>
-        /// <param name="terms">Further following search terms.</param>
-        /// <returns>True if there is an exact match, otherwise false.</returns>
+        /// <param name="document">The document id.</param>
+        /// <param name="position">The current absolute position in the document.</param>
+        /// <param name="offset">The relative position of the current token in the query.</param>
+        /// <param name="distance">The allowed distance tolerance.</param>
+        /// <param name="terms">The remaining terms to match.</param>
+        /// <returns>True if the phrase chain matches, otherwise false.</returns>
         private bool CheckForPhraseMatch(Guid document, uint position, uint offset, uint distance, IEnumerable<IndexTermToken> terms)
         {
             if (!terms.Any())
@@ -255,15 +283,22 @@ namespace WebExpress.WebIndex.Storage
             var firstTerm = terms.Take(1).FirstOrDefault();
             var nextTerms = terms.Skip(1);
 
+            // compute base offset safely in uint domain
+            var baseOffset = firstTerm.Position >= offset ? firstTerm.Position - offset : 0u;
+
+            // compute bounds with overflow protection
+            var minU = position + (ulong)baseOffset;
+            var maxU = minU + distance;
+
+            var min = minU > uint.MaxValue ? uint.MaxValue : (uint)minU;
+            var max = maxU > uint.MaxValue ? uint.MaxValue : (uint)maxU;
+
             foreach (var posting in Term.GetPostings(firstTerm.Value.ToString()).Where(x => x?.DocumentID == document))
             {
-                foreach (var pos in posting.Positions.Where
-                (
-                    x =>
-                    x.Position >= position + (firstTerm.Position - offset) &&
-                    x.Position <= position + (firstTerm.Position - offset) + distance
-                ))
+                foreach (var pos in (posting.Positions ?? [])
+                    .Where(x => x.Position >= min && x.Position <= max))
                 {
+                    // recurse with next term starting from the matched absolute position
                     return CheckForPhraseMatch(posting.DocumentID, pos.Position, firstTerm.Position, distance, nextTerms);
                 }
             }
@@ -272,12 +307,13 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Checks whether there is an exact match.
+        /// Checks whether there is a proximity match within a given distance window.
         /// </summary>
-        /// <param name="document">The document id to check.</param>
-        /// <param name="position">The position of the first term in the search text.</param>
-        /// <param name="terms">Further following search terms.</param>
-        /// <returns>True if there is an exact match, otherwise false.</returns>
+        /// <param name="document">The document id.</param>
+        /// <param name="position">The absolute position of the previously matched term.</param>
+        /// <param name="distance">The allowed distance tolerance.</param>
+        /// <param name="terms">The remaining terms to check.</param>
+        /// <returns>True if a proximity match is found, otherwise false.</returns>
         private bool CheckForProximityMatch(Guid document, uint position, uint distance, IEnumerable<IndexTermToken> terms)
         {
             if (!terms.Any())
@@ -288,22 +324,18 @@ namespace WebExpress.WebIndex.Storage
             var firstTerm = terms.Take(1).FirstOrDefault();
             var nextTerms = terms.Skip(1);
 
+            // compute uint-safe bounds around current position
+            var lower = position >= distance ? position - distance : 0u;
+            var upperU = position + (ulong)distance;
+            var upper = upperU > uint.MaxValue ? uint.MaxValue : (uint)upperU;
+
             foreach (var posting in Term.GetPostings(firstTerm.Value.ToString()).Where(x => x?.DocumentID == document))
             {
-                foreach (var pos in posting.Positions.Where
-                (
-                    x =>
-                    (
-                        x.Position >= position &&
-                        x.Position <= position + distance
-                    ) ||
-                    (
-                        x.Position <= position &&
-                        x.Position >= (int)position - distance
-                    )
-                ))
+                foreach (var pos in (posting.Positions ?? [])
+                    .Where(x => x.Position >= lower && x.Position <= upper))
                 {
-                    return CheckForProximityMatch(posting.DocumentID, position, distance, nextTerms);
+                    // recurse with next term starting from the matched absolute position
+                    return CheckForProximityMatch(posting.DocumentID, pos.Position, distance, nextTerms);
                 }
             }
 

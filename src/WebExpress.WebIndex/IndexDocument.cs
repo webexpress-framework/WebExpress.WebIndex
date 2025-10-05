@@ -10,17 +10,16 @@ using WebExpress.WebIndex.Storage;
 namespace WebExpress.WebIndex
 {
     /// <summary>
-    /// The IndexDocument is a segment that provides indexes (for each property of a data type).
-    /// Key: The field name.
-    /// Value: The reverse index.
+    /// Provides an index document segment that holds reverse indexes per property of a data type.
     /// </summary>
     public class IndexDocument<TIndexItem> : IIndexDocument<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        // key: property info of the field; value: reverse index instance.
         private readonly Dictionary<PropertyInfo, IIndexReverse<TIndexItem>> _dict = [];
 
         /// <summary>
-        /// Event that is triggered when the schema has changed.
+        /// Raised when the schema has changed and migration is required.
         /// </summary>
         public event EventHandler<IndexSchemaMigrationEventArgs> SchemaChanged;
 
@@ -40,7 +39,7 @@ namespace WebExpress.WebIndex
         public IndexType IndexType { get; private set; }
 
         /// <summary>
-        /// Return the index field data.
+        /// Returns the index field data.
         /// </summary>
         public IEnumerable<IndexFieldData> Fields => Schema.Fields;
 
@@ -88,14 +87,12 @@ namespace WebExpress.WebIndex
                         {
                             Schema = new IndexMemorySchema<TIndexItem>(Context);
                             DocumentStore = new IndexMemoryDocumentStore<TIndexItem>(Context, capacity);
-
                             break;
                         }
                     default:
                         {
                             Schema = new IndexStorageSchema<TIndexItem>(Context);
                             DocumentStore = new IndexStorageDocumentStore<TIndexItem>(Context, capacity);
-
                             break;
                         }
                 }
@@ -108,13 +105,11 @@ namespace WebExpress.WebIndex
                         PerformMigration = () =>
                         {
                             Schema.Migrate();
-
                             return true;
                         },
                         PerformMigrationAsync = async () =>
                         {
                             Schema.Migrate();
-
                             return await Task.FromResult(true);
                         }
                     };
@@ -145,14 +140,12 @@ namespace WebExpress.WebIndex
                     case IndexType.Memory:
                         {
                             DocumentStore = new IndexMemoryDocumentStore<TIndexItem>(Context, capacity);
-
                             break;
                         }
                     default:
                         {
                             var indexSchema = new IndexStorageSchema<TIndexItem>(Context);
                             DocumentStore = new IndexStorageDocumentStore<TIndexItem>(Context, capacity);
-
                             break;
                         }
                 }
@@ -165,13 +158,11 @@ namespace WebExpress.WebIndex
                         PerformMigration = () =>
                         {
                             Schema.Migrate();
-
                             return true;
                         },
                         PerformMigrationAsync = async () =>
                         {
                             Schema.Migrate();
-
                             return await Task.FromResult(true);
                         }
                     };
@@ -188,7 +179,6 @@ namespace WebExpress.WebIndex
         /// <summary>
         /// Adds a field name to the index.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexData interface.</typeparam>
         /// <param name="property">The property that makes up the index.</param>
         public virtual void Add(IndexFieldData property)
         {
@@ -203,19 +193,11 @@ namespace WebExpress.WebIndex
                     {
                         if (IsNumericType(property.PropertyInfo))
                         {
-                            _dict.Add
-                            (
-                                property.PropertyInfo,
-                                new IndexMemoryReverseNumeric<TIndexItem>(Context, property, Culture)
-                            );
+                            _dict.Add(property.PropertyInfo, new IndexMemoryReverseNumeric<TIndexItem>(Context, property, Culture));
                         }
                         else
                         {
-                            _dict.Add
-                            (
-                                property.PropertyInfo,
-                                new IndexMemoryReverseTerm<TIndexItem>(Context, property, Culture)
-                            );
+                            _dict.Add(property.PropertyInfo, new IndexMemoryReverseTerm<TIndexItem>(Context, property, Culture));
                         }
                         break;
                     }
@@ -223,19 +205,11 @@ namespace WebExpress.WebIndex
                     {
                         if (IsNumericType(property.PropertyInfo))
                         {
-                            _dict.Add
-                            (
-                                property.PropertyInfo,
-                                new IndexStorageReverseNumeric<TIndexItem>(Context, property, Culture)
-                            );
+                            _dict.Add(property.PropertyInfo, new IndexStorageReverseNumeric<TIndexItem>(Context, property, Culture));
                         }
                         else
                         {
-                            _dict.Add
-                            (
-                                property.PropertyInfo,
-                                new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture)
-                            );
+                            _dict.Add(property.PropertyInfo, new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture));
                         }
                         break;
                     }
@@ -281,9 +255,7 @@ namespace WebExpress.WebIndex
                 Task.Run(() => DocumentStore.Add(item))
             };
 
-            var reverseIndexes = Fields
-                .Select(GetReverseIndex)
-                .Where(x => x != null);
+            var reverseIndexes = Fields.Select(GetReverseIndex).Where(x => x != null);
 
             tasks.AddRange(reverseIndexes.Select(async reverseIndex =>
             {
@@ -296,7 +268,6 @@ namespace WebExpress.WebIndex
         /// <summary>
         /// Updates a item in the index.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexItem interface.</typeparam>
         /// <param name="item">The data to be updated to the index.</param>
         public virtual void Update(TIndexItem item)
         {
@@ -331,7 +302,6 @@ namespace WebExpress.WebIndex
         /// <summary>
         /// Performs an asynchronous update of an item in the index.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexItem interface.</typeparam>
         /// <param name="item">The data to be updated to the index.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         public virtual async Task UpdateAsync(TIndexItem item)
@@ -373,7 +343,6 @@ namespace WebExpress.WebIndex
                         index.Delete(item, deleteTerms);
                         index.Add(item, addTerms);
                     }
-
                 });
             }));
 
@@ -542,8 +511,7 @@ namespace WebExpress.WebIndex
         }
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, 
-        /// or resetting unmanaged resources.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public virtual void Dispose()
         {
@@ -561,20 +529,37 @@ namespace WebExpress.WebIndex
         }
 
         /// <summary>
-        /// Determines if the given property is of a numeric type.
+        /// Determines if the given property is of a numeric type (including Nullable&lt;T&gt; numeric).
         /// </summary>
         /// <param name="property">The property to check.</param>
-        /// <returns>True if the property is of a numeric type, otherwise false.</returns>
+        /// <returns>True if the property is of a numeric type; otherwise false.</returns>
         private static bool IsNumericType(PropertyInfo property)
         {
+            if (property == null)
+            {
+                return false;
+            }
+
             var type = property.PropertyType;
 
-            return type == typeof(byte) || type == typeof(sbyte) ||
-                   type == typeof(short) || type == typeof(ushort) ||
-                   type == typeof(int) || type == typeof(uint) ||
-                   type == typeof(long) || type == typeof(ulong) ||
-                   type == typeof(float) || type == typeof(double) ||
-                   type == typeof(decimal);
+            // unwrap nullable<T>
+            var underlying = Nullable.GetUnderlyingType(type);
+            if (underlying != null)
+            {
+                type = underlying;
+            }
+
+            if (type == typeof(byte) || type == typeof(sbyte) ||
+                type == typeof(short) || type == typeof(ushort) ||
+                type == typeof(int) || type == typeof(uint) ||
+                type == typeof(long) || type == typeof(ulong) ||
+                type == typeof(float) || type == typeof(double) ||
+                type == typeof(decimal))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

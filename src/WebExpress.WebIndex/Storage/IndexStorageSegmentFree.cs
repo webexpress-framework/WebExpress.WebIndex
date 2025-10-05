@@ -35,7 +35,7 @@ namespace WebExpress.WebIndex.Storage
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="context">The reference to the context of the index.</param>
-        /// <param name="addr">The adress of the free segment.</param>
+        /// <param name="addr">The address of the free segment.</param>
         public IndexStorageSegmentFree(IndexStorageContext context, ulong addr)
             : base(context, addr)
         {

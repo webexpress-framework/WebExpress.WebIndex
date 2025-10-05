@@ -7,20 +7,19 @@ using System.Threading;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Each document stored as separate nodes in a binary search tree.
+    /// Represents a posting node storing a document id in a binary search tree.
     /// </summary>
-    /// <remarks> 
-    /// TODO: Implement balanced tree algorithm for optimal performance. 
+    /// <remarks>
+    /// balancing is not implemented; consider an avl/rb-tree or b+-tree layout for on-disk structures.
     /// </remarks>
-    /// <typeparam name="T">The data type. This must have the IIndexData interface.</typeparam>
     /// <param name="context">The reference to the context of the index.</param>
-    /// <param name="addr">The adress of the segment.</param>
+    /// <param name="addr">The address of the segment.</param>
     public class IndexStorageSegmentPostingNode(IndexStorageContext context, ulong addr) : IndexStorageSegment(context, addr)
     {
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Returns the on-disk size of the segment.
         /// </summary>
         public const uint SegmentSize = 16 + sizeof(ulong) + sizeof(ulong) + sizeof(ulong);
 
@@ -40,12 +39,12 @@ namespace WebExpress.WebIndex.Storage
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Returns the adress of the first position element of a sorted list or 0 if there is no element.
+        /// Returns the address of the first position element of a sorted list or 0 if there is no element.
         /// </summary>
         public ulong PositionAddr { get; private set; }
 
         /// <summary>
-        /// Returns the left child of the node.
+        /// Returns the left child of the node or null.
         /// </summary>
         public IndexStorageSegmentPostingNode Left
         {
@@ -62,7 +61,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the right child of the node.
+        /// Returns the right child of the node or null.
         /// </summary>
         public IndexStorageSegmentPostingNode Right
         {
@@ -79,7 +78,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the height of the tree.
+        /// Returns the height of the tree (derived recursively; may be expensive on-disk).
         /// </summary>
         public uint Height
         {
@@ -93,7 +92,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the balance factor of the tree.
+        /// Returns the absolute balance factor of the node.
         /// </summary>
         public uint Balance
         {
@@ -107,7 +106,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the leftmost child and his parent.
+        /// Returns the leftmost child in the subtree and its parent.
         /// </summary>
         public dynamic LeftmostChild
         {
@@ -127,9 +126,8 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Passes through the tree in pre order.
+        /// Traverses the tree in pre-order.
         /// </summary>
-        /// <returns>The tree as a list.</returns>
         public IEnumerable<IndexStorageSegmentPostingNode> PreOrder
         {
             get
@@ -151,13 +149,12 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all document ids.
+        /// Returns all document ids in pre-order.
         /// </summary>
-        public IEnumerable<Guid> All => PreOrder
-            .Select(x => x.DocumentID);
+        public IEnumerable<Guid> All => PreOrder.Select(x => x.DocumentID);
 
         /// <summary>
-        /// Returns the a sorted list of the positions or no element.
+        /// Returns the sorted list of positions or no element.
         /// </summary>
         public IEnumerable<IndexStorageSegmentPosition> Positions
         {
@@ -183,135 +180,165 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Inserts a new node with the given document id into the binary tree.
         /// </summary>
-        /// <param name="id">The document id.</params>
-        /// <param name="insert">The posting node segment.</param>
-        /// <returns>Ture if a new node has been inserted, otherwise false.</returns>
+        /// <param name="id">The document id.</param>
+        /// <param name="insert">The inserted or existing posting node segment.</param>
+        /// <returns>True if a new node has been inserted, otherwise false.</returns>
         public bool Insert(Guid id, out IndexStorageSegmentPostingNode insert)
         {
-            if (id.CompareTo(DocumentID) < 0)
+            lock (_guard)
             {
-                if (LeftAddr == 0)
+                if (id.CompareTo(DocumentID) < 0)
                 {
-                    LeftAddr = Context.Allocator.Alloc(SegmentSize);
-                    var item = new IndexStorageSegmentPostingNode(Context, LeftAddr)
+                    if (LeftAddr == 0)
                     {
-                        DocumentID = id
-                    };
+                        LeftAddr = Context.Allocator.Alloc(SegmentSize);
+                        var item = new IndexStorageSegmentPostingNode(Context, LeftAddr)
+                        {
+                            DocumentID = id
+                        };
 
-                    Context.IndexFile.Write(this);
+                        // persist parent pointer update and new node
+                        Context.IndexFile.Write(this);
+                        Context.IndexFile.Write(item);
 
-                    insert = item;
-
-                    return true;
-                }
-                else
-                {
-                    return Left.Insert(id, out insert);
-                }
-            }
-            else if (id.CompareTo(DocumentID) > 0)
-            {
-                if (RightAddr == 0)
-                {
-                    RightAddr = Context.Allocator.Alloc(SegmentSize);
-                    var item = new IndexStorageSegmentPostingNode(Context, RightAddr)
+                        insert = item;
+                        return true;
+                    }
+                    else
                     {
-                        DocumentID = id
-                    };
-
-                    Context.IndexFile.Write(this);
-
-                    insert = item;
-
-                    return true;
+                        return Left.Insert(id, out insert);
+                    }
                 }
-                else
+                else if (id.CompareTo(DocumentID) > 0)
                 {
-                    return Right.Insert(id, out insert);
+                    if (RightAddr == 0)
+                    {
+                        RightAddr = Context.Allocator.Alloc(SegmentSize);
+                        var item = new IndexStorageSegmentPostingNode(Context, RightAddr)
+                        {
+                            DocumentID = id
+                        };
+
+                        // persist parent pointer update and new node
+                        Context.IndexFile.Write(this);
+                        Context.IndexFile.Write(item);
+
+                        insert = item;
+                        return true;
+                    }
+                    else
+                    {
+                        return Right.Insert(id, out insert);
+                    }
                 }
+
+                insert = this;
+                return false;
             }
-
-            insert = this;
-
-            return false;
         }
 
         /// <summary>
         /// Removes a node with the given data from the binary tree.
         /// </summary>
-        /// <param name="id">The document id.</params>
+        /// <param name="id">The document id.</param>
         /// <param name="parent">The parent node.</param>
-        /// <param name="direction"></param>
-        /// <returns>Ture if a node has been removed, otherwise false.</returns>
+        /// <param name="direction">The direction from the parent to this node.</param>
+        /// <returns>True if a node has been removed, otherwise false.</returns>
         public bool Remove(Guid id, IndexStorageSegmentPostingNode parent, IndexStorageBinaryTreeDirection direction)
         {
-            if (id.CompareTo(DocumentID) < 0)
+            lock (_guard)
             {
-                return Left?.Remove(id, this, IndexStorageBinaryTreeDirection.Left) ?? false;
-            }
-            else if (id.CompareTo(DocumentID) > 0)
-            {
-                return Right?.Remove(id, this, IndexStorageBinaryTreeDirection.Right) ?? false;
-            }
+                if (id.CompareTo(DocumentID) < 0)
+                {
+                    return Left?.Remove(id, this, IndexStorageBinaryTreeDirection.Left) ?? false;
+                }
+                else if (id.CompareTo(DocumentID) > 0)
+                {
+                    return Right?.Remove(id, this, IndexStorageBinaryTreeDirection.Right) ?? false;
+                }
 
-            // node with only one child or no child
-            if (LeftAddr == 0 || RightAddr == 0)
-            {
+                // node with only one child or no child
+                if (LeftAddr == 0 || RightAddr == 0)
+                {
+                    var childAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
+
+                    switch (direction)
+                    {
+                        case IndexStorageBinaryTreeDirection.Left:
+                            {
+                                parent.LeftAddr = childAddr;
+                                break;
+                            }
+                        case IndexStorageBinaryTreeDirection.Right:
+                            {
+                                parent.RightAddr = childAddr;
+                                break;
+                            }
+                    }
+
+                    // free positions and persist parent
+                    RemovePositions();
+                    Context.Allocator.Free(this);
+                    Context.IndexFile.Write(parent);
+
+                    return true;
+                }
+
+                // node with two children: find inorder successor (leftmost of right subtree)
+                var rightRoot = Right;
+                var leftmostPack = rightRoot.LeftmostChild;
+                var successor = leftmostPack.Leftmost as IndexStorageSegmentPostingNode;
+
+                var oldLeft = LeftAddr;
+                var oldRight = RightAddr;
+
+                // detach successor from its parent: parent.left becomes successor.right
+                if (leftmostPack.Parent is IndexStorageSegmentPostingNode successorParent)
+                {
+                    successorParent.LeftAddr = successor.RightAddr;
+                    Context.IndexFile.Write(successorParent);
+                }
+
+                // transplant successor in place of current node
+                successor.LeftAddr = oldLeft;
+
+                // if successor is not the immediate right child, hook up the old right subtree
+                if (successor.Addr != oldRight)
+                {
+                    successor.RightAddr = oldRight;
+                }
+
+                Context.IndexFile.Write(successor);
+
+                // connect parent to successor
                 switch (direction)
                 {
                     case IndexStorageBinaryTreeDirection.Left:
-                        parent.LeftAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
-                        break;
+                        {
+                            parent.LeftAddr = successor.Addr;
+                            break;
+                        }
                     case IndexStorageBinaryTreeDirection.Right:
-                        parent.RightAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
-                        break;
+                        {
+                            parent.RightAddr = successor.Addr;
+                            break;
+                        }
                 }
-
-                RemovePositions();
-                Context.Allocator.Free(this);
 
                 Context.IndexFile.Write(parent);
 
+                // free current node’s positions and the node itself
+                RemovePositions();
+                Context.Allocator.Free(this);
+
                 return true;
             }
-
-            // node with two children: get the inorder successor (most left child in the right subtree)
-            var leftmostChild = Right.LeftmostChild;
-            var inorderSuccessor = leftmostChild?.Leftmost;
-            var inorderSuccessorParent = leftmostChild?.Parent;
-
-            inorderSuccessor.LeftAddr = LeftAddr;
-            inorderSuccessor.RightAddr = inorderSuccessorParent?.Addr ?? 0ul;
-            Context.IndexFile.Write(inorderSuccessor);
-
-            if (inorderSuccessorParent != null)
-            {
-                inorderSuccessorParent.LeftAddr = 0ul;
-                Context.IndexFile.Write(inorderSuccessorParent);
-            }
-
-            switch (direction)
-            {
-                case IndexStorageBinaryTreeDirection.Left:
-                    parent.LeftAddr = inorderSuccessor?.Addr ?? 0ul;
-                    break;
-                case IndexStorageBinaryTreeDirection.Right:
-                    parent.RightAddr = inorderSuccessor?.Addr ?? 0ul;
-                    break;
-            }
-
-            RemovePositions();
-            Context.Allocator.Free(this);
-
-            Context.IndexFile.Write(parent);
-
-            return true;
         }
 
         /// <summary>
-        /// Add a position segments.
+        /// Adds a position segment in ascending order. Returns existing position if present.
         /// </summary>
-        /// <param name="pos">The position of the term.</params>
+        /// <param name="pos">The position of the term.</param>
         /// <returns>The position segment.</returns>
         public IndexStorageSegmentPosition AddPosition(uint pos)
         {
@@ -332,7 +359,7 @@ namespace WebExpress.WebIndex.Storage
                 }
                 else
                 {
-                    // check whether it exists
+                    // check whether it exists and find insertion point
                     var last = default(IndexStorageSegmentPosition);
                     var count = 0U;
 
@@ -350,7 +377,6 @@ namespace WebExpress.WebIndex.Storage
                         }
 
                         last = i;
-
                         count++;
                     }
 
@@ -386,7 +412,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Remove all position segments.
+        /// Removes all position segments and resets the head pointer.
         /// </summary>
         public void RemovePositions()
         {
@@ -399,12 +425,14 @@ namespace WebExpress.WebIndex.Storage
             {
                 foreach (var position in Positions)
                 {
-                    // remove
+                    // remove position segment
                     Context.Allocator.Free(position);
                 }
-            }
 
-            PositionAddr = 0;
+                PositionAddr = 0;
+                // persist head reset so readers do not follow freed nodes
+                Context.IndexFile.Write(this);
+            }
         }
 
         /// <summary>
@@ -433,17 +461,10 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Compares the current instance with another object of the same type and returns
-        ///  an integer that indicates whether the current instance precedes, follows, or
-        ///  occurs in the same position in the sort order as the other object.
+        /// Compares the current instance to another posting node by document id.
         /// </summary>
-        /// <param name="obj">An object to compare with this instance.</param>
-        /// <returns>
-        /// A signed integer that indicates the relative values of x and y.
-        ///     Less than zero -> x is less than y.
-        ///     Zero -> x equals y.
-        ///     Greater than zero -> x is greater than y.
-        /// </returns>
+        /// <param name="obj">The object to compare with this instance.</param>
+        /// <returns>A signed integer indicating the relative order.</returns>
         /// <exception cref="System.ArgumentException">Obj is not the same type as this instance.</exception>
         public int CompareTo(object obj)
         {
@@ -456,9 +477,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Converts the order expression to a string.
+        /// Returns the document id as string.
         /// </summary>
-        /// <returns>The order expression as a string.</returns>
+        /// <returns>The string representation.</returns>
         public override string ToString()
         {
             return $"{DocumentID}";

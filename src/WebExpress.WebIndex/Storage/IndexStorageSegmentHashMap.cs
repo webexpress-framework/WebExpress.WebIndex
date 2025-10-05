@@ -6,7 +6,7 @@ using System.Threading;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Represents a hash map segment in the index storage.
+    /// Represents a hash map segment stored on disk. Buckets hold singly linked lists of items.
     /// </summary>
     public class IndexStorageSegmentHashMap : IndexStorageSegment
     {
@@ -15,25 +15,17 @@ namespace WebExpress.WebIndex.Storage
         private const int _bufferSize = 4096;
 
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Returns the on-disk size of the hash map header.
         /// </summary>
         public const uint SegmentSize = sizeof(uint);
 
         /// <summary>
-        /// The number of fields (buckets) of the hash map. This should be a 
-        /// prime number so that there are fewer collisions.
+        /// Returns the number of buckets. should be prime to reduce collisions.
         /// </summary>
         public uint BucketCount { get; private set; }
 
         /// <summary>
-        /// A hash bucket is a range of memory in a hash table that is associated with a 
-        /// specific hash value. A bucket provides a concatenated list by recording the 
-        /// collisions (different keys with the same hash value).
-        /// </summary>
-        //private IndexStorageSegmentBucket[] Buckets { get; set; }
-
-        /// <summary>
-        /// Returns all items.
+        /// Returns all items across all buckets (enumerates on-disk linked lists).
         /// </summary>
         public IEnumerable<IndexStorageSegmentItem> All
         {
@@ -47,19 +39,20 @@ namespace WebExpress.WebIndex.Storage
                     while (addr != 0)
                     {
                         var item = Context.IndexFile.Read<IndexStorageSegmentItem>(addr, Context);
-                        addr = item.SuccessorAddr;
-
                         yield return item;
+
+                        addr = item.SuccessorAddr;
                     }
                 }
             }
         }
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Initializes a new instance of the hash map segment with the specified capacity 
+        /// (rounded up to next prime).
         /// </summary>
-        /// <param name="context">The reference to the context of the index.</param>
-        /// <param name="capacity">The initial capacity of the hash map segment.</param>
+        /// <param name="context">The index storage context.</param>
+        /// <param name="capacity">The desired initial capacity.</param>
         public IndexStorageSegmentHashMap(IndexStorageContext context, uint capacity)
             : base(context, context.IndexFile.Alloc(SegmentSize))
         {
@@ -68,41 +61,61 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Initialization method for the hash map segment.
+        /// Initializes the hash map segment either from file or by writing a new structure 
+        /// with zeroed buckets.
         /// </summary>
-        /// <param name="initializationFromFile">If true, initializes from file. Otherwise, initializes and writes to file.</param>
+        /// <param name="initializationFromFile">
+        /// If true, reads existing metadata; otherwise creates new buckets.
+        /// </param>
         public virtual void Initialization(bool initializationFromFile)
         {
             if (initializationFromFile)
             {
+                // read existing header only; do not allocate again on reopen
                 Context.IndexFile.Read(this);
-
-                Context.IndexFile.Alloc(SegmentSize + BucketCount * IndexStorageSegmentBucket.SegmentSize);
             }
             else
             {
-                var initalAddress = Context.IndexFile.Alloc(SegmentSize + (BucketCount * IndexStorageSegmentBucket.SegmentSize));
+                // write header
+                Context.IndexFile.Write(this);
+
+                // allocate bucket area directly after header so that GetBucket() addresses match (Addr + SegmentSize)
+                var bucketsSize = BucketCount * IndexStorageSegmentBucket.SegmentSize;
+                var bucketStart = Context.IndexFile.Alloc(bucketsSize);
+
+                // this invariant should hold because constructor allocated header first
+                // otherwise subsequent bucket address computations won't match layout
+                if (bucketStart != Addr + SegmentSize)
+                {
+                    // zeroing remains correct from allocated start; GetBucket depends on Addr+SegmentSize
+                    // but the mismatch indicates allocation order violation, so throw to avoid silent corruption
+                    throw new IOException("hash map bucket layout mismatch: expected contiguous allocation after header.");
+                }
+
+                // zero-initialize bucket region
                 var zeroBuffer = new byte[_bufferSize];
-                var totalBytes = BucketCount * IndexStorageSegmentBucket.SegmentSize;
+                var totalBytes = (long)bucketsSize;
                 var bytesWritten = 0L;
 
-                Context.IndexFile.Write(this);
-                Context.IndexFile.FileStream.Seek((long)initalAddress, SeekOrigin.Begin);
+                Context.IndexFile.FileStream.Seek((long)bucketStart, SeekOrigin.Begin);
 
                 while (bytesWritten < totalBytes)
                 {
-                    var bytesToWrite = Math.Min(_bufferSize, totalBytes - bytesWritten);
+                    var remaining = totalBytes - bytesWritten;
+                    var toWrite = (int)Math.Min(_bufferSize, remaining);
 
-                    Context.IndexFile.FileStream.Write(zeroBuffer, 0, (int)bytesToWrite);
-                    bytesWritten += bytesToWrite;
+                    Context.IndexFile.FileStream.Write(zeroBuffer, 0, toWrite);
+                    bytesWritten += toWrite;
                 }
             }
         }
 
         /// <summary>
-        /// Add an item.
+        /// Adds an item to the hash map in sorted order within its bucket; returns 
+        /// existing item if duplicate.
         /// </summary>
-        /// <param name="segment">The item segment.</param>
+        /// <param name="segment">The item segment to insert.</param>
+        /// <returns>The inserted item or the existing duplicate.</returns>
         public IndexStorageSegmentItem Add(IndexStorageSegmentItem segment)
         {
             var hash = segment.Id.GetHashCode();
@@ -120,9 +133,9 @@ namespace WebExpress.WebIndex.Storage
                 }
                 else
                 {
-                    // check whether it exists
+                    // check whether it exists (sorted by CompareTo)
                     var last = default(IndexStorageSegmentItem);
-                    var count = 0U;
+                    var count = 0u;
 
                     foreach (var i in GetBucket(segment.Id))
                     {
@@ -134,11 +147,11 @@ namespace WebExpress.WebIndex.Storage
                         }
                         else if (compare == 0)
                         {
+                            // duplicate; return existing
                             return i;
                         }
 
                         last = i;
-
                         count++;
                     }
 
@@ -169,10 +182,10 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all items in a bucket.
+        /// Enumerates all items within the bucket that corresponds to the given id.
         /// </summary>
-        /// <param name="id">The id of the item.</param>
-        /// <returns>The items in the buckets.</returns>
+        /// <param name="id">The item id.</param>
+        /// <returns>Items in the corresponding bucket.</returns>
         public IEnumerable<IndexStorageSegmentItem> GetBucket(Guid id)
         {
             var hash = id.GetHashCode();
@@ -196,12 +209,10 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Removes the first occurrence of a specific object from the list.
+        /// Removes the specified item from its bucket chain, if present.
         /// </summary>
-        /// <param name="segment">The object to remove from the list.</param>
-        /// <returns>True if item was successfully removed from the list, 
-        /// otherwise false. This method also returns false if item is not 
-        /// found in the list.</returns>
+        /// <param name="segment">The item to remove.</param>
+        /// <returns>True if the item was found and removed; otherwise false.</returns>
         public bool Remove(IndexStorageSegmentItem segment)
         {
             if (segment == null)
@@ -215,72 +226,56 @@ namespace WebExpress.WebIndex.Storage
 
             lock (_guard)
             {
-                var predecessor = GetPredecessor(segment, out _);
+                // search the chain by on-disk address to ensure we only remove if present
+                var prev = default(IndexStorageSegmentItem);
+                var addr = bucket.ItemAddr;
 
-                if (predecessor == null)
+                while (addr != 0)
                 {
-                    bucket.ItemAddr = segment.SuccessorAddr;
+                    var current = Context.IndexFile.Read<IndexStorageSegmentItem>(addr, Context);
 
-                    Context.IndexFile.Write(bucket);
-                    Context.IndexFile.Write(segment);
-                }
-                else
-                {
-                    predecessor.SuccessorAddr = segment.SuccessorAddr;
-                    Context.IndexFile.Write(predecessor);
-                    segment.SuccessorAddr = 0;
-                }
+                    if (current.Addr == segment.Addr)
+                    {
+                        // unlink current
+                        if (prev == null)
+                        {
+                            bucket.ItemAddr = current.SuccessorAddr;
+                            Context.IndexFile.Write(bucket);
+                        }
+                        else
+                        {
+                            prev.SuccessorAddr = current.SuccessorAddr;
+                            Context.IndexFile.Write(prev);
+                        }
 
-                Context.Allocator.Free(segment);
+                        // free removed item
+                        Context.Allocator.Free(current);
+
+                        return true;
+                    }
+
+                    prev = current;
+                    addr = current.SuccessorAddr;
+                }
             }
 
-            return true;
+            return false;
         }
 
         /// <summary>
-        /// Returns the predecessor.
+        /// Reads the hash map header from the storage medium.
         /// </summary>
-        /// <param name="item">The segment whose predecessor is to be determined.</param>
-        /// <param name="index">The index.</param>
-        /// <returns>The predecessor or null if there is no predecessor.</returns>
-        private IndexStorageSegmentItem GetPredecessor(IndexStorageSegmentItem item, out uint index)
-        {
-            var last = default(IndexStorageSegmentItem);
-            index = 0u;
-
-            foreach (var i in GetBucket(item.Id))
-            {
-                var compare = i.CompareTo(item);
-
-                if (compare > 0)
-                {
-                    break;
-                }
-                else if (compare == 0)
-                {
-                    return last;
-                }
-
-                last = i;
-                index++;
-            }
-
-            return last;
-        }
-
-        /// <summary>
-        /// Reads the record from the storage medium.
-        /// </summary>
+        /// <param name="reader">The binary reader.</param>
         public override void Read(BinaryReader reader)
         {
             BucketCount = reader.ReadUInt32();
         }
 
         /// <summary>
-        /// Returns the bucket at the specified index.
+        /// Returns the bucket structure at the specified index.
         /// </summary>
-        /// <param name="index">The index of the bucket to retrieve.</param>
-        /// <returns>The bucket at the specified index.</returns>
+        /// <param name="index">The bucket index.</param>
+        /// <returns>The bucket segment.</returns>
         private IndexStorageSegmentBucket GetBucket(uint index)
         {
             var addr = Addr + SegmentSize + (index * IndexStorageSegmentBucket.SegmentSize);
@@ -290,18 +285,18 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Writes the record to the storage medium.
+        /// Writes the hash map header to the storage medium.
         /// </summary>
-        /// <param name="writer">The writer for i/o operations.</param>
+        /// <param name="writer">The binary writer.</param>
         public override void Write(BinaryWriter writer)
         {
             writer.Write(BucketCount);
         }
 
         /// <summary>
-        /// Calculates the next prime number.
+        /// Calculates the next prime number greater than or equal to capacity.
         /// </summary>
-        /// <param name="capacity"></param>
+        /// <param name="capacity">The minimum capacity.</param>
         /// <returns>The next prime number.</returns>
         private static uint DeterminePrimeNumber(uint capacity)
         {
@@ -319,6 +314,7 @@ namespace WebExpress.WebIndex.Storage
                     if (i % j == 0)
                     {
                         isPrimeNumber = false;
+                        break; // break early once a divisor is found
                     }
                 }
 

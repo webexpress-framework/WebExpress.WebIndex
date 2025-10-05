@@ -9,9 +9,9 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageFile : IDisposable
     {
         /// <summary>
-        /// Returns the maximum upper limit of the cached segments
+        /// Returns or sets the maximum upper limit of the cached segments.
         /// </summary>
-        public static uint BufferSize { get; set; } = 4 * 1024; // 4096 Byte
+        public static uint BufferSize { get; set; } = 4 * 1024; // 4096 byte
 
         /// <summary>
         /// Returns the file name.
@@ -19,19 +19,26 @@ namespace WebExpress.WebIndex.Storage
         public string FileName { get; private set; }
 
         /// <summary>
-        /// Returns a stream for the index file.
+        /// Returns the stream for the index file.
         /// </summary>
         internal FileStream FileStream { get; private set; }
 
         /// <summary>
-        /// Returns a buffer for caching segments.
+        /// Returns the buffer for caching segments.
         /// </summary>
         private IndexStorageBuffer Buffer { get; set; }
 
         /// <summary>
         /// Returns or sets the next free address.
+        /// Note: This value is intentionally not inferred from file length on reopen,
+        /// because allocator/header segments rely on stable, predefined addresses.
         /// </summary>
         public ulong NextFreeAddr { get; internal set; } = 0ul;
+
+        /// <summary>
+        /// Returns a value indicating whether the object has been disposed.
+        /// </summary>
+        public bool IsDisposed { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -41,7 +48,13 @@ namespace WebExpress.WebIndex.Storage
         {
             FileName = fileName;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(FileName));
+            // ensure target directory exists; handle files without directory component
+            var dir = Path.GetDirectoryName(FileName);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
             var options = new FileStreamOptions()
             {
                 BufferSize = (int)BufferSize,
@@ -55,10 +68,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Allocate the memory.
+        /// Allocates the memory.
         /// </summary>
-        /// <param name="segment">The segment determines how much memory should be reserved.</param>
-        /// <param name="size"><param>
+        /// <param name="size">The size that determines how much memory should be reserved.</param>
         /// <returns>The start address of the reserved storage area.</returns>
         public ulong Alloc(uint size)
         {
@@ -74,7 +86,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="addr">The segment address.</param>
         /// <param name="context">The reference to the context of the index.</param>
         /// <typeparam name="TIndexStorageSegment">The type to be read.</typeparam>
-        /// <returns>The segment, how it was read by the storage medium.</returns>
+        /// <returns>The segment as read from the storage medium.</returns>
         public TIndexStorageSegment Read<TIndexStorageSegment>(ulong addr, IndexStorageContext context)
             where TIndexStorageSegment : IIndexStorageSegment
         {
@@ -86,7 +98,7 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         /// <param name="segment">The segment.</param>
         /// <typeparam name="TIndexStorageSegment">The type to be read.</typeparam>
-        /// <returns>The segment, how it was read by the storage medium.</returns>
+        /// <returns>The segment as read from the storage medium.</returns>
         public TIndexStorageSegment Read<TIndexStorageSegment>(TIndexStorageSegment segment)
             where TIndexStorageSegment : IIndexStorageSegment
         {
@@ -108,7 +120,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Ensures that all segments in the buffer is written to the storage device.
+        /// Ensures that all segments in the buffer are written to the storage device.
         /// </summary>
         public void Flush()
         {
@@ -121,7 +133,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Delete this file from storage.
+        /// Deletes this file from storage.
         /// </summary>
         public void Delete()
         {
@@ -136,11 +148,16 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="segment">The IndexStorageSegment object to be invalidated.</param>
         public void Invalidation(IIndexStorageSegment segment)
         {
+            if (segment == null)
+            {
+                return;
+            }
+
             Buffer.Invalidation(segment);
         }
 
         /// <summary>
-        /// Performs cache invalidation for a all IndexStorageSegment object.
+        /// Performs cache invalidation for all IndexStorageSegment objects.
         /// </summary>
         public void InvalidationAll()
         {
@@ -152,8 +169,18 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         public void Dispose()
         {
+            if (IsDisposed)
+            {
+                return;
+            }
+
             Buffer.Dispose();
             FileStream.Dispose();
+
+            FileStream = null;
+            Buffer = null;
+
+            IsDisposed = true;
 
             GC.SuppressFinalize(this);
         }
