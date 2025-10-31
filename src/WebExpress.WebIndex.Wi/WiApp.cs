@@ -728,7 +728,7 @@ internal class WiApp
         Console.WriteLine("wi is an administrative console application for creating and searching WebIndex indexes.");
         Console.WriteLine($"Version: {ViewModel.Version}");
         Console.WriteLine("License: MIT");
-        Console.WriteLine("Project: https://github.com/ReneSchwarzer/WebExpress.WebIndex");
+        Console.WriteLine("Project: https://github.com/webexpress-framework/WebExpress.WebIndex");
     }
 
     /// <summary>

@@ -35,11 +35,11 @@ namespace WebExpress.WebIndex.Test.Token
         /// </summary>
         [Theory]
         [InlineData("en", "abc def, ghi jkl mno-pip.", "abc", "def", "ghi", "jkl", "mno", "pip")]
-        [InlineData("en", "Be the change that you wish to see in the world. 😊🌸🐼", "change", "wish", "world")]
+        [InlineData("en", "Be the change that you wish to see in the world. 😊🌸🐼", "alter", "hope", "observe", "world")]
         [InlineData("en", "??? ??")]
         [InlineData("en", "???...&nbsp;")]
         [InlineData("en", "theya??r", "theya")]
-        [InlineData("en", "Life is like riding a bicycle. To keep your balance, you must keep moving.", "life", "riding", "bicycle", "balance", "moving")]
+        [InlineData("en", "Life is like riding a bicycle. To keep your balance, you must keep moving.", "existence", "enjoy", "riding", "bicycle", "retain", "balance", "retain", "moving")]
         [InlineData("en", "≾≿⊀⊁⊂⊃⊄⊅⊆⊇⊈⊉")]
         [InlineData("en", "★*€¢£¥©░▒▓│┤├")]
         [InlineData("en", "Hello Helena, hello Helge!", "helena", "helge")]
@@ -56,8 +56,8 @@ namespace WebExpress.WebIndex.Test.Token
         /// Tests the analysis function of an supported language.
         /// </summary>
         [Theory]
-        [InlineData("en", "JourneyThroughTheUniverse.en", 241)]
-        [InlineData("en", "InterstellarConversations.en", 161)]
+        [InlineData("en", "JourneyThroughTheUniverse.en", 250)]
+        [InlineData("en", "InterstellarConversations.en", 169)]
         [InlineData("de", "BotanischeBindungenMicrosReiseZuVerdantia.de", 392)]
         [InlineData("de-DE", "BotanischeBindungenMicrosReiseZuVerdantia.de", 392)]
         [InlineData("fr", "BotanischeBindungenMicrosReiseZuVerdantia.de", 716)]

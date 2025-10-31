@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using WebExpress.WebIndex.WebAttribute;
 
 namespace WebExpress.WebIndex
@@ -12,6 +13,7 @@ namespace WebExpress.WebIndex
         /// The id of the item.
         /// </summary>
         [IndexIgnore]
+        [JsonPropertyName("id")]
         Guid Id { get; }
     }
 }

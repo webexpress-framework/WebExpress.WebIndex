@@ -9,39 +9,51 @@ using WebExpress.WebIndex.Term.Pipeline;
 namespace WebExpress.WebIndex.Term
 {
     /// <summary>
-    /// The analyzer decomposes and processes the input string into a sequence of terms.
+    /// Decomposes and processes an input string into a sequence of terms via a configurable pipeline.
+    /// Handles resource extraction for language assets and disposes pipeline stages safely.
     /// </summary>
     public sealed class IndexTokenAnalyzer : IDisposable
     {
+        private bool _disposed;
+
         /// <summary>
-        /// Returns or sets the index context.
+        /// Returns the index context.
         /// </summary>
         public IIndexContext Context { get; private set; }
 
         /// <summary>
-        /// Retruns the pipeline. The pipeline represents a sequence of processing stages. Each 'PipeStage' in this pipeline performs a 
-        /// specific task, such as stemming, lemmatization, or stopword filtering. The data is sequentially passed through each 'PipeStage',
-        /// with each stage applying its specific processing to the data.
+        /// Returns the pipeline containing processing stages applied in sequence.
         /// </summary>
-        private List<IIndexPipeStage> TextProcessingPipeline { get; } = [];
+        private readonly List<IIndexPipeStage> TextProcessingPipeline = [];
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Initializes a new instance of the analyzer.
         /// </summary>
-        /// <param name="context">The reference to the context.</param>
+        /// <param name="context">The index context holding configuration and paths.</param>
+        /// <exception cref="ArgumentNullException">Thrown when context is null.</exception>
         public IndexTokenAnalyzer(IIndexContext context)
         {
+            ArgumentNullException.ThrowIfNull(context);
+
+            if (string.IsNullOrWhiteSpace(context.IndexDirectory))
+            {
+                throw new ArgumentException("Context.IndexDirectory must be a non-empty directory path.", nameof(context));
+            }
+
             Context = context;
 
             Initialization();
         }
 
         /// <summary>
-        /// Initialization
+        /// Performs one-time initialization, materializing embedded resource files and 
+        /// registering default pipeline stages.
         /// </summary>
         private void Initialization()
         {
             var assembly = typeof(IndexManager).Assembly;
+
+            // resource files expected in embedded resources
             string[] fileNames =
             [
                 "IrregularWords.en", "IrregularWords.de",
@@ -51,18 +63,21 @@ namespace WebExpress.WebIndex.Term
                 "Synonyms.en", "Synonyms.de"
             ];
 
+            // ensure index directory exists
             Directory.CreateDirectory(Context.IndexDirectory);
+
+            // cache resource names once
+            var resources = assembly.GetManifestResourceNames();
 
             foreach (var fileName in fileNames)
             {
-                var path = Path.Combine(Context.IndexDirectory, fileName.ToLower());
-                var resources = assembly.GetManifestResourceNames();
+                var path = Path.Combine(Context.IndexDirectory, fileName.ToLowerInvariant());
                 var resource = resources
-                    .Where(x => x.EndsWith($".{fileName}", StringComparison.OrdinalIgnoreCase))
-                    .FirstOrDefault();
+                    .FirstOrDefault(x => x.EndsWith($".{fileName}", StringComparison.OrdinalIgnoreCase));
 
                 if (resource == null)
                 {
+                    // resource not found, skip silently
                     continue;
                 }
 
@@ -70,18 +85,37 @@ namespace WebExpress.WebIndex.Term
                 {
                     if (!File.Exists(path))
                     {
-                        using var sw = new StreamWriter(path, false, Encoding.UTF8);
+                        // open resource stream safely
                         using var contentStream = assembly.GetManifestResourceStream(resource);
-                        using var sr = new StreamReader(contentStream, Encoding.UTF8);
+                        if (contentStream == null)
+                        {
+                            // no content available, skip
+                            continue;
+                        }
 
-                        sw.Write(sr.ReadToEnd());
+                        using var sr = new StreamReader(contentStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                        var content = sr.ReadToEnd();
+
+                        // write UTF-8 without BOM to avoid encoding mismatches across platforms
+                        using var sw = new StreamWriter(path, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                        sw.Write(content);
                     }
                 }
-                catch
+                catch (UnauthorizedAccessException)
                 {
+                    // cannot write into target directory, skip file to avoid blocking initialization
+                }
+                catch (IOException)
+                {
+                    // i/o error while materializing resource, skip file
+                }
+                catch (SystemException)
+                {
+                    // guard against other rare system exceptions, continue
                 }
             }
 
+            // register default pipeline stages (order matters)
             Register(new IndexPipeStageConverterTrim(Context));
             Register(new IndexPipeStageConverterLowerCase(Context));
             Register(new IndexPipeStageConverterMisspelled(Context));
@@ -94,11 +128,16 @@ namespace WebExpress.WebIndex.Term
         }
 
         /// <summary>
-        /// Registers a pipe state for processing the tokens.
+        /// Registers a pipe stage for processing the tokens.
         /// </summary>
-        /// <param name="pipeState">The pipe stage to add.</param>
+        /// <param name="pipeStage">The pipe stage to add.</param>
         public void Register(IIndexPipeStage pipeStage)
         {
+            if (pipeStage == null)
+            {
+                return;
+            }
+
             TextProcessingPipeline.Add(pipeStage);
         }
 
@@ -108,33 +147,80 @@ namespace WebExpress.WebIndex.Term
         /// <param name="pipeStage">The pipe stage to remove.</param>
         public void Remove(IIndexPipeStage pipeStage)
         {
+            if (pipeStage == null)
+            {
+                return;
+            }
+
             TextProcessingPipeline.Remove(pipeStage);
         }
 
         /// <summary>
-        /// Analyze the input.
+        /// Analyzes the input and returns processed term tokens.
         /// </summary>
-        /// <param name="input">The input.</param>
-        /// <param name="culture">The culture.</param>
-        /// <param name="retrieval">Is set if the analysis is used for queries and the placeholders should not be treated as separators.</param>
-        /// <returns>The terms.</returns>
+        /// <param name="input">The raw input text.</param>
+        /// <param name="culture">The culture for tokenization and normalization.</param>
+        /// <param name="retrieval">When true, wildcard placeholders are preserved for query parsing.</param>
+        /// <returns>An enumeration of processed tokens.</returns>
         public IEnumerable<IndexTermToken> Analyze(string input, CultureInfo culture, bool retrieval = false)
         {
-            var tokens = IndexTermTokenizer.Tokenize(input, culture, retrieval ? IndexTermTokenizer.Wildcards : null);
+            var effectiveCulture = culture ?? CultureInfo.InvariantCulture;
+            var wildcards = retrieval ? IndexTermTokenizer.Wildcards : null;
 
+            var tokens = IndexTermTokenizer.Tokenize(input ?? string.Empty, effectiveCulture, wildcards);
+
+            // pass tokens through all stages
             foreach (var pipeStage in TextProcessingPipeline)
             {
-                tokens = pipeStage.Process(tokens, culture);
+                tokens = pipeStage?.Process(tokens, effectiveCulture) ?? tokens;
             }
 
-            return tokens;
+            return tokens ?? [];
         }
 
         /// <summary>
-        /// Disposes of the resources used by the current instance.
+        /// Releases resources held by this analyzer, disposing pipe stages that 
+        /// implement IDisposable.
         /// </summary>
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Core dispose routine with managed/unmanaged split.
+        /// </summary>
+        /// <param name="disposing">True when called from Dispose, false when finalizing.</param>
+        private void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                // dispose registered pipe stages if they are disposable
+                foreach (var stage in TextProcessingPipeline)
+                {
+                    if (stage is IDisposable d)
+                    {
+                        try
+                        {
+                            d.Dispose();
+                        }
+                        catch
+                        {
+                            // swallow exceptions during dispose to avoid teardown failures
+                        }
+                    }
+                }
+
+                TextProcessingPipeline.Clear();
+            }
+
+            _disposed = true;
         }
     }
 }

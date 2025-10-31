@@ -134,7 +134,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         /// Removes an entry from the document store.
         /// </summary>
         [Fact]
-        public void Remove()
+        public void Delete()
         {
             // preconditions
             Preconditions();

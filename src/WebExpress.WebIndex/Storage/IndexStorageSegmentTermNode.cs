@@ -9,51 +9,50 @@ using WebExpress.WebIndex.WebAttribute;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Each term is broken down into individual characters and stored as separate nodes in a search tree. With the exception 
-    /// of the root node, the TreeNode segments, which have a constant length, are stored in the data area of the reverse 
-    /// index. The path determines the term. Each node, which is a complete term, points to a term segment, which has additional 
-    /// information about the term, such as its frequency, position in the document, and other relevant information that can be
-    /// useful in search queries.
+    /// Represents a node in a term trie where each character is stored as a separate node.
+    /// Except for the root node, the nodes have a fixed-size on-disk layout and are stored
+    /// in the reverse index's data area. A complete term can reference a posting tree with
+    /// per-document positions and frequency data.
     /// </summary>
-    /// <param name="context">The reference to the context of the index.</param>
-    /// <param name="addr">The adress of the segment.</param>
+    /// <param name="context">The index storage context.</param>
+    /// <param name="addr">The address of the node segment.</param>
     [SegmentCached]
     public class IndexStorageSegmentTermNode(IndexStorageContext context, ulong addr) : IndexStorageSegment(context, addr)
     {
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Returns the on-disk size of the node segment.
         /// </summary>
         public const uint SegmentSize = sizeof(uint) + sizeof(ulong) + sizeof(ulong) + sizeof(uint) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the character of the node.
+        /// Returns or sets the character of the node (0 indicates the root node).
         /// </summary>
         public char Character { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the siblings.
+        /// Returns or sets the address of the sibling node.
         /// </summary>
         public ulong SiblingAddr { get; set; }
 
         /// <summary>
-        /// Returns the child address of the tree.
+        /// Returns or sets the address of the first child node.
         /// </summary>
         public ulong ChildAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the number of times the term is used (postings).
+        /// Returns or sets the number of postings (documents) for the term ending at this node.
         /// </summary>
         public uint Fequency { get; set; }
 
         /// <summary>
-        /// Returns the adress of the first posting element of a sorted list or 0 if there is no element.
+        /// Returns the address of the root of the posting tree or 0 if none.
         /// </summary>
         public ulong PostingAddr { get; private set; }
 
         /// <summary>
-        /// Returns the children list.
+        /// Returns the list of child nodes.
         /// </summary>
         public IEnumerable<IndexStorageSegmentTermNode> Children
         {
@@ -77,14 +76,13 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Checks whether the current node is the root.
+        /// Returns a value indicating whether this node is the root.
         /// </summary>
         public bool IsRoot => Character == 0;
 
         /// <summary>
-        /// Passes through the tree in pre order.
+        /// Traverses the trie in pre-order and returns the nodes.
         /// </summary>
-        /// <returns>The tree as a list.</returns>
         public IEnumerable<IndexStorageSegmentTermNode> PreOrder
         {
             get
@@ -102,7 +100,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all terms.
+        /// Returns all terms and their leaf nodes reachable from this node.
         /// </summary>
         public IEnumerable<(string, IndexStorageSegmentTermNode)> Terms
         {
@@ -143,13 +141,12 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all document ids.
+        /// Returns all document ids from all postings reachable from this node.
         /// </summary>
-        public IEnumerable<Guid> All => Terms
-            .SelectMany(x => x.Item2.Posting?.All);
+        public IEnumerable<Guid> All => Terms.SelectMany(x => x.Item2.Posting?.All ?? []);
 
         /// <summary>
-        /// Returns the root element of the posting tree.
+        /// Returns the root of the posting tree or null.
         /// </summary>
         public IndexStorageSegmentPostingNode Posting
         {
@@ -166,10 +163,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the term in the tree.
+        /// Returns the leaf node corresponding to the given subterm, or null if not found.
         /// </summary>
-        /// <param name="subterm">A subterm that is shortened by the first character at each tree level.</param>
-        /// <returns>The leaf of the term.</returns>
+        /// <param name="subterm">The remaining subterm to traverse; decreases one character per level.</param>
         public IndexStorageSegmentTermNode this[string subterm]
         {
             get
@@ -197,46 +193,49 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Create tree from term and save item in leaf.
+        /// Adds the given subterm to the trie and returns the leaf node where the term ends.
         /// </summary>
-        /// <param name="subterm">A subterm that is shortened by the first character at each tree level.</param>
-        /// <returns>The node where the term is added.</returns>
+        /// <param name="subterm">The remaining subterm to add; decreases one character per level.</param>
+        /// <returns>The leaf node corresponding to the full term.</returns>
         public IndexStorageSegmentTermNode Add(string subterm)
         {
-            if (subterm == null)
+            lock (_guard)
             {
-                return this;
-            }
-
-            var first = subterm.FirstOrDefault();
-            var next = subterm.Length > 1 ? subterm[1..] : null;
-
-            // find existing nodes
-            foreach (var child in Children)
-            {
-                if (first == child.Character)
+                if (subterm == null)
                 {
-                    // recursive descent
-                    return child.Add(next);
+                    return this;
                 }
+
+                var first = subterm.FirstOrDefault();
+                var next = subterm.Length > 1 ? subterm[1..] : null;
+
+                // find existing nodes
+                foreach (var child in Children)
+                {
+                    if (first == child.Character)
+                    {
+                        // recursive descent
+                        return child.Add(next);
+                    }
+                }
+
+                // add new node
+                var node = new IndexStorageSegmentTermNode(Context, Context.Allocator.Alloc(SegmentSize))
+                {
+                    Character = first
+                };
+
+                AddChild(node);
+
+                return node.Add(next);
             }
-
-            // add new node
-            var node = new IndexStorageSegmentTermNode(Context, Context.Allocator.Alloc(SegmentSize))
-            {
-                Character = first
-            };
-
-            AddChild(node);
-
-            return node.Add(next);
         }
 
         /// <summary>
-        /// Add a posting segments.
+        /// Adds a posting (document id) to this term. Creates the posting tree if missing.
         /// </summary>
-        /// <param name="id">The document id.</params>
-        /// <returns>The posting node segment.</returns>
+        /// <param name="id">The document id to add.</param>
+        /// <returns>The posting node segment added or found.</returns>
         public IndexStorageSegmentPostingNode AddPosting(Guid id)
         {
             var item = default(IndexStorageSegmentPostingNode);
@@ -273,10 +272,11 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Remove a posting segments.
+        /// Removes a posting (document id) from this term's posting tree.
+        /// Handles all cases including root replacement with inorder successor.
         /// </summary>
-        /// <param name="id">The document id.</params>
-        /// <returns>The posting segment.</returns>
+        /// <param name="id">The document id to remove.</param>
+        /// <returns>True if removed; otherwise false.</returns>
         public bool RemovePosting(Guid id)
         {
             if (PostingAddr == 0)
@@ -286,99 +286,96 @@ namespace WebExpress.WebIndex.Storage
 
             lock (_guard)
             {
-                if (PostingAddr != 0)
+                if (PostingAddr == 0)
                 {
-                    var root = Posting;
+                    return false;
+                }
 
-                    if (id.CompareTo(root.DocumentID) < 0)
+                var root = Posting;
+
+                if (id.CompareTo(root.DocumentID) < 0)
+                {
+                    if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
                     {
-                        if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
-                        {
-                            Fequency--;
-
-                            Context.IndexFile.Write(this);
-
-                            return true;
-                        }
-
-                        return false;
-                    }
-                    else if (id.CompareTo(root.DocumentID) > 0)
-                    {
-                        if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
-                        {
-                            Fequency--;
-
-                            Context.IndexFile.Write(this);
-
-                            return true;
-                        }
-
-                        return false;
-                    }
-
-                    // node with only one child or no child
-                    if (root.LeftAddr == 0)
-                    {
-                        PostingAddr = root.RightAddr;
-
-                        root.RemovePositions();
-                        Context.Allocator.Free(root);
-
                         Fequency--;
-
                         Context.IndexFile.Write(this);
-
-                        return true;
-                    }
-                    else if (root.RightAddr == 0)
-                    {
-                        PostingAddr = root.LeftAddr;
-
-                        root.RemovePositions();
-                        Context.Allocator.Free(root);
-
-                        Fequency--;
-
-                        Context.IndexFile.Write(this);
-
                         return true;
                     }
 
-                    // node with two children: get the inorder successor (most left child in the right subtree)
-                    var leftmostChild = root.Right.LeftmostChild;
-                    var inorderSuccessor = leftmostChild?.Leftmost;
-                    var inorderSuccessorParent = leftmostChild?.Parent;
-
-                    inorderSuccessor.LeftAddr = root.LeftAddr;
-                    inorderSuccessor.RightAddr = inorderSuccessorParent?.Addr ?? 0ul;
-                    Context.IndexFile.Write(inorderSuccessor);
-
-                    if (inorderSuccessorParent != null)
+                    return false;
+                }
+                else if (id.CompareTo(root.DocumentID) > 0)
+                {
+                    if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
                     {
-                        inorderSuccessorParent.LeftAddr = 0ul;
-                        Context.IndexFile.Write(inorderSuccessorParent);
+                        Fequency--;
+                        Context.IndexFile.Write(this);
+                        return true;
                     }
 
-                    PostingAddr = inorderSuccessor?.Addr ?? 0ul;
+                    return false;
+                }
+
+                // node with only one child or no child
+                if (root.LeftAddr == 0 || root.RightAddr == 0)
+                {
+                    PostingAddr = root.LeftAddr != 0 ? root.LeftAddr : root.RightAddr;
+
                     root.RemovePositions();
                     Context.Allocator.Free(root);
 
                     Fequency--;
-
                     Context.IndexFile.Write(this);
 
                     return true;
                 }
-            }
 
-            return false;
+                // node with two children: replace root with inorder successor (leftmost of right subtree)
+                var rightRoot = root.Right;
+                var leftmostPack = rightRoot.LeftmostChild;
+                var successor = leftmostPack.Leftmost as IndexStorageSegmentPostingNode;
+
+                var oldLeft = root.LeftAddr;
+                var oldRight = root.RightAddr;
+
+                // detach successor from its parent: parent.left becomes successor.right
+                if (leftmostPack.Parent is IndexStorageSegmentPostingNode successorParent)
+                {
+                    successorParent.LeftAddr = successor.RightAddr;
+                    Context.IndexFile.Write(successorParent);
+                }
+
+                // transplant successor in place of root
+                successor.LeftAddr = oldLeft;
+
+                // if successor is not the immediate right child, hook up old right subtree
+                if (successor.Addr != oldRight)
+                {
+                    successor.RightAddr = oldRight;
+                }
+
+                Context.IndexFile.Write(successor);
+
+                // update head to new root of posting tree
+                PostingAddr = successor.Addr;
+
+                // free old root
+                root.RemovePositions();
+                Context.Allocator.Free(root);
+
+                Fequency--;
+                Context.IndexFile.Write(this);
+
+                return true;
+            }
         }
 
         /// <summary>
-        /// Add a child node.
+        /// Adds a child node to the current node; maintains sibling ordering by character.
+        /// Returns the inserted or existing child.
         /// </summary>
-        /// <returns>The child node.<returns>
+        /// <param name="node">The child node to add.</param>
+        /// <returns>The inserted or existing child node.</returns>
         private IndexStorageSegmentTermNode AddChild(IndexStorageSegmentTermNode node)
         {
             lock (_guard)
@@ -392,7 +389,7 @@ namespace WebExpress.WebIndex.Storage
                 }
                 else
                 {
-                    // check whether it exists
+                    // check whether it exists (ordered insert by character)
                     var last = default(IndexStorageSegmentTermNode);
                     var count = 0U;
 
@@ -441,11 +438,11 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Return all term items for a given term.
+        /// Retrieves all document ids for the given term using the provided options.
         /// </summary>
-        /// <param name="term">The term.</param>
-        /// <param name="options">The retrieve options.</param>
-        /// <returns>An enumeration of data ids of the terms.</returns>
+        /// <param name="term">The search term.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>An enumeration of document ids.</returns>
         public virtual IEnumerable<Guid> Retrieve(string term, IndexRetrieveOptions options)
         {
             foreach (var posting in GetPostings(term))
@@ -455,10 +452,10 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Return all term posting items for a given term.
+        /// Retrieves the posting items for the given term.
         /// </summary>
-        /// <param name="term">The term.</param>
-        /// <returns>An enumeration of posting items.</returns>
+        /// <param name="term">The search term.</param>
+        /// <returns>An enumeration of posting nodes.</returns>
         internal virtual IEnumerable<IndexStorageSegmentPostingNode> GetPostings(string term)
         {
             foreach (var node in GetLeafs(term))
@@ -471,10 +468,11 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the nodes in the tree.
+        /// Returns the leaf nodes matching the given (possibly wildcard) term.
+        /// Supports '?' for single-character and '*' for multi-character wildcards.
         /// </summary>
-        /// <param name="term">A subterm that is shortened by the first character at each tree level.</param>
-        /// <returns>An enumeration of leafs of the term.</returns>
+        /// <param name="term">The (sub)term to match; decreases one character per level.</param>
+        /// <returns>An enumeration of matching leaf nodes.</returns>
         public virtual IEnumerable<IndexStorageSegmentTermNode> GetLeafs(string term)
         {
             if (term == null)
@@ -489,47 +487,55 @@ namespace WebExpress.WebIndex.Storage
                 switch (first)
                 {
                     case '?':
-                        // find nodes
-                        foreach (var child in Children)
                         {
-                            foreach (var node in child.GetLeafs(next))
+                            // find nodes
+                            foreach (var child in Children)
                             {
-                                yield return node;
-                            }
-                        }
-                        break;
-                    case '*':
-                        var pattern = next?.Replace("*", ".*").Replace("?", ".") ?? ".*";
-                        foreach (var termTuple in Terms)
-                        {
-                            if (Regex.IsMatch(termTuple.Item1, pattern))
-                            {
-                                yield return termTuple.Item2;
-                            }
-                        }
-                        break;
-                    default:
-                        // find nodes
-                        foreach (var child in Children)
-                        {
-                            if (first == child.Character)
-                            {
-                                // recursive descent
                                 foreach (var node in child.GetLeafs(next))
                                 {
                                     yield return node;
                                 }
                             }
+                            break;
                         }
-                        break;
+                    case '*':
+                        {
+                            // escape regex special chars before expanding wildcards
+                            var escaped = Regex.Escape(next ?? string.Empty);
+                            var pattern = escaped.Replace("\\*", ".*").Replace("\\?", ".");
+                            foreach (var termTuple in Terms)
+                            {
+                                if (Regex.IsMatch(termTuple.Item1, pattern, RegexOptions.CultureInvariant))
+                                {
+                                    yield return termTuple.Item2;
+                                }
+                            }
+                            break;
+                        }
+                    default:
+                        {
+                            // find nodes
+                            foreach (var child in Children)
+                            {
+                                if (first == child.Character)
+                                {
+                                    // recursive descent
+                                    foreach (var node in child.GetLeafs(next))
+                                    {
+                                        yield return node;
+                                    }
+                                }
+                            }
+                            break;
+                        }
                 }
             }
         }
 
         /// <summary>
-        /// Reads the record from the storage medium.
+        /// Reads the node from the storage medium.
         /// </summary>
-        /// <param name="reader">The reader for i/o operations.</param>
+        /// <param name="reader">The binary reader.</param>
         public override void Read(BinaryReader reader)
         {
             Character = (char)reader.ReadUInt32();
@@ -540,9 +546,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Writes the record to the storage medium.
+        /// Writes the node to the storage medium.
         /// </summary>
-        /// <param name="writer">The writer for i/o operations.</param>
+        /// <param name="writer">The binary writer.</param>
         public override void Write(BinaryWriter writer)
         {
             writer.Write((uint)Character);
@@ -553,32 +559,25 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Compares the current instance with another object of the same type and returns
-        ///  an integer that indicates whether the current instance precedes, follows, or
-        ///  occurs in the same position in the sort order as the other object.
+        /// Compares this instance with another node by character.
         /// </summary>
-        /// <param name="obj">An object to compare with this instance.</param>
-        /// <returns>
-        /// A signed integer that indicates the relative values of x and y.
-        ///     Less than zero -> x is less than y.
-        ///     Zero -> x equals y.
-        ///     Greater than zero -> x is greater than y.
-        /// </returns>
-        /// <exception cref="System.ArgumentException">Obj is not the same type as this instance.</exception>
+        /// <param name="obj">The object to compare.</param>
+        /// <returns>A signed integer indicating relative order.</returns>
+        /// <exception cref="System.ArgumentException">Thrown if obj is of different type.</exception>
         public int CompareTo(object obj)
         {
             if (obj is IndexStorageSegmentTermNode item)
             {
-                return Character == item.Character ? 0 : -1;
+                return Character.CompareTo(item.Character);
             }
 
-            throw new ArgumentException();
+            throw new ArgumentException("Object is of different type");
         }
 
         /// <summary>
-        /// Converts the order expression to a string.
+        /// Returns a string representation of the node.
         /// </summary>
-        /// <returns>The order expression as a string.</returns>
+        /// <returns>ROOT for the root or the character.</returns>
         public override string ToString()
         {
             if (IsRoot)

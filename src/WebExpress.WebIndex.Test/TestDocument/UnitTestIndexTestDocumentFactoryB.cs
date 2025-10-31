@@ -29,7 +29,7 @@ namespace WebExpress.WebIndex.Test.Document
                     Date = DateTime.Now.AddMonths(i % 12),
                     Price = i,
                     New = i % 2 != 0,
-                    Adress = new UnitTestIndexTestDocumentB.AdressClass()
+                    Address = new UnitTestIndexTestDocumentB.AddressClass()
                     {
                         Country = Country.USA,
                         City = GenerateCity(1),

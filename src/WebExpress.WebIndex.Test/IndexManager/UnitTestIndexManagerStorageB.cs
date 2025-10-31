@@ -8,19 +8,15 @@ namespace WebExpress.WebIndex.Test.IndexManager
     /// <summary>
     /// Test class for testing the storage-based index manager.
     /// </summary>
+    /// <remarks>
+    /// Initializes a new instance of the class.
+    /// </remarks>
+    /// <param name="fixture">The log.</param>
+    /// <param name="output">The test context.</param>
     [Collection("NonParallelTests")]
-    public class UnitTestIndexManagerStorageB : UnitTestIndexManager<UnitTestIndexFixtureIndexB>
+    public class UnitTestIndexManagerStorageB(UnitTestIndexFixtureIndexB fixture, ITestOutputHelper output)
+        : UnitTestIndexManager<UnitTestIndexFixtureIndexB>(fixture, output)
     {
-        /// <summary>
-        /// Initializes a new instance of the class.
-        /// </summary>
-        /// <param name="fixture">The log.</param>
-        /// <param name="output">The test context.</param>
-        public UnitTestIndexManagerStorageB(UnitTestIndexFixtureIndexB fixture, ITestOutputHelper output)
-            : base(fixture, output)
-        {
-        }
-
         /// <summary>
         /// Tests registering a document in the index manager.
         /// </summary>
@@ -347,8 +343,8 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [InlineData("Summary = 'Name_3'", "en", "Name_3")]
         [InlineData("Price = 3", "en", "Name_3")]
         [InlineData("Price = '3'", "en", "Name_3")]
-        [InlineData("Adress.Street = 3", "en", "Name_3")]
-        [InlineData("Adress.Country = usa", "en", "Name_3")]
+        [InlineData("Address.Street = 3", "en", "Name_3")]
+        [InlineData("Address.Country = usa", "en", "Name_3")]
         public void Retrieve(string wqlString, string cultureString, string expected)
         {
             // preconditions

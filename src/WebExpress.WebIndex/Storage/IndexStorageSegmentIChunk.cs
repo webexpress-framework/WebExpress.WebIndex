@@ -5,89 +5,152 @@ using System.Linq;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// The class represents a segment of an index storage that is divided into chunks. Each chunk contains a 
-    /// portion of the data and a reference to the next chunk, creating an ordered list of chunks. 
+    /// The class represents a segment of an index storage that is divided into chunks. Each 
+    /// chunk contains a portion of the data and a reference to the next chunk, creating 
+    /// an ordered list of chunks. 
+    /// This ensures fixed-size records for reliable addressing.
     /// </summary>
-    public class IndexStorageSegmentChunk : IndexStorageSegment, IIndexStorageSegmentChunk
+    /// <remarks>
+    /// Initializes a new instance of the chunk segment.
+    /// </remarks>
+    /// <param name="context">The storage context.</param>
+    /// <param name="addr">The absolute address of the segment.</param>
+    public class IndexStorageSegmentChunk(IndexStorageContext context, ulong addr) : IndexStorageSegment(context, addr), IIndexStorageSegmentChunk, IComparable
     {
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the payload size of a single chunk in bytes.
         /// </summary>
         public const uint ChunkSize = 256;
 
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the total on-disk size of a chunk segment.
         /// </summary>
         public const uint SegmentSize = sizeof(uint) + ChunkSize + sizeof(ulong);
 
         /// <summary>
-        /// Returns the number of characters in the term.
+        /// Gets the number of bytes of the payload currently stored (not including padding).
         /// </summary>
-        public uint Length => (uint)DataChunk.Length;
+        public uint Length => (uint)Math.Min(DataChunk?.Length ?? 0, ChunkSize);
 
         /// <summary>
-        /// Returns or sets the item data. 
+        /// Gets or sets the raw payload bytes of this chunk (maximum ChunkSize considered).
         /// </summary>
-        public byte[] DataChunk { get; set; }
+        public byte[] DataChunk { get; set; } = [];
 
         /// <summary>
-        /// Returns or sets the address of the next chunk element of a list or 0 if there is no element.
+        /// Gets or sets the address of the next chunk in the chain or 0 when none exists.
         /// </summary>
         public ulong NextChunkAddr { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Reads the chunk record from the stream and consumes exactly SegmentSize bytes.
         /// </summary>
-        /// <param name="context">The reference to the context of the index.</param>
-        /// <param name="addr">The adress of the segment.</param>
-        public IndexStorageSegmentChunk(IndexStorageContext context, ulong addr)
-            : base(context, addr)
-        {
-        }
-
-        /// <summary>
-        /// Reads the record from the storage medium.
-        /// </summary>
-        /// <param name="reader">The reader for i/o operations.</param>
+        /// <param name="reader">The binary reader to read from.</param>
         public override void Read(BinaryReader reader)
         {
-            var length = reader.ReadUInt32();
-            DataChunk = reader.ReadBytes((int)Math.Min(length, ChunkSize));
+            ArgumentNullException.ThrowIfNull(reader);
+
+            var storedLen = reader.ReadUInt32();
+            var actualLen = (int)Math.Min(storedLen, ChunkSize);
+
+            // read exactly ChunkSize bytes from the stream, keep only actualLen in DataChunk
+            var padded = reader.ReadBytes((int)ChunkSize);
+            if (padded.Length < ChunkSize)
+            {
+                // unexpected end of stream
+                throw new EndOfStreamException("Unexpected end of stream while reading chunk payload.");
+            }
+
+            if (actualLen == 0)
+            {
+                DataChunk = [];
+            }
+            else
+            {
+                DataChunk = [.. padded.Take(actualLen)];
+            }
+
             NextChunkAddr = reader.ReadUInt64();
         }
 
         /// <summary>
-        /// Writes the record to the storage medium.
+        /// Writes the chunk record to the stream as fixed-size: [len][ChunkSize payload][next].
         /// </summary>
-        /// <param name="writer">The writer for i/o operations.</param>
+        /// <param name="writer">The binary writer to write to.</param>
         public override void Write(BinaryWriter writer)
         {
-            writer.Write(Length);
-            writer.Write(DataChunk);
+            ArgumentNullException.ThrowIfNull(writer);
+
+            // compute effective length and write it
+            var effectiveLen = (int)Length;
+            writer.Write((uint)effectiveLen);
+
+            // write payload up to effectiveLen, then pad to ChunkSize with zeros
+            if (effectiveLen > 0 && DataChunk != null && DataChunk.Length > 0)
+            {
+                writer.Write(DataChunk, 0, effectiveLen);
+            }
+
+            var padSize = (int)ChunkSize - effectiveLen;
+            if (padSize > 0)
+            {
+                // write zero padding for the remainder of the chunk payload
+                writer.Write(new byte[padSize]);
+            }
+
+            // write link to next chunk
             writer.Write(NextChunkAddr);
         }
 
         /// <summary>
-        /// Compares the current instance with another object of the same type and returns
-        ///  an integer that indicates whether the current instance precedes, follows, or
-        ///  occurs in the same position in the sort order as the other object.
+        /// Compares this instance with another object implementing a lexicographic byte comparison on payload.
         /// </summary>
-        /// <param name="obj">An object to compare with this instance.</param>
+        /// <param name="obj">The object to compare with.</param>
         /// <returns>
-        /// A signed integer that indicates the relative values of x and y.
-        ///     Less than zero -> x is less than y.
-        ///     Zero -> x equals y.
-        ///     Greater than zero -> x is greater than y.
+        /// A negative number if this instance precedes obj; zero if equal; a positive number if it follows.
         /// </returns>
-        /// <exception cref="System.ArgumentException">Obj is not the same type as this instance.</exception>
+        /// <exception cref="ArgumentException">Thrown when obj is neither IndexStorageSegmentChunk nor IndexStorageSegmentItem.</exception>
         public int CompareTo(object obj)
         {
-            if (obj is IndexStorageSegmentItem item)
+            if (obj is null)
             {
-                return DataChunk.SequenceEqual(item.DataChunk) ? 0 : -1;
+                return 1;
             }
 
-            throw new System.ArgumentException();
+            ReadOnlySpan<byte> a = DataChunk ?? [];
+            ReadOnlySpan<byte> b;
+
+            if (obj is IndexStorageSegmentChunk chunk)
+            {
+                b = chunk.DataChunk ?? [];
+            }
+            else if (obj is IndexStorageSegmentItem item)
+            {
+                b = item.DataChunk ?? [];
+            }
+            else
+            {
+                throw new ArgumentException("Object is not a comparable storage segment.", nameof(obj));
+            }
+
+            // compare by length first, then by content
+            var lenCompare = a.Length.CompareTo(b.Length);
+            if (lenCompare != 0)
+            {
+                return lenCompare;
+            }
+
+            // lexicographic comparison
+            for (int i = 0; i < a.Length; i++)
+            {
+                int diff = a[i].CompareTo(b[i]);
+                if (diff != 0)
+                {
+                    return diff;
+                }
+            }
+
+            return 0;
         }
     }
 }

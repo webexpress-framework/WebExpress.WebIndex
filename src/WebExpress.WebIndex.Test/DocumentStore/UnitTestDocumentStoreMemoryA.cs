@@ -55,6 +55,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
 
             var i = documentStore.GetItem(Fixture.TestData[0].Id);
 
+            // validation
             Assert.True(i != null && i.Id == Fixture.TestData[0].Id);
 
             // postconditions
@@ -126,7 +127,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         /// Removes an entry from the document store.
         /// </summary>
         [Fact]
-        public void Remove()
+        public void Delete()
         {
             // preconditions
             Preconditions();
@@ -140,7 +141,13 @@ namespace WebExpress.WebIndex.Test.DocumentStore
             documentStore.Delete(Fixture.TestData[0]);
             var all = documentStore.All;
 
-            Assert.Equal(all.Select(x => x.Id).OrderBy(x => x), Fixture.TestData.Where(x => x.Id == Fixture.TestData[1].Id).Select(x => x.Id));
+            Assert.Equal
+            (
+                all.Select(x => x.Id).OrderBy(x => x),
+                Fixture.TestData
+                    .Where(x => x.Id == Fixture.TestData[1].Id)
+                    .Select(x => x.Id)
+            );
 
             // postconditions
             documentStore.Dispose();

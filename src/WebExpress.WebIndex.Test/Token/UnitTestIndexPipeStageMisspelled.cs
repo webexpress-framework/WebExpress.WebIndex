@@ -6,61 +6,87 @@ using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.Token
 {
-    public class UnitTestIndexPipeStageMisspelled : IClassFixture<UnitTestIndexFixtureToken>
+    /// <summary>
+    /// Initializes a new instance of the class.
+    /// </summary>
+    /// <param name="fixture">The test context.</param>
+    /// <param name="output">The log.</param>
+    public class UnitTestIndexPipeStageMisspelled(UnitTestIndexFixtureToken fixture, ITestOutputHelper output) : IClassFixture<UnitTestIndexFixtureToken>
     {
         /// <summary>
         /// Returns the log.
         /// </summary>
-        public ITestOutputHelper Output { get; private set; }
+        public ITestOutputHelper Output { get; private set; } = output;
 
         /// <summary>
         /// Returns the test context.
         /// </summary>
-        protected UnitTestIndexFixtureToken Fixture { get; set; }
+        protected UnitTestIndexFixtureToken Fixture { get; set; } = fixture;
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Tests the misspelled correction method for individual word pairs.
+        /// This function is part of the lemmatization process and corrects commonly misspelled terms.
         /// </summary>
-        /// <param name="fixture">The test context.</param>
-        /// <param name="output">The log.</param>
-        public UnitTestIndexPipeStageMisspelled(UnitTestIndexFixtureToken fixture, ITestOutputHelper output)
+        [Theory]
+        [InlineData("febuary", "february")]
+        [InlineData("finaly", "finally")]
+        [InlineData("flourescent", "fluorescent")]
+        [InlineData("foriegn", "foreign")]
+        [InlineData("greatful", "grateful")]
+        [InlineData("garentee", "guarantee")]
+        [InlineData("happend", "happened")]
+        [InlineData("independant", "independent")]
+        [InlineData("inturrupt", "interrupt")]
+        [InlineData("knowlege", "knowledge")]
+        [InlineData("libary", "library")]
+        [InlineData("noticable", "noticeable")]
+        [InlineData("ocassion", "occasion")]
+        [InlineData("occured", "occurred")]
+        public void Misspelled_En(string input, string expected)
         {
-            Fixture = fixture;
-            Output = output;
-        }
-
-        /// <summary>
-        /// Tests the misspelled method. This function is part of the lemmatization process and corrects commonly misspelled terms.
-        /// </summary>
-        [Fact]
-        public void Misspelled_En()
-        {
+            // precondition
             var culture = CultureInfo.GetCultureInfo("en");
             var pipeStage = new IndexPipeStageConverterMisspelled(Fixture.Context);
 
-            (string, string)[] words =
-            [
-                ("febuary", "february"),
-                ("finaly", "finally"),
-                ("flourescent", "fluorescent"),
-                ("foriegn", "foreign"),
-                ("greatful", "grateful"),
-                ("garentee", "guarantee"),
-                ("happend", "happened"),
-                ("independant", "independent"),
-                ("inturrupt", "interrupt"),
-                ("knowlege", "knowledge"),
-                ("libary", "library"),
-                ("noticable", "noticeable"),
-                ("ocassion", "occasion"),
-                ("occured", "occurred")
-            ];
+            // test execution
+            var tokens = IndexTermTokenizer.Tokenize(input, culture);
+            var result = pipeStage.Process(tokens, culture).Select(x => x.Value).ToList();
 
-            var res = pipeStage.Process(IndexTermTokenizer.Tokenize(string.Join(" ", words.Select(x => x.Item1)), culture), culture)
-                .Select(x => x.Value)
-                .ToList();
+            // validation
+            Assert.Contains(expected, result);
+        }
 
-            Assert.True(res.Intersect(words.Select(x => x.Item2)).Count() == res.Count);
+        /// <summary>
+        /// Tests the misspelled correction method for individual word pairs.
+        /// This function is part of the lemmatization process and corrects commonly misspelled terms.
+        /// </summary>
+        [Theory]
+        [InlineData("andauernd", "andauernd")]
+        [InlineData("beschwerden", "beschwerden")]
+        [InlineData("balett", "ballett")]
+        [InlineData("denenach", "demnach")]
+        [InlineData("fahhrad", "fahrrad")]
+        [InlineData("managment", "management")]
+        [InlineData("muzik", "musik")]
+        [InlineData("niderlage", "niederlage")]
+        [InlineData("parner", "partner")]
+        [InlineData("probem", "problem")]
+        [InlineData("quallität", "qualität")]
+        [InlineData("rythmus", "rhythmus")]
+        [InlineData("willkomenn", "willkommen")]
+        [InlineData("zumindestens", "zumindest")]
+        public void Misspelled_De(string input, string expected)
+        {
+            // precondition
+            var culture = CultureInfo.GetCultureInfo("de");
+            var pipeStage = new IndexPipeStageConverterMisspelled(Fixture.Context);
+
+            // test execution
+            var tokens = IndexTermTokenizer.Tokenize(input, culture);
+            var result = pipeStage.Process(tokens, culture).Select(x => x.Value).ToList();
+
+            // validation
+            Assert.Contains(expected, result);
         }
     }
 }

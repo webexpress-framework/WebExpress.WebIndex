@@ -33,7 +33,7 @@ namespace WebExpress.WebIndex.Test.Token
         /// Tests the synonym method. This function is part of the lemmatization process and reduced sysnonyms.
         /// </summary>
         [Theory]
-        [InlineData("joyful", "happy", "en")]
+        [InlineData("happy", "joyful", "en")]
         [InlineData("kfz", "auto", "de")]
         public void Synonym(string synonymWord, string normalWord, string cultureString)
         {

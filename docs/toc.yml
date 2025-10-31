@@ -1,7 +1,7 @@
 ﻿- name: Home
   href: index.md
 - name: API Documentation
-  href: api/WebExpress.WebIndex.html
+  href: api/
 - name: Concept
   href: concept.md
 - name: User Guide

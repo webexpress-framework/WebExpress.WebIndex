@@ -1,66 +1,106 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace WebExpress.WebIndex.Term.Pipeline
 {
     /// <summary>
-    /// Conversion of misspelled words.
+    /// Converts misspelled words to their normalized form using culture-specific dictionaries.
     /// </summary>
     public class IndexPipeStageConverterMisspelled : IIndexPipeStage
     {
         /// <summary>
-        /// Returns the name of the process state.
+        /// Returns the name of the process stage.
         /// </summary>
         public string Name => "Misspelled";
 
         /// <summary>
-        /// Returns a list of the misspelled words.
+        /// Holds misspelling dictionaries per culture key (e.g., "en", "en-US").
         /// </summary>
-        internal Dictionary<CultureInfo, Dictionary<string, string>> MisspelledWordDictionary { get; } = [];
+        internal Dictionary<string, Dictionary<string, string>> MisspelledWordDictionary { get; } =
+            new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Initializes a new instance of the class.
+        /// Initializes a new instance of the class by loading all available misspelling dictionaries.
         /// </summary>
-        /// <param name="context">The reference to the context.</param>
+        /// <param name="context">The reference to the indexing context.</param>
         public IndexPipeStageConverterMisspelled(IIndexContext context)
         {
+            ArgumentNullException.ThrowIfNull(context);
+
+            if (string.IsNullOrWhiteSpace(context.IndexDirectory))
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            if (!Directory.Exists(context.IndexDirectory))
+            {
+                // nothing to load if directory is absent
+                return;
+            }
+
             foreach (var file in Directory.GetFiles(context.IndexDirectory, "misspelledwords.*"))
             {
-                var extension = Path.GetExtension(file).Trim('.');
+                var cultureKey = ExtractCultureKeyFromFileName(file);
+                if (string.IsNullOrWhiteSpace(cultureKey))
+                {
+                    continue;
+                }
 
-                FillMisspelledWordDictionary(context, CultureInfo.GetCultureInfo(extension));
+                try
+                {
+                    // validate culture; normalize key to CultureInfo.Name (e.g., "en" or "en-US")
+                    var culture = CultureInfo.GetCultureInfo(cultureKey);
+                    var normalizedKey = culture.Name;
+
+                    FillMisspelledWordDictionary(file, normalizedKey);
+                }
+                catch (CultureNotFoundException)
+                {
+                    // ignore files with invalid culture suffix
+                }
             }
         }
 
         /// <summary>
-        /// Converts specific elements on the term enumeration.
+        /// Converts terms by replacing misspelled tokens using the culture-specific dictionary.
         /// </summary>
-        /// <param name="input">The terms.</param>
-        /// <param name="culture">The culture.</param>
-        /// <returns>The terms at which the misspelled words have been converted.</returns>
+        /// <param name="input">The input token sequence.</param>
+        /// <param name="culture">The culture to use for the conversion.</param>
+        /// <returns>Transformed token sequence with misspellings corrected where applicable.</returns>
         public IEnumerable<IndexTermToken> Process(IEnumerable<IndexTermToken> input, CultureInfo culture)
         {
-            var supportedCulture = GetSupportedCulture(culture);
+            if (input == null)
+            {
+                yield break;
+            }
 
-            if (!MisspelledWordDictionary.ContainsKey(supportedCulture))
+            var cultureKey = GetSupportedCultureKey(culture);
+
+            if (!MisspelledWordDictionary.TryGetValue(cultureKey, out Dictionary<string, string> dict))
             {
                 foreach (var token in input)
                 {
                     yield return token;
                 }
+
+                yield break;
             }
 
             foreach (var token in input)
             {
-                if (token.Value is string)
+                if (token?.Value is string s)
                 {
-                    if (MisspelledWordDictionary[supportedCulture].ContainsKey(token.Value.ToString()))
+                    var normalized = NormalizeToken(s);
+
+                    if (!string.IsNullOrEmpty(normalized) && dict.TryGetValue(normalized, out var replacement))
                     {
-                        yield return new IndexTermToken()
+                        yield return new IndexTermToken
                         {
-                            Value = MisspelledWordDictionary[supportedCulture][token.Value.ToString()],
+                            Value = replacement,
                             Position = token.Position
                         };
                     }
@@ -77,59 +117,150 @@ namespace WebExpress.WebIndex.Term.Pipeline
         }
 
         /// <summary>
-        /// Fills the directory with misspelled words.
+        /// Loads a misspelled words file into the dictionary for the given culture key.
         /// </summary>
-        /// <param name="context">The reference to the context.</param>
-        /// <param name="culture">The culture.</param>
-        private void FillMisspelledWordDictionary(IIndexContext context, CultureInfo culture)
+        /// <param name="filePath">The full path to the misspelling file.</param>
+        /// <param name="cultureKey">The normalized culture key (e.g., "en", "en-US").</param>
+        private void FillMisspelledWordDictionary(string filePath, string cultureKey)
         {
-            var fileContent = File.ReadAllLines
-            (
-                Path.Combine(context.IndexDirectory,
-                $"misspelledwords.{culture.TwoLetterISOLanguageName}")
-            );
-
-            if (!MisspelledWordDictionary.ContainsKey(culture))
+            if (string.IsNullOrWhiteSpace(filePath))
             {
-                MisspelledWordDictionary.Add(culture, new Dictionary<string, string>());
+                return;
             }
 
-            var dict = MisspelledWordDictionary[culture];
-
-            foreach (var line in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
+            if (!File.Exists(filePath))
             {
-                var l = line.Normalize(System.Text.NormalizationForm.FormKD).ToLower();
-                var split = l.Split('=', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                var key = split[0]?.ToLower();
-                var value = split[1]?.ToLower()?.Split('#')[0]?.TrimEnd();
+                return;
+            }
 
-                if (!string.IsNullOrWhiteSpace(key) && !dict.ContainsKey(key))
+            if (!MisspelledWordDictionary.TryGetValue(cultureKey, out Dictionary<string, string> dict))
+            {
+                dict = new Dictionary<string, string>(StringComparer.Ordinal);
+                MisspelledWordDictionary[cultureKey] = dict;
+            }
+
+            foreach (var rawLine in File.ReadLines(filePath))
+            {
+                var line = rawLine?.Trim();
+                if (string.IsNullOrEmpty(line))
                 {
-                    dict.Add(key, value);
+                    continue;
                 }
+
+                if (line.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                var eqIndex = line.IndexOf('=');
+                if (eqIndex <= 0 || eqIndex == line.Length - 1)
+                {
+                    // skip lines without key=value
+                    continue;
+                }
+
+                var left = line[..eqIndex];
+                var right = line[(eqIndex + 1)..];
+
+                // strip trailing inline comments in value
+                var hashIdx = right.IndexOf('#');
+                if (hashIdx >= 0)
+                {
+                    right = right[..hashIdx];
+                }
+
+                var key = NormalizeToken(left);
+                var value = NormalizeToken(right);
+
+                // skip if key/value invalid or identical
+                if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value) || key == value)
+                {
+                    continue;
+                }
+
+                // last definition wins to allow overrides
+                dict[key] = value;
             }
         }
 
         /// <summary>
-        /// Transforms a given culture into a supported culture.
+        /// Derives a supported culture key from a requested culture. Falls back to neutral ("en") or first available.
         /// </summary>
-        /// <param name="culture">The culture to be used.</param>
-        /// <returns>A supported culture, this may differ from the desired culture.</returns>
-        private CultureInfo GetSupportedCulture(CultureInfo culture)
+        /// <param name="culture">The requested culture.</param>
+        /// <returns>A culture key present in the dictionary, if any; otherwise a fallback.</returns>
+        private string GetSupportedCultureKey(CultureInfo culture)
         {
-            if (MisspelledWordDictionary.ContainsKey(culture))
+            var requested = culture?.Name ?? "en";
+            if (MisspelledWordDictionary.ContainsKey(requested))
             {
-                return culture;
+                return requested;
             }
 
-            var generalCulture = CultureInfo.GetCultureInfo(culture.TwoLetterISOLanguageName);
-
-            if (MisspelledWordDictionary.ContainsKey(generalCulture))
+            var neutral = culture?.TwoLetterISOLanguageName ?? "en";
+            if (MisspelledWordDictionary.ContainsKey(neutral))
             {
-                return generalCulture;
+                return neutral;
             }
 
-            return CultureInfo.GetCultureInfo("en");
+            if (MisspelledWordDictionary.ContainsKey("en"))
+            {
+                return "en";
+            }
+
+            // fallback to any available culture to avoid empty results if dictionaries exist
+            if (MisspelledWordDictionary.Count > 0)
+            {
+                return MisspelledWordDictionary.Keys.First();
+            }
+
+            return "en";
+        }
+
+        /// <summary>
+        /// Extracts the culture part from a file name misspelledwords.{culture}[.anything].
+        /// </summary>
+        /// <param name="filePath">Full path to the file.</param>
+        /// <returns>The culture key or null if the pattern does not match.</returns>
+        private static string ExtractCultureKeyFromFileName(string filePath)
+        {
+            var fileName = Path.GetFileName(filePath);
+            const string prefix = "misspelledwords.";
+            if (fileName == null || !fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var remainder = fileName[prefix.Length..];
+
+            var dotIndex = remainder.IndexOf('.');
+            if (dotIndex >= 0)
+            {
+                remainder = remainder[..dotIndex];
+            }
+
+            // normalize en_US -> en-US to satisfy CultureInfo
+            remainder = remainder.Replace('_', '-').Trim();
+
+            return remainder;
+        }
+
+        /// <summary>
+        /// Normalizes tokens for dictionary lookup (compatibility decomposition, lower-case, trim).
+        /// </summary>
+        /// <param name="text">The input text.</param>
+        /// <returns>Normalized token or empty string.</returns>
+        private static string NormalizeToken(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            // small inline normalization for consistent key matching
+            return text
+                .Normalize(NormalizationForm.FormKD)
+                .ToLowerInvariant()
+                .Trim();
         }
     }
 }

@@ -6,16 +6,22 @@ using WebExpress.WebIndex.Term;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// The web reverse index, which stores the key-value pairs on disk.
+    /// Provides a base class for reverse index implementations persisted on disk.
     /// </summary>
-    /// <typeparam name="TIndexItem">The data type. This must have the IIndexItem interface.</typeparam>
-    public abstract class IndexStorageReverse<TIndexItem> : IIndexReverse<TIndexItem>, IIndexStorage
+    /// <typeparam name="TIndexItem">The data type implementing IIndexItem.</typeparam>
+    /// <remarks>
+    /// Initializes a new instance of the reverse index base.
+    /// </remarks>
+    /// <param name="context">The index document context.</param>
+    /// <param name="field">The field definition that builds the index.</param>
+    /// <param name="culture">The culture information.</param>
+    public abstract class IndexStorageReverse<TIndexItem>(IIndexDocumemntContext context, IndexFieldData field, CultureInfo culture) : IIndexReverse<TIndexItem>, IIndexStorage, IDisposable
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// The field that makes up the index.
+        /// Returns the field definition that builds the index.
         /// </summary>
-        protected IndexFieldData Field { get; private set; }
+        protected IndexFieldData Field { get; private set; } = field;
 
         /// <summary>
         /// Returns the file name for the reverse index.
@@ -23,107 +29,117 @@ namespace WebExpress.WebIndex.Storage
         public string FileName { get; protected set; }
 
         /// <summary>
-        /// Returns or sets the reverse index file.
+        /// Returns the underlying file for the reverse index.
         /// </summary>
         public IndexStorageFile IndexFile { get; protected set; }
 
         /// <summary>
-        /// Returns or sets the header.
+        /// Returns the header segment.
         /// </summary>
         public IndexStorageSegmentHeader Header { get; protected set; }
 
         /// <summary>
-        /// Returns or sets the memory manager.
+        /// Returns the allocator segment.
         /// </summary>
         public IndexStorageSegmentAllocator Allocator { get; protected set; }
 
         /// <summary>
-        /// Returns the statistical values that can be help to optimize the index.
+        /// Returns the statistic segment containing optimization counters.
         /// </summary>
         public IndexStorageSegmentStatistic Statistic { get; protected set; }
 
         /// <summary>
-        /// Returns the index context.
+        /// Returns the index document context.
         /// </summary>
-        public IIndexDocumemntContext Context { get; private set; }
+        public IIndexDocumemntContext Context { get; private set; } = context;
 
         /// <summary>
-        /// Returns the culture.
+        /// Returns the culture info used by the index.
         /// </summary>
-        public CultureInfo Culture { get; private set; }
+        public CultureInfo Culture { get; private set; } = culture;
 
         /// <summary>
-        /// Returns all items.
+        /// Returns all document ids contained in the reverse index.
         /// </summary>
         public abstract IEnumerable<Guid> All { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="IndexStorageReverse{TIndexItem}"/> class.
+        /// Adds a single item to the index.
         /// </summary>
-        /// <param name="context">The context of the indexed document.</param>
-        /// <param name="field">The field that makes up the index.</param>
-        /// <param name="culture">The culture information.</param>
-        public IndexStorageReverse(IIndexDocumemntContext context, IndexFieldData field, CultureInfo culture)
-        {
-            Context = context;
-            Field = field;
-            Culture = culture;
-        }
-
-        /// <summary>
-        /// Adds a item to the index.
-        /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexItem interface.</typeparam>
-        /// <param name="item">The data to be added to the index.</param>
+        /// <param name="item">The item to add.</param>
         public abstract void Add(TIndexItem item);
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds the specified terms of an item to the index.
         /// </summary>
-        /// <param name="item">The data to be added to the index.</param>
-        /// <param name="terms">The terms to add to the reverse index for the given item.</param>
+        /// <param name="item">The item to add.</param>
+        /// <param name="terms">The tokenized terms for the given item.</param>
         public abstract void Add(TIndexItem item, IEnumerable<IndexTermToken> terms);
 
         /// <summary>
-        /// The data to be removed from the index.
+        /// Deletes a single item from the index.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexData interface.</typeparam>
-        /// <param name="item">The data to be removed from the field.</param>
+        /// <param name="item">The item to delete.</param>
         public abstract void Delete(TIndexItem item);
 
         /// <summary>
-        /// The data to be removed from the index.
+        /// Deletes the specified terms of an item from the index.
         /// </summary>
-        /// <param name="item">The data to be removed from the field.</param>
-        /// <param name="terms">The terms to add to the reverse index for the given item.</param>
+        /// <param name="item">The item to delete.</param>
+        /// <param name="terms">The tokenized terms for the given item.</param>
         public abstract void Delete(TIndexItem item, IEnumerable<IndexTermToken> terms);
 
         /// <summary>
-        /// Removed all data from the index.
+        /// Clears all data from the index and reinitializes structures.
         /// </summary>
         public abstract void Clear();
 
         /// <summary>
-        /// Drop the reverse index.
+        /// Drops the reverse index and removes persistent storage.
         /// </summary>
         public abstract void Drop();
 
         /// <summary>
-        /// Return all items for a given input.
+        /// Retrieves all items for a given input according to the provided options.
         /// </summary>
-        /// <param name="term">The input.</param>
-        /// <param name="options">The retrieve options.</param>
-        /// <returns>An enumeration of the data ids.</returns>
+        /// <param name="input">The raw input to analyze.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>An enumeration of document ids.</returns>
         public abstract IEnumerable<Guid> Retrieve(object input, IndexRetrieveOptions options);
 
+        // implements disposable pattern with null guards to avoid null reference on uninitialized IndexFile
+        private bool _disposed;
+
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, 
-        /// or resetting unmanaged resources.
+        /// Releases the resources used by the reverse index.
         /// </summary>
         public void Dispose()
         {
-            IndexFile.Dispose();
+            Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases unmanaged and optionally managed resources.
+        /// </summary>
+        /// <param name="disposing">True to release managed resources; otherwise false.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (IndexFile != null)
+                {
+                    IndexFile.Dispose();
+                    IndexFile = null;
+                }
+            }
+
+            _disposed = true;
         }
     }
 }

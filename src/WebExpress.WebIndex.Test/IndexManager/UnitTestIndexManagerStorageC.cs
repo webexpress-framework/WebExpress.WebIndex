@@ -353,7 +353,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Theory]
         [InlineData(100, 100, 100, 15, "en")]
         [InlineData(1000, 100, 2000, 15, "en")]
-        public void Retrieve(int itemCount, int wordCount, int vocabulary, int wordLength, string culture)
+        public async Task Retrieve(int itemCount, int wordCount, int vocabulary, int wordLength, string culture)
         {
             var w = wordCount;
             var i = itemCount;
@@ -393,7 +393,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 }));
             }
 
-            Task.WhenAll(tasks);
+            await Task.WhenAll(tasks);
 
             // postconditions
             Postconditions();
