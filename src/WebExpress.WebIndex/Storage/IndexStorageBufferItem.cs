@@ -36,7 +36,7 @@ namespace WebExpress.WebIndex.Storage
         {
             Segment = segment;
 
-            if (segment.GetType().GetCustomAttribute<SegmentCachedAttribute>() != null)
+            if (segment.GetType().GetCustomAttribute<SegmentCachedAttribute>() is not null)
             {
                 _counter = uint.MaxValue;
             }

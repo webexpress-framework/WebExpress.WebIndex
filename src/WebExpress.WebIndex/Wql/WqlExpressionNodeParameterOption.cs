@@ -30,7 +30,7 @@
         /// <returns>The options expression as a string.</returns>
         public override string ToString()
         {
-            return $"{(Similarity != null ? "~" + Similarity : "")} {(Distance != null ? ":" + Distance : "")}".Trim();
+            return $"{(Similarity is not null ? "~" + Similarity : "")} {(Distance is not null ? ":" + Distance : "")}".Trim();
         }
     }
 }

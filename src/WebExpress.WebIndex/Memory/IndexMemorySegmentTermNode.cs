@@ -59,7 +59,7 @@ namespace WebExpress.WebIndex.Memory
             {
                 foreach (var child in Children)
                 {
-                    if (child.Postings != null && child.Children.Any())
+                    if (child.Postings is not null && child.Children.Count != 0)
                     {
                         yield return (Character + child.Character.ToString(), child);
                     }
@@ -106,13 +106,13 @@ namespace WebExpress.WebIndex.Memory
         /// <param name="position">The position of the term in the input value.</param>
         public void Add(Guid id, string subterm, uint position)
         {
-            if (subterm == null)
+            if (subterm is null)
             {
                 // end of recursive descent reached
                 Postings ??= [];
                 var posting = Postings.FirstOrDefault(x => x.DocumentId.Equals(id));
 
-                if (posting == null)
+                if (posting is null)
                 {
                     Postings.Add(new IndexMemorySegmentPosting(id, position));
                 }
@@ -153,7 +153,7 @@ namespace WebExpress.WebIndex.Memory
         /// <param name="id">The data to be added to the index.</param>
         public void Remove(string subterm, Guid id)
         {
-            if (subterm == null)
+            if (subterm is null)
             {
                 Postings = Postings?.Where(X => !X.DocumentId.Equals(id)).ToList();
 
@@ -211,7 +211,7 @@ namespace WebExpress.WebIndex.Memory
         /// <returns>An enumeration of leafs of the term.</returns>
         public virtual IEnumerable<IndexMemorySegmentTermNode> GetLeafs(string term)
         {
-            if (term == null)
+            if (term is null)
             {
                 yield return this;
             }

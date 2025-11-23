@@ -128,7 +128,7 @@ namespace WebExpress.WebIndex.Wql
                 IndexDocument = IndexDocument
             };
 
-            if (input == null)
+            if (input is null)
             {
                 return wql;
             }
@@ -204,7 +204,7 @@ namespace WebExpress.WebIndex.Wql
 
             var condition = ParseCondition(tokenQueue);
 
-            if (condition != null)
+            if (condition is not null)
             {
                 if (PeekToken(tokenQueue, "and") || PeekToken(tokenQueue, "&") || PeekToken(tokenQueue, "or") || PeekToken(tokenQueue, "||"))
                 {
@@ -225,7 +225,7 @@ namespace WebExpress.WebIndex.Wql
             }
 
             var leftFilter = ParseFilter(tokenQueue);
-            if (leftFilter != null)
+            if (leftFilter is not null)
             {
                 var logicalOperator = ParseLogicalOperator(tokenQueue);
                 var rightFilter = ParseFilter(tokenQueue);
@@ -256,7 +256,7 @@ namespace WebExpress.WebIndex.Wql
 
             try
             {
-                if (condition.Value == null || string.IsNullOrWhiteSpace(condition.Key))
+                if (condition.Value is null || string.IsNullOrWhiteSpace(condition.Key))
                 {
                     throw new WqlParseException
                     (
@@ -377,7 +377,7 @@ namespace WebExpress.WebIndex.Wql
 
             ReadToken(tokenQueue);
 
-            if (attribute != null)
+            if (attribute is not null)
             {
                 return new WqlExpressionNodeAttribute<TIndexItem>
                 {

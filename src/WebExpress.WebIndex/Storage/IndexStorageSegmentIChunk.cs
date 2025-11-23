@@ -86,7 +86,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write((uint)effectiveLen);
 
             // write payload up to effectiveLen, then pad to ChunkSize with zeros
-            if (effectiveLen > 0 && DataChunk != null && DataChunk.Length > 0)
+            if (effectiveLen > 0 && DataChunk is not null && DataChunk.Length > 0)
             {
                 writer.Write(DataChunk, 0, effectiveLen);
             }

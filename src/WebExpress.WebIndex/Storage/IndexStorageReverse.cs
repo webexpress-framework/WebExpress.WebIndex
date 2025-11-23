@@ -132,7 +132,7 @@ namespace WebExpress.WebIndex.Storage
 
             if (disposing)
             {
-                if (IndexFile != null)
+                if (IndexFile is not null)
                 {
                     IndexFile.Dispose();
                     IndexFile = null;

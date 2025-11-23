@@ -32,7 +32,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The value.</returns>
         public object GetValue()
         {
-            return Function != null ? Function.Execute() : Value.GetValue();
+            return Function is not null ? Function.Execute() : Value.GetValue();
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The parameter expression as a string.</returns>
         public override string ToString()
         {
-            return Value != null ? Value.ToString() : Function.ToString().Trim();
+            return Value is not null ? Value.ToString() : Function.ToString().Trim();
         }
     }
 }

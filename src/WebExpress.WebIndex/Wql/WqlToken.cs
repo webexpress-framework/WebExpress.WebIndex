@@ -19,7 +19,7 @@
         /// Checks if the token is empty.
         /// </summary>
         /// <returns>True if no value is stored, false otherwise.</returns>
-        public bool IsEmpty => Value == null || Value.Length == 0;
+        public bool IsEmpty => Value is null || Value.Length == 0;
 
         /// <summary>
         /// Returns the token value.

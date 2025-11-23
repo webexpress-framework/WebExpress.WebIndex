@@ -120,7 +120,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Left != null && search < Value)
+                    if (Left is not null && search < Value)
                     {
                         // recurse on the left subtree
                         foreach (var value in Left.Retrieve(search, options))
@@ -129,7 +129,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Right != null && search > Value)
+                    if (Right is not null && search > Value)
                     {
                         // recurse on the right subtree
                         foreach (var value in Right.Retrieve(search, options))
@@ -148,7 +148,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Left != null)
+                    if (Left is not null)
                     {
                         foreach (var value in Left.Retrieve(search, options))
                         {
@@ -156,7 +156,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Right != null)
+                    if (Right is not null)
                     {
                         foreach (var value in Right.Retrieve(search, options))
                         {
@@ -175,7 +175,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Left != null)
+                    if (Left is not null)
                     {
                         foreach (var value in Left.Retrieve(search, options))
                         {
@@ -183,7 +183,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Right != null)
+                    if (Right is not null)
                     {
                         foreach (var value in Right.Retrieve(search, options))
                         {
@@ -202,7 +202,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Left != null)
+                    if (Left is not null)
                     {
                         foreach (var value in Left.Retrieve(search, options))
                         {
@@ -210,7 +210,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Right != null && search > Value)
+                    if (Right is not null && search > Value)
                     {
                         foreach (var value in Right.Retrieve(search, options))
                         {
@@ -229,7 +229,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Left != null)
+                    if (Left is not null)
                     {
                         foreach (var value in Left.Retrieve(search, options))
                         {
@@ -237,7 +237,7 @@ namespace WebExpress.WebIndex.Memory
                         }
                     }
 
-                    if (Right != null && search >= Value)
+                    if (Right is not null && search >= Value)
                     {
                         foreach (var value in Right.Retrieve(search, options))
                         {
@@ -341,7 +341,7 @@ namespace WebExpress.WebIndex.Memory
         {
             if (value.CompareTo(Value) < 0)
             {
-                if (Left == null)
+                if (Left is null)
                 {
                     Left = new IndexMemorySegmentNumericNode(value, [new IndexMemorySegmentPosting(id, 0)]);
                 }
@@ -352,7 +352,7 @@ namespace WebExpress.WebIndex.Memory
             }
             else if (value.CompareTo(Value) > 0)
             {
-                if (Right == null)
+                if (Right is null)
                 {
                     Right = new IndexMemorySegmentNumericNode(value, [new IndexMemorySegmentPosting(id, 0)]);
                 }
@@ -366,7 +366,7 @@ namespace WebExpress.WebIndex.Memory
                 var postingsList = Postings.ToList();
                 var posting = postingsList.FirstOrDefault(x => x.DocumentId.Equals(id));
 
-                if (posting == null)
+                if (posting is null)
                 {
                     postingsList.Add(new IndexMemorySegmentPosting(id, 0));
                 }

@@ -111,7 +111,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="segment">The segment.</param>
         public void Write(IIndexStorageSegment segment)
         {
-            if (segment == null)
+            if (segment is null)
             {
                 return;
             }
@@ -148,7 +148,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="segment">The IndexStorageSegment object to be invalidated.</param>
         public void Invalidation(IIndexStorageSegment segment)
         {
-            if (segment == null)
+            if (segment is null)
             {
                 return;
             }

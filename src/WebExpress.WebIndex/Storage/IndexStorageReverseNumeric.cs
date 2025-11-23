@@ -82,7 +82,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="item">The item to add.</param>
         public override void Add(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -101,7 +101,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="terms">The terms to index for the item.</param>
         public override void Add(TIndexItem item, IEnumerable<IndexTermToken> terms)
         {
-            if (item == null || terms == null)
+            if (item is null || terms is null)
             {
                 return;
             }
@@ -126,7 +126,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="item">The item to remove.</param>
         public override void Delete(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -145,7 +145,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="terms">The terms to delete from the reverse index for the item.</param>
         public override void Delete(TIndexItem item, IEnumerable<IndexTermToken> terms)
         {
-            if (item == null || terms == null)
+            if (item is null || terms is null)
             {
                 return;
             }
@@ -158,7 +158,7 @@ namespace WebExpress.WebIndex.Storage
                 }
 
                 var node = Numeric[key];
-                if (node != null)
+                if (node is not null)
                 {
                     if (node.RemovePosting(item.Id))
                     {
@@ -263,7 +263,7 @@ namespace WebExpress.WebIndex.Storage
         {
             result = default;
 
-            if (value == null)
+            if (value is null)
             {
                 return false;
             }

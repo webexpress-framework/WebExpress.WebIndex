@@ -35,7 +35,7 @@ namespace WebExpress.WebIndex.Storage
         /// <exception cref="InvalidOperationException">Thrown when the index file is not available.</exception>
         public virtual void Initialization(bool initializationFromFile)
         {
-            if (Context?.IndexFile == null)
+            if (Context?.IndexFile is null)
             {
                 throw new InvalidOperationException("Index file is not available in the provided context.");
             }

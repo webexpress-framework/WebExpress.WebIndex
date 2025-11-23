@@ -41,7 +41,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns true if there are any errors that occurred during parsing, false otherwise.
         /// </summary>
-        public bool HasErrors => Error != null;
+        public bool HasErrors => Error is not null;
 
         /// <summary>
         /// Returns the part in error of the original wql statement.
@@ -62,17 +62,17 @@ namespace WebExpress.WebIndex.Wql
             {
                 var nodes = new List<IWqlExpressionNode<TIndexItem>>();
 
-                if (Filter != null)
+                if (Filter is not null)
                 {
                     nodes.Add(Filter);
                 }
 
-                if (Order != null)
+                if (Order is not null)
                 {
                     nodes.Add(Order);
                 }
 
-                if (Partitioning != null)
+                if (Partitioning is not null)
                 {
                     nodes.Add(Partitioning);
                 }
@@ -98,7 +98,7 @@ namespace WebExpress.WebIndex.Wql
         {
             var filtered = Enumerable.Empty<TIndexItem>().AsQueryable();
 
-            if (Filter != null)
+            if (Filter is not null)
             {
                 filtered = Filter.Apply().Select(x => IndexDocument.DocumentStore.GetItem(x)).AsQueryable();
             }
@@ -107,12 +107,12 @@ namespace WebExpress.WebIndex.Wql
                 filtered = IndexDocument?.DocumentStore.All.AsQueryable();
             }
 
-            if (Order != null)
+            if (Order is not null)
             {
                 filtered = Order.Apply(filtered);
             }
 
-            if (Partitioning != null)
+            if (Partitioning is not null)
             {
                 filtered = Partitioning.Apply(filtered);
             }
@@ -139,17 +139,17 @@ namespace WebExpress.WebIndex.Wql
         {
             var filtered = unfiltered;
 
-            if (Filter != null)
+            if (Filter is not null)
             {
                 filtered = Filter.Apply(filtered);
             }
 
-            if (Order != null)
+            if (Order is not null)
             {
                 filtered = Order.Apply(filtered);
             }
 
-            if (Partitioning != null)
+            if (Partitioning is not null)
             {
                 filtered = Partitioning.Apply(filtered);
             }
@@ -168,7 +168,7 @@ namespace WebExpress.WebIndex.Wql
 
             sql.Append($"select * from {name}");
 
-            if (Filter != null)
+            if (Filter is not null)
             {
                 sql.Append($" where {Filter.GetSqlQueryString()}");
             }
@@ -192,7 +192,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The WQL expression as a string.</returns>
         public override string ToString()
         {
-            if (Error != null)
+            if (Error is not null)
             {
                 return Raw;
             }
@@ -200,10 +200,10 @@ namespace WebExpress.WebIndex.Wql
             return string.Format
             (
                 "{0} {1} {2} {3}",
-                Filter != null ? Filter.ToString() : "",
-                Order != null ? Order.ToString() : "",
-                Partitioning != null ? Partitioning.ToString() : "",
-                Error != null ? Error.ToString() : ""
+                Filter is not null ? Filter.ToString() : "",
+                Order is not null ? Order.ToString() : "",
+                Partitioning is not null ? Partitioning.ToString() : "",
+                Error is not null ? Error.ToString() : ""
             ).Trim();
         }
     }

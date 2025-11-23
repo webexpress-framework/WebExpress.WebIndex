@@ -170,7 +170,7 @@ namespace WebExpress.WebIndex.Storage
         {
             get
             {
-                if (subterm == null)
+                if (subterm is null)
                 {
                     return this;
                 }
@@ -201,7 +201,7 @@ namespace WebExpress.WebIndex.Storage
         {
             lock (_guard)
             {
-                if (subterm == null)
+                if (subterm is null)
                 {
                     return this;
                 }
@@ -411,7 +411,7 @@ namespace WebExpress.WebIndex.Storage
                         count++;
                     }
 
-                    if (last == null)
+                    if (last is null)
                     {
                         // insert at the beginning
                         var tempAddr = ChildAddr;
@@ -475,7 +475,7 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>An enumeration of matching leaf nodes.</returns>
         public virtual IEnumerable<IndexStorageSegmentTermNode> GetLeafs(string term)
         {
-            if (term == null)
+            if (term is null)
             {
                 yield return this;
             }

@@ -57,7 +57,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
 
             var i = documentStore.GetItem(Fixture.TestData[0].Id);
 
-            Assert.True(i != null && i.Id == Fixture.TestData[0].Id);
+            Assert.True(i is not null && i.Id == Fixture.TestData[0].Id);
 
             // postconditions
             documentStore.Dispose();

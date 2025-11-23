@@ -79,7 +79,7 @@ namespace WebExpress.WebIndex
         /// <param name="capacity">The predicted capacity (number of items to store) of the index.</param>
         protected virtual void ReBuild(uint capacity)
         {
-            if (DocumentStore == null || capacity > DocumentStore.Capacity)
+            if (DocumentStore is null || capacity > DocumentStore.Capacity)
             {
                 switch (IndexType)
                 {
@@ -133,7 +133,7 @@ namespace WebExpress.WebIndex
         /// <returns>A task representing the asynchronous operation.</returns>
         protected virtual async Task ReBuildAsync(uint capacity)
         {
-            if (DocumentStore == null || capacity > DocumentStore.Capacity)
+            if (DocumentStore is null || capacity > DocumentStore.Capacity)
             {
                 switch (IndexType)
                 {
@@ -222,7 +222,7 @@ namespace WebExpress.WebIndex
         /// <param name="item">The data to be added to the index.</param>
         public virtual void Add(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -245,7 +245,7 @@ namespace WebExpress.WebIndex
         /// <returns>A task representing the asynchronous operation.</returns>
         public virtual async Task AddAsync(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -255,7 +255,7 @@ namespace WebExpress.WebIndex
                 Task.Run(() => DocumentStore.Add(item))
             };
 
-            var reverseIndexes = Fields.Select(GetReverseIndex).Where(x => x != null);
+            var reverseIndexes = Fields.Select(GetReverseIndex).Where(x => x is not null);
 
             tasks.AddRange(reverseIndexes.Select(async reverseIndex =>
             {
@@ -271,7 +271,7 @@ namespace WebExpress.WebIndex
         /// <param name="item">The data to be updated to the index.</param>
         public virtual void Update(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -306,7 +306,7 @@ namespace WebExpress.WebIndex
         /// <returns>A task representing the asynchronous operation.</returns>
         public virtual async Task UpdateAsync(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -320,7 +320,7 @@ namespace WebExpress.WebIndex
 
             var reverseIndexes = Fields
                 .Select(property => new { Index = GetReverseIndex(property), Field = property })
-                .Where(x => x.Index != null);
+                .Where(x => x.Index is not null);
 
             tasks.AddRange(reverseIndexes.Select(async reverseIndex =>
             {
@@ -355,7 +355,7 @@ namespace WebExpress.WebIndex
         /// <param name="item">The data to be removed from the index.</param>
         public virtual void Remove(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -378,7 +378,7 @@ namespace WebExpress.WebIndex
         /// <returns>A task representing the asynchronous operation.</returns>
         public virtual async Task RemoveAsync(TIndexItem item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return;
             }
@@ -535,7 +535,7 @@ namespace WebExpress.WebIndex
         /// <returns>True if the property is of a numeric type; otherwise false.</returns>
         private static bool IsNumericType(PropertyInfo property)
         {
-            if (property == null)
+            if (property is null)
             {
                 return false;
             }
@@ -544,7 +544,7 @@ namespace WebExpress.WebIndex
 
             // unwrap nullable<T>
             var underlying = Nullable.GetUnderlyingType(type);
-            if (underlying != null)
+            if (underlying is not null)
             {
                 type = underlying;
             }

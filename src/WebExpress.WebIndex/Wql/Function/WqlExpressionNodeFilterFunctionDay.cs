@@ -27,7 +27,7 @@ namespace WebExpress.WebIndex.Wql.Function
             var parameters = Parameters.Select(x => x.GetValue());
             var param = parameters.FirstOrDefault();
 
-            if (param != null)
+            if (param is not null)
             {
                 return DateTime.Now.Date.AddDays(Convert.ToDouble(param));
             }

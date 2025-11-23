@@ -39,7 +39,7 @@ namespace WebExpress.WebIndex
         {
             get
             {
-                return PropertyInfo?.GetCustomAttribute<IndexIgnoreAttribute>() == null;
+                return PropertyInfo?.GetCustomAttribute<IndexIgnoreAttribute>() is null;
             }
         }
 
@@ -70,13 +70,13 @@ namespace WebExpress.WebIndex
         /// <returns>The resolved value, or null when not available.</returns>
         public object GetPropertyValue(object item)
         {
-            if (item == null)
+            if (item is null)
             {
                 return null;
             }
 
             var accessor = _cachedAccessor;
-            if (accessor == null)
+            if (accessor is null)
             {
                 lock (_sync)
                 {
@@ -123,7 +123,7 @@ namespace WebExpress.WebIndex
 
                 for (int i = 0; i < segments.Length; i++)
                 {
-                    if (current == null)
+                    if (current is null)
                     {
                         return null;
                     }
@@ -133,7 +133,7 @@ namespace WebExpress.WebIndex
 
                     // fetch public instance property only; skip indexers
                     var prop = currentType.GetProperty(segment, BindingFlags.Instance | BindingFlags.Public);
-                    if (prop == null)
+                    if (prop is null)
                     {
                         return null;
                     }

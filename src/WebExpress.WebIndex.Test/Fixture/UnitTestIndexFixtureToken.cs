@@ -53,7 +53,7 @@ namespace WebExpress.WebIndex.Test.Fixture
                 .Where(x => x.Contains(name, StringComparison.OrdinalIgnoreCase))
                 .FirstOrDefault();
 
-            if (resource == null)
+            if (resource is null)
             {
                 return "";
             }
