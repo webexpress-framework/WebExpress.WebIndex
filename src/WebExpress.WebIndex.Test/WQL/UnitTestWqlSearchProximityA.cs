@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :2");
             Assert.False(wql.HasErrors);
         }
@@ -35,7 +35,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :0");
             Assert.False(wql.HasErrors);
         }
@@ -46,7 +46,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidEmptyWql()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :");
             Assert.True(wql.HasErrors);
         }
@@ -57,7 +57,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidNegativeWql()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :-2");
             Assert.True(wql.HasErrors);
         }
@@ -68,7 +68,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWqlOrderBy()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :2 Order by text");
             Assert.False(wql.HasErrors);
 
@@ -83,7 +83,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWqlAnd()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :2 And text = 'Helge' Order by text skip 1");
             Assert.False(wql.HasErrors);
 
@@ -91,7 +91,7 @@ namespace WebExpress.WebIndex.Test.WQL
             Assert.NotNull(wql.Order);
             Assert.NotNull(wql.Partitioning);
 
-            // test execution
+            // act
             wql = Fixture.ExecuteWql("text~'Helena Helge' :2 & text = 'Helge' Order by text take 10");
             Assert.False(wql.HasErrors);
 
@@ -106,7 +106,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge' :a");
             Assert.True(wql.HasErrors);
         }
@@ -117,7 +117,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWqlIn()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text in ('Helena Helge' :2)");
             Assert.True(wql.HasErrors);
         }
@@ -128,7 +128,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Bob Dave':20");
             var res = wql?.Apply();
 
@@ -144,7 +144,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Dave Bob':20");
             var res = wql?.Apply();
 
@@ -160,7 +160,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityInvalidMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Bob Dave':1");
             var res = wql?.Apply();
 
@@ -174,7 +174,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityInvalidMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Dave Bob':1");
             var res = wql?.Apply();
 
@@ -188,7 +188,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityPhraseMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Bob Dave':20");
             var res = wql?.Apply();
 
@@ -206,7 +206,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityInvalidPhraseMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Bob Dave':1");
             var res = wql?.Apply();
 

@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena'");
             Assert.False(wql.HasErrors);
         }
@@ -35,7 +35,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text=\"Helena\"");
             Assert.False(wql.HasErrors);
         }
@@ -46,7 +46,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql3()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text=Helena");
             Assert.False(wql.HasErrors);
         }
@@ -57,7 +57,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql4()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena Helge'");
             Assert.False(wql.HasErrors);
         }
@@ -68,7 +68,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text=Helena Helge order by text");
             Assert.True(wql.HasErrors);
         }
@@ -79,7 +79,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena Helge order by text");
             Assert.True(wql.HasErrors);
         }
@@ -90,7 +90,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql3()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena Helge\" order by text");
             Assert.True(wql.HasErrors);
         }
@@ -101,7 +101,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql4()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("='Helena Helge\" order by text");
             Assert.True(wql.HasErrors);
         }
@@ -112,7 +112,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena'");
             var res = wql?.Apply();
 
@@ -130,7 +130,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena and Helge!'");
             var res = wql?.Apply();
 
@@ -145,7 +145,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Hello Helena and Helge!'");
             var res = wql?.Apply();
 
@@ -162,7 +162,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void UnexpectedMatch()
         {
-            // test execution
+            // act
             // Hello Helena and Helge!
             var wql = Fixture.ExecuteWql("text='Hello Helena hello Helge!'");
             var res = wql?.Apply();
@@ -178,7 +178,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void EmptyMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text=''");
             var res = wql?.Apply();
 
@@ -192,7 +192,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void EmptyMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Sophie'");
             var res = wql?.Apply();
 
@@ -206,7 +206,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void NotExactMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Hello Helena, Aurora and Helge!'");
             var res = wql?.Apply();
 
@@ -220,7 +220,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void NotExactMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helena Helge'");
             var res = wql?.Apply();
 

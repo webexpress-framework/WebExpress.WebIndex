@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~ 80");
             Assert.False(wql.HasErrors);
 
@@ -39,7 +39,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWqlOrderBy()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~ 80 Order by text");
             Assert.False(wql.HasErrors);
 
@@ -54,7 +54,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWqlAnd1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~ 80 And text = 'Helge' Order by text skip 1");
             Assert.False(wql.HasErrors);
 
@@ -76,7 +76,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWqlAnd2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~ 80 & text = 'Helge' Order by text take 10");
             Assert.False(wql.HasErrors);
 
@@ -91,7 +91,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~a0");
             Assert.True(wql.HasErrors);
         }
@@ -102,7 +102,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWqlIn()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text in ('Helena' ~ 80)");
             Assert.True(wql.HasErrors);
         }
@@ -113,7 +113,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void Fuzzy()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~50");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();
@@ -133,7 +133,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void FuzzyFromQueryable()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Hel' ~50");
             var res = wql?.Apply(Fixture.TestData.AsQueryable());
             var item = res?.FirstOrDefault();

@@ -24,10 +24,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleWordFromQueryable()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{term}'");
             var res = wql?.Apply(Fixture.TestData.AsQueryable());
             var item = res?.FirstOrDefault();
@@ -48,10 +48,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleWord()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{term}'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();
@@ -72,11 +72,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleWords()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();

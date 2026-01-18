@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("description~'lorem ipsum':2");
             var res = wql?.Apply();
 

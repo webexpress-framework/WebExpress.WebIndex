@@ -30,10 +30,10 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [Fact]
         public void Create()
         {
-            // preconditions
+            // arrange
             Preconditions();
 
-            // test execution
+            // act
             var reverseIndex = new IndexStorageReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
 
             // postconditions
@@ -52,12 +52,12 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [InlineData("29F34DFD-432D-4315-88C2-CE41F293AC71", "🦋🌼🌙 Butterfly Flower Moon", true)]
         public void Add(string id, string name, bool valid)
         {
-            // preconditions
+            // arrange
             Preconditions();
             var doc = new UnitTestIndexTestDocumentF() { Id = Guid.Parse(id), Name = name };
             var reverseIndex = new IndexStorageReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
 
-            // test execution
+            // act
             reverseIndex.Add(new UnitTestIndexTestDocumentF() { Id = Guid.Parse(id), Name = name });
 
             Assert.NotNull(reverseIndex);
@@ -86,7 +86,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [InlineData("张伟")]
         public void Remove(string str)
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.TestData?.LastOrDefault();
             var reverseIndex = new IndexStorageReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
@@ -99,7 +99,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
             var token = Context.TokenAnalyzer.Analyze(str, CultureInfo.GetCultureInfo("en"));
             reverseIndex.Add(randomItem, token.TakeLast(1));
 
-            // test execution
+            // act
             reverseIndex.Delete(randomItem, token.TakeLast(1));
 
             var items = reverseIndex.Retrieve(str, new IndexRetrieveOptions());
@@ -117,18 +117,18 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [InlineData("张伟", IndexRetrieveMethod.Phrase)]
         public void Retrieve(string str, IndexRetrieveMethod method)
         {
-            // preconditions
+            // arrange
             Preconditions();
             var reverseIndex = new IndexStorageReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
             var option = new IndexRetrieveOptions() { Method = method };
 
             foreach (var item in Fixture.TestData)
             {
-                // test execution
+                // act
                 reverseIndex.Add(item);
             }
 
-            // test execution
+            // act
             var items = reverseIndex.Retrieve(str, option);
 
             Assert.NotEmpty(items);

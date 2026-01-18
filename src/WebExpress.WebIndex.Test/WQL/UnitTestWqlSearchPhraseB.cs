@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("address.street=lorem")]
         public void ParseValidWql(string wqlString)
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql(wqlString);
 
             Assert.False(wql.HasErrors);
@@ -41,7 +41,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("Address,Street=lorem")]
         public void ParseInvalidWql(string wqlString)
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql(wqlString);
             Assert.True(wql.HasErrors);
         }
@@ -53,7 +53,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("Description='lorem'", "lorem")]
         public void SingleMatch(string wqlString, string expected)
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql(wqlString);
             var res = wql?.Apply();
 
@@ -70,7 +70,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("Description='lorem ipsum'");
             var res = wql?.Apply();
 

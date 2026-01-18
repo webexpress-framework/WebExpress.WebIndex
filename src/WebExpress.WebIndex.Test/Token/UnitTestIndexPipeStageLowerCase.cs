@@ -45,11 +45,11 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("Families", "families", "en")]
         public void LowerCase(string term, string normalizeTerm, string cultureString)
         {
-            // preconditions
+            // arrange
             var culture = CultureInfo.GetCultureInfo(cultureString);
             var pipeStage = new IndexPipeStageConverterLowerCase(Fixture.Context);
 
-            // test execution
+            // act
             var res = pipeStage.Process(IndexTermTokenizer.Tokenize(term, culture), culture)
                 .FirstOrDefault();
 

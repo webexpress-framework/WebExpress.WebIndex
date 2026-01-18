@@ -45,11 +45,11 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("Björk", "Bjork", "en")]
         public void Normalize(string term, string expected, string cultureString)
         {
-            // preconditions
+            // arrange
             var culture = CultureInfo.GetCultureInfo(cultureString);
             var pipeStage = new IndexPipeStageConverterNormalizer(Fixture.Context);
 
-            // test execution
+            // act
             var res = pipeStage.Process(IndexTermTokenizer.Tokenize(term, culture), culture)
                 .Select(x => x.Value)
                 .ToList();

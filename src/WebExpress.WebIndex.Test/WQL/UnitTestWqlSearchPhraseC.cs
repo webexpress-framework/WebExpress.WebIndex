@@ -24,11 +24,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch1()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text='{term} {secondTerm}'");
             var res = wql?.Apply();
 

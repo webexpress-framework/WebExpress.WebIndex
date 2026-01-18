@@ -30,10 +30,10 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [Fact]
         public void Create()
         {
-            // preconditions
+            // arrange
             Preconditions();
 
-            // test execution
+            // act
             var reverseIndex = new IndexMemoryReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
 
             // postconditions
@@ -47,7 +47,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [Fact]
         public void Add()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var reverseIndex = new IndexMemoryReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
 
@@ -55,7 +55,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
 
             foreach (var item in Fixture.TestData)
             {
-                // test execution
+                // act
                 reverseIndex.Add(item);
             }
 
@@ -74,13 +74,13 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [InlineData("张伟", true)]
         public void AddToken(string str, bool valid)
         {
-            // preconditions
+            // arrange
             Preconditions();
             var doc = new UnitTestIndexTestDocumentF() { Id = Guid.Parse("9A274C29-E210-49C9-A673-238F79636CD9"), Name = str };
             var reverseIndex = new IndexMemoryReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
             var token = Context.TokenAnalyzer.Analyze(str, CultureInfo.GetCultureInfo("en"));
 
-            // test execution
+            // act
             reverseIndex.Add(doc, token);
             var item = reverseIndex.Retrieve(str, new IndexRetrieveOptions());
 
@@ -104,7 +104,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [Fact]
         public void Remove()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.RandomItem;
             var reverseIndex = new IndexMemoryReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
@@ -118,7 +118,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
             var token = Context.TokenAnalyzer.Analyze("Aurora", CultureInfo.GetCultureInfo("en"));
             reverseIndex.Add(randomItem, token.TakeLast(1));
 
-            // test execution
+            // act
             reverseIndex.Delete(randomItem, token.TakeLast(1));
 
             var items = reverseIndex.Retrieve("aurora", new IndexRetrieveOptions());
@@ -135,7 +135,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [Fact]
         public void Retrieve()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.RandomItem;
             var reverseIndex = new IndexMemoryReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
@@ -143,11 +143,11 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
             reverseIndex.Clear();
             foreach (var item in Fixture.TestData)
             {
-                // test execution
+                // act
                 reverseIndex.Add(item);
             }
 
-            // test execution
+            // act
             var items = reverseIndex.Retrieve(randomItem.Name, new IndexRetrieveOptions());
 
             if (randomItem.Name != "😊🌸🐼")
@@ -170,18 +170,18 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         [Fact]
         public void All()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var reverseIndex = new IndexMemoryReverseTerm<UnitTestIndexTestDocumentF>(Context, Field, CultureInfo.GetCultureInfo("en"));
 
             reverseIndex.Clear();
             foreach (var item in Fixture.TestData)
             {
-                // test execution
+                // act
                 reverseIndex.Add(item);
             }
 
-            // test execution
+            // act
             var all = reverseIndex.All;
 
             Assert.Equal(all.OrderBy(x => x), Fixture.TestData.Where(x => x.Name != "😊🌸🐼").Select(x => x.Id).OrderBy(x => x));

@@ -24,11 +24,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch1()
         {
-            // preconditions
+            // arrange
             var term = Fixture.RandomItem.Text.Split(' ').Skip(5).FirstOrDefault();
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(10).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':12");
             var res = wql?.Apply();
 
@@ -45,11 +45,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch2()
         {
-            // preconditions
+            // arrange
             var term = Fixture.RandomItem.Text.Split(' ').Skip(5).FirstOrDefault();
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(20).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':3");
             var res = wql?.Apply();
 

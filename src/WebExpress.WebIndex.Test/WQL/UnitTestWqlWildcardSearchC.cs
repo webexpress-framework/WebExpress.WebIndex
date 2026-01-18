@@ -24,11 +24,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterFirst()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{term} {string.Concat("?", secondTerm.AsSpan(1))}'");
             var res = wql?.Apply();
 
@@ -45,11 +45,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterMiddle()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{term} {string.Concat(secondTerm.AsSpan(0, 2), "?", secondTerm.AsSpan(1))}'");
             var res = wql?.Apply();
 
@@ -66,11 +66,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterEnd()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{term} {string.Concat(secondTerm[..^1], "?")}'");
             var res = wql?.Apply();
 
@@ -87,11 +87,11 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharacters()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
 
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql($"text~'{term} {string.Concat(secondTerm[..^1], "*")}'");
             var res = wql?.Apply();
 

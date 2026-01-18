@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name='Olivia'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();

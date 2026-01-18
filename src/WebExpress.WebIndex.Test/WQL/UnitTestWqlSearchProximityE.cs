@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivia':6");
             var res = wql?.Apply();
 
@@ -40,7 +40,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivia':0");
             var res = wql?.Apply();
 

@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterFirst()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'?livia'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();
@@ -41,7 +41,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterMiddle()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Oli?ia'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();
@@ -58,7 +58,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterEnd()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivi?'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();
@@ -76,7 +76,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharacters()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivi*'");
             var res = wql?.Apply();
             var item = res?.FirstOrDefault();

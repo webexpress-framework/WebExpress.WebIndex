@@ -41,7 +41,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("-1", -1, "de")]
         public void Number(string term, double expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, (double)tokens.FirstOrDefault()?.Value);
@@ -56,7 +56,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("10b0", "10 b0", "en")]
         public void InvalidNumber(string term, string expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, string.Join(" ", tokens.Select(x => x.Value)));
@@ -74,7 +74,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("-1.0038,76", -10038.76, "de")]
         public void Double(string term, double expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, (double)tokens.FirstOrDefault()?.Value);
@@ -88,7 +88,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("1,0038.76", new double[] { 1.0038, 76 }, "de")]
         public void InvalidDouble(string term, double[] expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, tokens.Select(x => (double)x.Value));
@@ -111,7 +111,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("-1,0038e76", -1.0038e76, "de")]
         public void Exponent(string term, double expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, (double)tokens.FirstOrDefault()?.Value);
@@ -127,7 +127,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("-∞", double.NegativeInfinity, "de")]
         public void Infinity(string term, double expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, (double)tokens.FirstOrDefault()?.Value);
@@ -143,7 +143,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("2 + 3", new double[] { 2, 3 }, "de")]
         public void Add(string term, double[] expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, tokens.Select(x => (double)x.Value));
@@ -159,7 +159,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("2 - 3", new double[] { 2, 3 }, "de")]
         public void Minus(string term, double[] expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, tokens.Select(x => (double)x.Value));
@@ -175,7 +175,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("2 ^ 3", new double[] { 2, 3 }, "de")]
         public void Power(string term, double[] expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, tokens.Select(x => (double)x.Value));
@@ -189,7 +189,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("N1", "n1", "de")]
         public void TextWithNumber(string term, string expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, tokens.FirstOrDefault()?.Value);
@@ -203,7 +203,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("Name?23", "name?23", "de")]
         public void NumberWithWildcard(string term, string expected, string culture)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(term, CultureInfo.GetCultureInfo(culture), true);
 
             Assert.Equal(expected, tokens.FirstOrDefault()?.Value);

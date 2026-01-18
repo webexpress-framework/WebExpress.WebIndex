@@ -57,10 +57,10 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Write()
         {
-            // preconditions
+            // arrange
             var segment = new TestSegment(0);
 
-            // test execution
+            // act
             _buffer.Write(segment);
 
             // validation
@@ -74,11 +74,11 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Flush()
         {
-            // preconditions
+            // arrange
             var segment = new TestSegment(3);
             _buffer.Write(segment);
 
-            // test execution
+            // act
             _buffer.Flush();
 
             // validation
@@ -91,11 +91,11 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Close()
         {
-            // preconditions
+            // arrange
             var segment = new TestSegment(4);
             _buffer.Write(segment);
 
-            // test execution
+            // act
             _buffer.Dispose();
 
             // validation

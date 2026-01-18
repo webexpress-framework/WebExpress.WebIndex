@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("description='lorem ipsum'");
             var res = wql?.Apply();
 

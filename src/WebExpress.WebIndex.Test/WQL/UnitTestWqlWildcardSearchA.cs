@@ -24,7 +24,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'?elena'");
             Assert.False(wql.HasErrors);
         }
@@ -35,7 +35,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='*elena'");
             Assert.False(wql.HasErrors);
         }
@@ -46,7 +46,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql3()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='Helen?'");
             Assert.False(wql.HasErrors);
         }
@@ -57,7 +57,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql4()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helen*'");
             Assert.False(wql.HasErrors);
         }
@@ -68,7 +68,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql5()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='*elen*'");
             Assert.False(wql.HasErrors);
         }
@@ -79,7 +79,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql6()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'?elen?' ~90");
             Assert.False(wql.HasErrors);
         }
@@ -90,7 +90,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql7()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text='?elen*' ORDER BY text");
             Assert.False(wql.HasErrors);
         }
@@ -101,7 +101,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterFirst()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'?elena'");
             var res = wql?.Apply();
 
@@ -119,7 +119,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterMiddle()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'He?ena'");
             var res = wql?.Apply();
 
@@ -137,7 +137,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterEnd()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Helen?'");
             var res = wql?.Apply();
 
@@ -155,7 +155,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharactersFirst()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'*ena'");
             var res = wql?.Apply();
 
@@ -173,7 +173,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharactersMiddle()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'He*a'");
             var res = wql?.Apply();
 
@@ -191,7 +191,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharactersEnd()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("text~'Hel*'");
             var res = wql?.Apply();
 
