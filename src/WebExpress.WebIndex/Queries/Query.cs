@@ -23,180 +23,72 @@ namespace WebExpress.WebIndex.Queries
     public class Query<TIndexItem> : IQuery<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        private readonly List<Expression<Func<TIndexItem, bool>>> _filters = [];
+
         /// <summary>
         /// Returns the collection of filter expressions applied to the index items.
         /// </summary>
-        public IEnumerable<Expression<Func<TIndexItem, bool>>> Filters { get; }
+        public IEnumerable<Expression<Func<TIndexItem, bool>>> Filters => _filters;
 
         /// <summary>
         /// Returns the expression used to specify the property or value by which to order 
         /// index items.
         /// </summary>
-        public Expression<Func<TIndexItem, object>> OrderBy { get; }
+        public Expression<Func<TIndexItem, object>> OrderBy { get; private set; }
 
         /// <summary>
         /// Returns the expression used to specify the property or value by which to sort items 
         /// in descending order.
         /// </summary>
-        public Expression<Func<TIndexItem, object>> OrderByDescending { get; }
+        public Expression<Func<TIndexItem, object>> OrderByDescending { get; private set; }
 
         /// <summary>
         /// Returns the expression used to specify an additional sorting criterion for the query 
         /// after the primary ordering has been applied.
         /// </summary>
-        public Expression<Func<TIndexItem, object>> ThenBy { get; }
+        public Expression<Func<TIndexItem, object>> ThenBy { get; private set; }
 
         /// <summary>
         /// Returns the expression used to specify a secondary descending sort order for the 
         /// index items.
         /// </summary>
-        public Expression<Func<TIndexItem, object>> ThenByDescending { get; }
+        public Expression<Func<TIndexItem, object>> ThenByDescending { get; private set; }
 
         /// <summary>
         /// Returns the number of items to skip before starting to return results.
         /// </summary>
-        public int? Skip { get; }
+        public int? Skip { get; private set; }
 
         /// <summary>
         /// Returns the maximum number of items to return in a query result.
         /// </summary>
-        public int? Take { get; }
+        public int? Take { get; private set; }
 
         /// <summary>
         /// Creates a new empty query with default settings.
         /// </summary>
         public Query()
-            : this
-            (
-                  filters: [],
-                  orderBy: null,
-                  orderByDescending: null,
-                  thenBy: null,
-                  thenByDescending: null,
-                  skip: null,
-                  take: null
-            )
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the Query class with the specified tracking behavior, 
-        /// filter expressions, included navigation properties, ordering, and paging options.
-        /// </summary>
-        /// <param name="filters">
-        /// A collection of filter expressions used to restrict the results of the query. Each 
-        /// expression should return true for items to include.
-        /// </param>
-        /// <param name="orderBy">
-        /// An expression that defines the property by which to order the results in ascending 
-        /// order. If null, no ascending ordering is applied.
-        /// </param>
-        /// <param name="orderByDescending">
-        /// An expression that defines the property by which to order the results in descending 
-        /// order. If null, no descending ordering is applied.
-        /// </param>
-        /// <param name="thenBy">
-        /// An expression specifying a secondary property for ascending ordering, applied after the 
-        /// primary orderBy expression. If null, no secondary ascending ordering is applied.
-        /// </param>
-        /// <param name="thenByDescending">An expression specifying a secondary property for descending 
-        /// ordering, applied after the primary orderByDescending expression. If null, no secondary 
-        /// descending ordering is applied.
-        /// </param>
-        /// <param name="skip">
-        /// The number of items to skip before returning results. If null, no items are skipped.
-        /// </param>
-        /// <param name="take">The maximum number of items to return. If null, all remaining items 
-        /// are returned.
-        /// </param>
-        private Query
-        (
-            IEnumerable<Expression<Func<TIndexItem, bool>>> filters,
-            Expression<Func<TIndexItem, object>> orderBy,
-            Expression<Func<TIndexItem, object>> orderByDescending,
-            Expression<Func<TIndexItem, object>> thenBy,
-            Expression<Func<TIndexItem, object>> thenByDescending,
-            int? skip,
-            int? take
-        )
-        {
-            Filters = filters;
-            OrderBy = orderBy;
-            OrderByDescending = orderByDescending;
-            ThenBy = thenBy;
-            ThenByDescending = thenByDescending;
-            Skip = skip;
-            Take = take;
-        }
-
-        /// <summary>
-        /// Creates a new Query<TIndexItem> instance that is a copy of the current query, 
-        /// optionally overriding specified query options such as tracking behavior, 
-        /// filters, includes, ordering, and pagination.
-        /// </summary>
-        /// <param name="filters">
-        /// A collection of filter expressions used to restrict the results of the query. Each 
-        /// expression should return true for items to include.
-        /// </param>
-        /// <param name="orderBy">
-        /// An expression that defines the property by which to order the results in ascending 
-        /// order. If null, no ascending ordering is applied.
-        /// </param>
-        /// <param name="orderByDescending">
-        /// An expression that defines the property by which to order the results in descending 
-        /// order. If null, no descending ordering is applied.
-        /// </param>
-        /// <param name="thenBy">
-        /// An expression specifying a secondary property for ascending ordering, applied after the 
-        /// primary orderBy expression. If null, no secondary ascending ordering is applied.
-        /// </param>
-        /// <param name="thenByDescending">An expression specifying a secondary property for descending 
-        /// ordering, applied after the primary orderByDescending expression. If null, no secondary 
-        /// descending ordering is applied.
-        /// </param>
-        /// <param name="skip">
-        /// The number of items to skip before returning results. If null, no items are skipped.
-        /// </param>
-        /// <param name="take">The maximum number of items to return. If null, all remaining items 
-        /// are returned.
-        /// </param>
-        private Query<TIndexItem> Clone
-        (
-            IEnumerable<Expression<Func<TIndexItem, bool>>> filters = null,
-            Expression<Func<TIndexItem, object>> orderBy = null,
-            Expression<Func<TIndexItem, object>> orderByDescending = null,
-            Expression<Func<TIndexItem, object>> thenBy = null,
-            Expression<Func<TIndexItem, object>> thenByDescending = null,
-            int? skip = null,
-            int? take = null)
-        {
-            return new Query<TIndexItem>
-            (
-                filters ?? Filters,
-                orderBy ?? OrderBy,
-                orderByDescending ?? OrderByDescending,
-                thenBy ?? ThenBy,
-                thenByDescending ?? ThenByDescending,
-                skip ?? Skip,
-                take ?? Take
-            );
         }
 
         /// <summary>
         /// Filters the query results based on a specified predicate expression.
         /// </summary>
-        /// <param name="predicate">
-        /// An expression that defines the conditions each item must satisfy to be included in 
-        /// the result set.
+        /// <param name="predicates">
+        /// An array of expressions that define the conditions each item in the query 
+        /// must satisfy. Each predicate is applied as a filter to the query results. 
+        /// Cannot be null.
         /// </param>
         /// <returns>
         /// A new query that contains only the items that satisfy the specified predicate.
         /// </returns>
-        public IQuery<TIndexItem> Where(Expression<Func<TIndexItem, bool>> predicate)
+        public IQuery<TIndexItem> Where(params Expression<Func<TIndexItem, bool>>[] predicates)
         {
-            return predicate is null
-                ? throw new ArgumentNullException(nameof(predicate))
-                : (IQuery<TIndexItem>)Clone(filters: Filters.Append(predicate));
+            ArgumentNullException.ThrowIfNull(predicates);
+
+            _filters.AddRange(predicates);
+
+            return this;
         }
 
         /// <summary>
@@ -547,9 +439,12 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> OrderByAsc(Expression<Func<TIndexItem, object>> key)
         {
-            return key is null
-                ? throw new ArgumentNullException(nameof(key))
-                : (IQuery<TIndexItem>)Clone(orderBy: key, orderByDescending: null);
+            ArgumentNullException.ThrowIfNull(key);
+
+            OrderBy = key;
+            OrderByDescending = null;
+
+            return this;
         }
 
         /// <summary>
@@ -563,9 +458,12 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> OrderByDesc(Expression<Func<TIndexItem, object>> key)
         {
-            return key is null
-                ? throw new ArgumentNullException(nameof(key))
-                : (IQuery<TIndexItem>)Clone(orderBy: null, orderByDescending: key);
+            ArgumentNullException.ThrowIfNull(key);
+
+            OrderBy = null;
+            OrderByDescending = key;
+
+            return this;
         }
 
         /// <summary>
@@ -580,9 +478,12 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> ThenByAsc(Expression<Func<TIndexItem, object>> key)
         {
-            return key is null
-                ? throw new ArgumentNullException(nameof(key))
-                : (IQuery<TIndexItem>)Clone(thenBy: key, thenByDescending: null);
+            ArgumentNullException.ThrowIfNull(key);
+
+            ThenBy = key;
+            ThenByDescending = null;
+
+            return this;
         }
 
         /// <summary>
@@ -597,9 +498,12 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> ThenByDesc(Expression<Func<TIndexItem, object>> key)
         {
-            return key is null
-                ? throw new ArgumentNullException(nameof(key))
-                : (IQuery<TIndexItem>)Clone(thenBy: null, thenByDescending: key);
+            ArgumentNullException.ThrowIfNull(key);
+
+            ThenBy = null;
+            ThenByDescending = key;
+
+            return this;
         }
 
         /// <summary>
@@ -622,7 +526,10 @@ namespace WebExpress.WebIndex.Queries
             ArgumentOutOfRangeException.ThrowIfNegative(skip);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take);
 
-            return Clone(skip: skip, take: take);
+            Skip = skip;
+            Take = take;
+
+            return this;
         }
 
         /// <summary>

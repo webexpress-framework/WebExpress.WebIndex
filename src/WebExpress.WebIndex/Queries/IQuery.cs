@@ -65,14 +65,15 @@ namespace WebExpress.WebIndex.Queries
         /// <summary>
         /// Filters the query results based on a specified predicate expression.
         /// </summary>
-        /// <param name="predicate">
-        /// An expression that defines the conditions each item must satisfy to be included in 
-        /// the result set.
+        /// <param name="predicates">
+        /// An array of expressions that define the conditions each item in the query 
+        /// must satisfy. Each predicate is applied as a filter to the query results. 
+        /// Cannot be null.
         /// </param>
         /// <returns>
         /// A new query that contains only the items that satisfy the specified predicate.
         /// </returns>
-        IQuery<TIndexItem> Where(Expression<Func<TIndexItem, bool>> predicate);
+        IQuery<TIndexItem> Where(params Expression<Func<TIndexItem, bool>>[] predicates);
 
         /// <summary>
         /// Filters the query to include only items where the specified string property 

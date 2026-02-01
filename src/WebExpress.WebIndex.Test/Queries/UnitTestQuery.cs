@@ -30,11 +30,10 @@ namespace WebExpress.WebIndex.Test.Queries
         }
 
         /// <summary>
-        /// Verifies that the class is immutable by ensuring that applying a filter 
-        /// returns a new instance without modifying the original.
+        /// Verifies that the class implements mutable behavior when applying filters.
         /// </summary>
         [Fact]
-        public void Immutable()
+        public void Mutable()
         {
             // arrange
             var q1 = new Query<IndexItem>();
@@ -43,9 +42,10 @@ namespace WebExpress.WebIndex.Test.Queries
             var q2 = q1.Where(x => x.Value > 10);
 
             // validation
-            Assert.NotSame(q1, q2);
-            Assert.Empty(q1.Filters);
+            Assert.Same(q1, q2);
+            Assert.Single(q1.Filters);
             Assert.Single(q2.Filters);
+            Assert.Equal(q1.Filters, q2.Filters);
         }
 
         /// <summary>
