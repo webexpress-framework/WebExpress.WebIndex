@@ -1,8 +1,8 @@
 ﻿using System.Linq.Expressions;
-using WebExpress.WebIndex.Predicate;
+using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Test.Data;
 
-namespace WebExpress.WebIndex.Test.Predicate
+namespace WebExpress.WebIndex.Test.Queries
 {
     /// <summary>
     /// Provides unit tests for the ExpressionExtensions class that compose and manipulate

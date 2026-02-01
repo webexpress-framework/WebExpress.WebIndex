@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 
-namespace WebExpress.WebIndex.Predicate
+namespace WebExpress.WebIndex.Queries
 {
     /// <summary>
     /// Static helper class for building and combining predicate expressions efficiently.
