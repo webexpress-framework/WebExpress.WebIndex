@@ -92,6 +92,22 @@ namespace WebExpress.WebIndex.Queries
         IQuery<TIndexItem> WhereEquals(Expression<Func<TIndexItem, string>> selector, string value);
 
         /// <summary>
+        /// Filters the query to include only items where the specified string property 
+        /// equals the given value.
+        /// </summary>
+        /// <param name="selector">
+        /// An expression that selects the string property of the index item to compare.
+        /// </param>
+        /// <param name="value">
+        /// The value to compare against the selected property. Can be null to match items 
+        /// with a null property value.
+        /// </param>
+        /// <returns>
+        /// A query that returns items where the selected property equals the specified value.
+        /// </returns>
+        IQuery<TIndexItem> WhereEquals(Expression<Func<TIndexItem, Guid>> selector, Guid value);
+
+        /// <summary>
         /// Filters the query to include only items where the specified string property equals 
         /// the given value, using a case-insensitive comparison.
         /// </summary>
