@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -35,36 +37,39 @@ namespace WebExpress.WebIndex.Wql.Condition
         }
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Applies the current filter condition to the specified query and returns the 
+        /// resulting query.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public override IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
+        /// <param name="query">
+        /// The query to which the filter condition will be applied. This parameter must 
+        /// not be null.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
+        /// condition exists; otherwise, the original query.
+        /// </returns>
+        public override IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
         {
-            var property = Attribute.Property;
-            var value = Parameter.GetValue().ToString();
-            var filtered = unfiltered.Where
-            (
-                x => property.GetValue(x).ToString().Contains
-                (
-                    value,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            );
+            ArgumentNullException.ThrowIfNull(query);
+            ArgumentNullException.ThrowIfNull(Attribute);
+            ArgumentNullException.ThrowIfNull(Parameter);
 
-            return filtered;
-        }
+            var value = Parameter.GetValue()?.ToString();
+            var propertyName = Attribute.Property.Name;
 
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public override string GetSqlQueryString()
-        {
-            var property = Attribute?.Property;
-            var value = Parameter.Value;
+            // build the expression: item => item.Property.Contains(value)
+            var param = Expression.Parameter(typeof(TIndexItem), "item");
+            var property = Expression.Property(param, propertyName);
 
-            return $"{property.Name} like '%{value}%'";
+            // use the string contains method for "LIKE" functionality
+            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)]);
+            var containsCall = Expression.Call(property, containsMethod, Expression.Constant(value));
+
+            // create the lambda expression
+            var lambda = Expression.Lambda<Func<TIndexItem, bool>>(containsCall, param);
+
+            // apply the condition to the query
+            return query.WhereEquals(lambda);
         }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -35,33 +37,33 @@ namespace WebExpress.WebIndex.Wql.Condition
         }
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Applies the current filter condition to the specified query and returns the 
+        /// resulting query.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public override IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
+        /// <param name="query">
+        /// The query to which the filter condition will be applied. This parameter must 
+        /// not be null.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
+        /// condition exists; otherwise, the original query.
+        /// </returns>
+        public override IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
         {
-            var property = Attribute?.Property;
-            var value = Parameter.GetValue();
+            ArgumentNullException.ThrowIfNull(query);
+            ArgumentNullException.ThrowIfNull(Attribute);
+            ArgumentNullException.ThrowIfNull(Parameter);
 
-            var filtered = unfiltered.Where
-            (
-                x => property != null && property.GetValue(x).Equals(value)
-            );
+            var value = Parameter.GetValue()?.ToString();
+            var propertyName = Attribute.Property.Name;
 
-            return filtered.AsQueryable();
-        }
+            var param = Expression.Parameter(typeof(TIndexItem), "item");
+            var property = Expression.Property(param, propertyName);
+            var constant = Expression.Constant(value);
+            var equalExpression = Expression.Equal(property, constant);
+            var lambda = Expression.Lambda<Func<TIndexItem, bool>>(equalExpression, param);
 
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public override string GetSqlQueryString()
-        {
-            var property = Attribute?.Name;
-            var value = Parameter.Value;
-
-            return $"{property} like {value}";
+            return query.WhereEquals(lambda);
         }
     }
 }

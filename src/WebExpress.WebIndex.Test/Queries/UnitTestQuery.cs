@@ -30,10 +30,10 @@ namespace WebExpress.WebIndex.Test.Queries
         }
 
         /// <summary>
-        /// Verifies that the class implements mutable behavior when applying filters.
+        /// Verifies that the class implements immutable behavior when applying filters.
         /// </summary>
         [Fact]
-        public void Mutable()
+        public void Immutable()
         {
             // arrange
             var q1 = new Query<IndexItem>();
@@ -42,10 +42,10 @@ namespace WebExpress.WebIndex.Test.Queries
             var q2 = q1.Where(x => x.Value > 10);
 
             // validation
-            Assert.Same(q1, q2);
-            Assert.Single(q1.Filters);
+            Assert.NotSame(q1, q2);
+            Assert.Empty(q1.Filters);
             Assert.Single(q2.Filters);
-            Assert.Equal(q1.Filters, q2.Filters);
+            Assert.NotEqual(q1.Filters, q2.Filters);
         }
 
         /// <summary>
@@ -329,6 +329,56 @@ namespace WebExpress.WebIndex.Test.Queries
             Assert.True(filter(new IndexItem { Email = "USER@DOMAIN.COM" }));
             Assert.True(filter(new IndexItem { Email = "user@domain.com" }));
             Assert.False(filter(new IndexItem { Email = "user@other.com" }));
+        }
+
+        /// <summary>
+        /// Verifies that the `And` method correctly combines filters using a logical AND operation.
+        /// </summary>
+        [Fact]
+        public void And()
+        {
+            // arrange
+            Expression<Func<IndexItem, bool>> filter1 = x => x.IsActive;
+            Expression<Func<IndexItem, bool>> filter2 = x => x.Name == "Test";
+
+            // act
+            var query = new Query<IndexItem>()
+                .And(filter1)
+                .And(filter2);
+
+            // validation
+            Assert.Single(query.Filters);
+
+            var combinedFilter = query.Filters.First().Compile();
+
+            Assert.True(combinedFilter(new IndexItem { IsActive = true, Name = "Test" }));
+            Assert.False(combinedFilter(new IndexItem { IsActive = false, Name = "Test" }));
+            Assert.False(combinedFilter(new IndexItem { IsActive = true, Name = "Nope" }));
+        }
+
+        /// <summary>
+        /// Verifies that the `Or` method correctly combines filters using a logical OR operation.
+        /// </summary>
+        [Fact]
+        public void Or()
+        {
+            // arrange
+            Expression<Func<IndexItem, bool>> filter1 = x => x.IsActive;
+            Expression<Func<IndexItem, bool>> filter2 = x => x.Name == "Test";
+
+            // act
+            var query = new Query<IndexItem>()
+                .Or(filter1)
+                .Or(filter2);
+
+            // validation
+            Assert.Single(query.Filters);
+
+            var combinedFilter = query.Filters.First().Compile();
+
+            Assert.True(combinedFilter(new IndexItem { IsActive = true, Name = "Nope" }));
+            Assert.True(combinedFilter(new IndexItem { IsActive = false, Name = "Test" }));
+            Assert.False(combinedFilter(new IndexItem { IsActive = false, Name = "Nope" }));
         }
 
         /// <summary>

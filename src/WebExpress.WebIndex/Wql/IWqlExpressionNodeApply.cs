@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -18,16 +18,17 @@ namespace WebExpress.WebIndex.Wql
         IEnumerable<Guid> Apply();
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Applies the current filter condition to the specified query and returns the 
+        /// resulting query.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered);
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        string GetSqlQueryString();
+        /// <param name="query">
+        /// The query to which the filter condition will be applied. This parameter must 
+        /// not be null.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
+        /// condition exists; otherwise, the original query.
+        /// </returns>
+        IQuery<TIndexItem> Apply(IQuery<TIndexItem> query);
     }
 }

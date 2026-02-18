@@ -25,13 +25,15 @@ namespace WebExpress.WebIndex.Test.WQL
         public void ProximityMatch1()
         {
             // arrange
-            var term = Fixture.RandomItem.Text.Split(' ').Skip(5).FirstOrDefault();
-            var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(10).FirstOrDefault();
+            var randomItem = Fixture.RandomItem;
+            var term = randomItem.Text.Split(' ').Skip(5).FirstOrDefault();
+            var secondTerm = randomItem.Text.Split(' ').Skip(6).FirstOrDefault();
 
             // act
-            var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':12");
+            var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':1");
             var res = wql?.Apply();
 
+            // valdation 
             Assert.NotNull(res);
             foreach (var item in res)
             {
@@ -53,6 +55,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':3");
             var res = wql?.Apply();
 
+            // valdation 
             Assert.NotNull(res);
             foreach (var item in res)
             {

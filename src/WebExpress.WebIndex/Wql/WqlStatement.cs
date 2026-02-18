@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -121,69 +120,22 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Applies the filter to the index.
+        /// Converts the current wql statemment to a query.
         /// </summary>
-        /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
-        /// <returns>The data ids from the index.</returns>
-        public IQueryable Apply(Type dataType)
+        /// <returns>
+        /// An <see cref="IQuery{TIndexItem}"/> that represents a query for 
+        /// retrieving indexed items.
+        /// </returns>
+        public IQuery<TIndexItem> ToQuery()
         {
-            return Apply();
-        }
-
-        /// <summary>
-        /// Applies the filter to the unfiltered data object.
-        /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
-        {
-            var filtered = unfiltered;
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             if (Filter is not null)
             {
-                filtered = Filter.Apply(filtered);
+                query = Filter.Apply(query);
             }
 
-            if (Order is not null)
-            {
-                filtered = Order.Apply(filtered);
-            }
-
-            if (Partitioning is not null)
-            {
-                filtered = Partitioning.Apply(filtered);
-            }
-
-            return filtered;
-        }
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public string GetSqlQueryString()
-        {
-            var sql = new StringBuilder();
-            var name = typeof(TIndexItem).Name;
-
-            sql.Append($"select * from {name}");
-
-            if (Filter is not null)
-            {
-                sql.Append($" where {Filter.GetSqlQueryString()}");
-            }
-
-            //if (Order != null)
-            //{
-            //    sql.Add(Order);
-            //}
-
-            //if (Partitioning != null)
-            //{
-            //    sql.Add(Partitioning);
-            //}
-
-            return sql.ToString();
+            return query;
         }
 
         /// <summary>

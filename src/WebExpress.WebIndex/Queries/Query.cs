@@ -6,27 +6,18 @@ using System.Linq.Expressions;
 namespace WebExpress.WebIndex.Queries
 {
     /// <summary>
-    /// Represents a composable query definition for retrieving items from an index, supporting 
+    /// Represents a composable query definition for retrieving items from an index, supporting
     /// filtering, sorting, including related data, and paging operations.
     /// </summary>
-    /// <remarks>
-    /// The class provides a fluent API for building complex queries against an index. It allows 
-    /// chaining of filtering, sorting, inclusion of related data, and paging options before
-    /// execution. This class is typically used to construct queries that can be executed by 
-    /// a repository or data provider supporting the specified query semantics. Instances of 
-    /// this class are immutable; each method returns a new query instance with the specified 
-    /// modification applied.
-    /// </remarks>
-    /// <typeparam name="TIndexItem">
-    /// The type of items in the index to be queried.
-    /// </typeparam>
+    /// <typeparam name="TIndexItem">The type of items in the index being queried.</typeparam>
     public class Query<TIndexItem> : IQuery<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private readonly List<Expression<Func<TIndexItem, bool>>> _filters = [];
 
         /// <summary>
-        /// Returns the collection of filter expressions applied to the index items.
+        /// Returns the collection of filters applied to index items as boolean 
+        /// expressions.
         /// </summary>
         public IEnumerable<Expression<Func<TIndexItem, bool>>> Filters => _filters;
 
@@ -72,6 +63,181 @@ namespace WebExpress.WebIndex.Queries
         }
 
         /// <summary>
+        /// Initializes a new instance of the class with the specified 
+        /// filtering, ordering, and pagination options.
+        /// </summary>
+        /// <param name="filters">
+        /// A list of filter expressions that define the criteria used 
+        /// to select items from the index. Each expression should return 
+        /// true for items to include.
+        /// </param>
+        /// <param name="orderBy">
+        /// An expression that specifies the property to use for ordering 
+        /// the results in ascending order. If null, no ascending primary 
+        /// ordering is applied.
+        /// </param>
+        /// <param name="orderByDescending">
+        /// An expression that specifies the property to use for ordering 
+        /// the results in descending order. If null, no descending 
+        /// primary ordering is applied.
+        /// </param>
+        /// <param name="thenBy">
+        /// An expression that specifies an additional property for 
+        /// secondary ordering in ascending order, applied after
+        /// the primary ordering. If null, no secondary ascending rdering 
+        /// is applied.
+        /// </param>
+        /// <param name="thenByDescending">
+        /// An expression that specifies an additional property for 
+        /// secondary ordering in descending order, applied after the 
+        /// primary ordering. If null, no secondary descending ordering 
+        /// is applied.
+        /// </param>
+        /// <param name="skip">
+        /// The number of items to skip before starting to collect the 
+        /// result set. Specify null to skip no items.
+        /// </param>
+        /// <param name="take">
+        /// The maximum number of items to return in the result set. 
+        /// Specify null to return all remaining items after skipping.
+        /// </param>
+        private Query
+        (
+            List<Expression<Func<TIndexItem, bool>>> filters,
+            Expression<Func<TIndexItem, object>> orderBy,
+            Expression<Func<TIndexItem, object>> orderByDescending,
+            Expression<Func<TIndexItem, object>> thenBy,
+            Expression<Func<TIndexItem, object>> thenByDescending,
+            int? skip,
+            int? take
+        )
+        {
+            _filters = filters;
+            OrderBy = orderBy;
+            OrderByDescending = orderByDescending;
+            ThenBy = thenBy;
+            ThenByDescending = thenByDescending;
+            Skip = skip;
+            Take = take;
+        }
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition using a logical AND.
+        /// </summary>
+        /// <param name="otherQuery">
+        /// The other query whose filters will be combined with the current query using AND.
+        /// </param>
+        /// <returns>A new query instance with the updated logical tree.</returns>
+        public IQuery<TIndexItem> And(IQuery<TIndexItem> otherQuery)
+        {
+            ArgumentNullException.ThrowIfNull(otherQuery);
+
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+
+            if (otherQuery.Filters.Any())
+            {
+                var combinedTree = BuildGroupedFilterTree(
+                    Expression.AndAlso,
+                    newFilters,
+                    otherQuery.Filters.ToList());
+                newFilters.Clear();
+                newFilters.Add(combinedTree);
+            }
+
+            return CreateNewQuery(newFilters);
+        }
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition 
+        /// using a logical AND. If filters already exist, creates a combined tree.
+        /// </summary>
+        /// <param name="expr">
+        /// An expression representing a condition to combine with the existing 
+        /// filters using AND.
+        /// </param>
+        /// <returns>
+        /// An updated query combining the existing filters with the specified 
+        /// condition using logical AND.
+        /// </returns>
+        public IQuery<TIndexItem> And(Expression<Func<TIndexItem, bool>> expr)
+        {
+            ArgumentNullException.ThrowIfNull(expr);
+
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+
+            if (newFilters.Any())
+            {
+                var combinedTree = BuildGroupedFilterTree(Expression.AndAlso, newFilters, new List<Expression<Func<TIndexItem, bool>>> { expr });
+                newFilters.Clear();
+                newFilters.Add(combinedTree);
+            }
+            else
+            {
+                newFilters.Add(expr);
+            }
+
+            return CreateNewQuery(newFilters);
+        }
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition using a logical OR.
+        /// </summary>
+        /// <param name="otherQuery">
+        /// The other query whose filters will be combined with the current query using OR.
+        /// </param>
+        /// <returns>A new query instance with the updated logical tree.</returns>
+        public IQuery<TIndexItem> Or(IQuery<TIndexItem> otherQuery)
+        {
+            ArgumentNullException.ThrowIfNull(otherQuery);
+
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+
+            if (otherQuery.Filters.Any())
+            {
+                var combinedTree = BuildGroupedFilterTree(
+                    Expression.OrElse,
+                    newFilters,
+                    otherQuery.Filters.ToList());
+                newFilters.Clear();
+                newFilters.Add(combinedTree);
+            }
+
+            return CreateNewQuery(newFilters);
+        }
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition 
+        /// using a logical OR. If filters already exist, creates a combined tree.
+        /// </summary>
+        /// <param name="expr">
+        /// An expression representing a condition to combine with the existing 
+        /// filters using OR.
+        /// </param>
+        /// <returns>
+        /// An updated query with the existing filters combined with the 
+        /// specified condition using logical OR.
+        /// </returns>
+        public IQuery<TIndexItem> Or(Expression<Func<TIndexItem, bool>> expr)
+        {
+            ArgumentNullException.ThrowIfNull(expr);
+
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+
+            if (newFilters.Any())
+            {
+                var combinedTree = BuildGroupedFilterTree(Expression.OrElse, newFilters, new List<Expression<Func<TIndexItem, bool>>> { expr });
+                newFilters.Clear();
+                newFilters.Add(combinedTree);
+            }
+            else
+            {
+                newFilters.Add(expr);
+            }
+
+            return CreateNewQuery(newFilters);
+        }
+
+        /// <summary>
         /// Filters the query results based on a specified predicate expression.
         /// </summary>
         /// <param name="predicates">
@@ -86,9 +252,11 @@ namespace WebExpress.WebIndex.Queries
         {
             ArgumentNullException.ThrowIfNull(predicates);
 
-            _filters.AddRange(predicates);
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
 
-            return this;
+            newFilters.AddRange(predicates);
+
+            return CreateNewQuery(newFilters);
         }
 
         /// <summary>
@@ -143,6 +311,28 @@ namespace WebExpress.WebIndex.Queries
             );
 
             return Where(Expression.Lambda<Func<TIndexItem, bool>>(body, param));
+        }
+
+        /// <summary>
+        /// Filters the query to include only items that satisfy the given lambda expression condition.
+        /// </summary>
+        /// <param name="predicate">
+        /// A lambda expression representing a boolean condition. This condition will be used to 
+        /// filter items in the query.
+        /// </param>
+        /// <returns>
+        /// A query that includes only items matching the specified predicate.
+        /// </returns>
+        public IQuery<TIndexItem> WhereEquals(Expression<Func<TIndexItem, bool>> predicate)
+        {
+            ArgumentNullException.ThrowIfNull(predicate, nameof(predicate));
+
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters)
+            {
+                predicate
+            };
+
+            return CreateNewQuery(newFilters);
         }
 
         /// <summary>
@@ -466,12 +656,13 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> OrderByAsc(Expression<Func<TIndexItem, object>> key)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            OrderBy = key;
-            OrderByDescending = null;
+            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
+            query.OrderBy = key;
+            query.OrderByDescending = null;
 
-            return this;
+            return query;
         }
 
         /// <summary>
@@ -485,12 +676,13 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> OrderByDesc(Expression<Func<TIndexItem, object>> key)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            OrderBy = null;
-            OrderByDescending = key;
+            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
+            query.OrderBy = null;
+            query.OrderByDescending = key;
 
-            return this;
+            return query;
         }
 
         /// <summary>
@@ -505,12 +697,13 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> ThenByAsc(Expression<Func<TIndexItem, object>> key)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            ThenBy = key;
-            ThenByDescending = null;
+            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
+            query.ThenBy = key;
+            query.ThenByDescending = null;
 
-            return this;
+            return query;
         }
 
         /// <summary>
@@ -525,12 +718,13 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> ThenByDesc(Expression<Func<TIndexItem, object>> key)
         {
-            ArgumentNullException.ThrowIfNull(key);
+            ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            ThenBy = null;
-            ThenByDescending = key;
+            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
+            query.ThenBy = null;
+            query.ThenByDescending = key;
 
-            return this;
+            return query;
         }
 
         /// <summary>
@@ -550,13 +744,14 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> WithPaging(int skip, int take)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(skip);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take);
+            ArgumentOutOfRangeException.ThrowIfNegative(skip, nameof(skip));
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take, nameof(take));
 
-            Skip = skip;
-            Take = take;
+            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
+            query.Skip = skip;
+            query.Take = take;
 
-            return this;
+            return query;
         }
 
         /// <summary>
@@ -615,6 +810,55 @@ namespace WebExpress.WebIndex.Queries
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Combines existing filters with either logical AND or OR, supporting multiple filters.
+        /// </summary>
+        /// <param name="logicalOperator">The logical operator (AND or OR) to use when combining filters.</param>
+        /// <param name="existingFilters">The current filters in the query.</param>
+        /// <param name="newFilters">A list of filters from the other query to combine.</param>
+        /// <returns>A combined filter expression that represents the logical tree.</returns>
+        private Expression<Func<TIndexItem, bool>> BuildGroupedFilterTree
+        (
+            Func<Expression, Expression, BinaryExpression> logicalOperator,
+            List<Expression<Func<TIndexItem, bool>>> existingFilters,
+            List<Expression<Func<TIndexItem, bool>>> newFilters
+        )
+        {
+            var param = Expression.Parameter(typeof(TIndexItem), "x");
+
+            // Combine existing filters
+            var combinedExistingBody = existingFilters
+                .Select(filter => Expression.Invoke(filter, param))
+                .Aggregate(logicalOperator);
+
+            // Combine new filters
+            var combinedNewBody = newFilters
+                .Select(filter => Expression.Invoke(filter, param))
+                .Aggregate(logicalOperator);
+
+            // Combine both trees
+            var finalBody = logicalOperator(combinedExistingBody, combinedNewBody);
+
+            return Expression.Lambda<Func<TIndexItem, bool>>(finalBody, param);
+        }
+
+        /// <summary>
+        /// Creates a new query instance with the provided filters and the current state.
+        /// </summary>
+        /// <param name="filters">The new filters to apply to the new query instance.</param>
+        /// <returns>A new query instance.</returns>
+        private IQuery<TIndexItem> CreateNewQuery(List<Expression<Func<TIndexItem, bool>>> filters)
+        {
+            return new Query<TIndexItem>(
+                filters,
+                OrderBy,
+                OrderByDescending,
+                ThenBy,
+                ThenByDescending,
+                Skip,
+                Take);
         }
     }
 }

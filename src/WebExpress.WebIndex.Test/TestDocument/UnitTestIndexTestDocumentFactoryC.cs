@@ -24,26 +24,37 @@
         /// </returns>
         public static IEnumerable<UnitTestIndexTestDocumentC> GenerateTestData(int itemCount, int wordCount, int vocabulary, int wordLength)
         {
-            var set = GenerateVocabulary(vocabulary, 3, wordLength);
+            // generate a vocabulary with the specified size and word length
+            var set = GenerateVocabulary(vocabulary, 3, wordLength).ToList(); // convert to list for efficient indexing
+            if (set.Count == 0)
+            {
+                throw new ArgumentException("Vocabulary must contain at least one word.", nameof(vocabulary));
+            }
+
+            // check bounds for generation
+            if (itemCount <= 0) throw new ArgumentOutOfRangeException(nameof(itemCount), "Item count must be greater than zero.");
+            if (wordCount <= 0) throw new ArgumentOutOfRangeException(nameof(wordCount), "Word count must be greater than zero.");
+
+            var random = new Random();
 
             for (int i = 0; i < itemCount; i++)
             {
                 var words = new List<string>();
-                //for (int j = 0; j < Rand.Next(wordCount / 2, wordCount); j++)
+
                 for (int j = 0; j < wordCount; j++)
                 {
-                    words.Add(set.Skip(Rand.Next() % set.Count()).FirstOrDefault());
+                    // select a random word from the vocabulary
+                    var randomWord = set[random.Next(set.Count)];
+                    words.Add(randomWord);
                 }
 
                 yield return new UnitTestIndexTestDocumentC
                 {
                     Id = Guid.NewGuid(),
-                    Text = string.Join(" ", words),
-                    Number = i
+                    Text = string.Join(" ", words), // create a space-separated text
+                    Number = i                      // assign a unique number to each record
                 };
             }
-
-            yield break;
         }
     }
 }

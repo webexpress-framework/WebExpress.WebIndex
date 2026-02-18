@@ -1,13 +1,15 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
-    /// Represents a WQL (WebExpress Query Language) statement.
+    /// Represents a WQL (WebExpress Query Language) statement with a specific index item type.
     /// </summary>
-    public interface IWqlStatement
+    /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
+    public interface IWqlStatement<TIndexItem>
+        where TIndexItem : IIndexItem
     {
         /// <summary>
         /// Returns the original wql statement.
@@ -30,27 +32,6 @@ namespace WebExpress.WebIndex.Wql
         CultureInfo Culture { get; }
 
         /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
-        /// <returns>The data ids from the index.</returns>
-        IQueryable Apply(Type dataType);
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        string GetSqlQueryString();
-    }
-
-    /// <summary>
-    /// Represents a WQL (WebExpress Query Language) statement with a specific index item type.
-    /// </summary>
-    /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
-    public interface IWqlStatement<TIndexItem> : IWqlStatement
-        where TIndexItem : IIndexItem
-    {
-        /// <summary>
         /// Returns the filter expression.
         /// </summary>
         WqlExpressionNodeFilter<TIndexItem> Filter { get; }
@@ -72,10 +53,12 @@ namespace WebExpress.WebIndex.Wql
         IQueryable<TIndexItem> Apply();
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Converts the current wql statemment to a query.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered);
+        /// <returns>
+        /// An <see cref="IQuery{TIndexItem}"/> that represents a query for 
+        /// retrieving indexed items.
+        /// </returns>
+        IQuery<TIndexItem> ToQuery();
     }
 }

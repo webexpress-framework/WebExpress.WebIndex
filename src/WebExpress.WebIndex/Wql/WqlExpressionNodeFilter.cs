@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql.Condition;
 
 namespace WebExpress.WebIndex.Wql
@@ -34,24 +34,20 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Applies the current filter condition to the specified query and returns the 
+        /// resulting query.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public virtual IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
+        /// <param name="query">
+        /// The query to which the filter condition will be applied. This parameter must 
+        /// not be null.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
+        /// condition exists; otherwise, the original query.
+        /// </returns>
+        public virtual IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
         {
-            return Condition?.Apply(unfiltered) ?? unfiltered;
-        }
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public virtual string GetSqlQueryString()
-        {
-            var sql = Condition?.GetSqlQueryString() ?? "";
-
-            return sql;
+            return Condition?.Apply(query) ?? query;
         }
 
         /// <summary>

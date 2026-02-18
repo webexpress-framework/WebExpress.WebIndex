@@ -63,6 +63,52 @@ namespace WebExpress.WebIndex.Queries
         int? Take { get; }
 
         /// <summary>
+        /// Combines an existing query tree with an additional filter condition using a logical AND.
+        /// </summary>
+        /// <param name="otherQuery">
+        /// The other query whose filters will be combined with the current query using AND.
+        /// </param>
+        /// <returns>A new query instance with the updated logical tree.</returns>
+        IQuery<TIndexItem> And(IQuery<TIndexItem> otherQuery);
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition 
+        /// using a logical AND. If filters already exist, creates a combined tree.
+        /// </summary>
+        /// <param name="expr">
+        /// An expression representing a condition to combine with the existing 
+        /// filters using AND.
+        /// </param>
+        /// <returns>
+        /// An updated query combining the existing filters with the specified 
+        /// condition using logical AND.
+        /// </returns>
+        IQuery<TIndexItem> And(Expression<Func<TIndexItem, bool>> expr);
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition using a logical OR.
+        /// </summary>
+        /// <param name="otherQuery">
+        /// The other query whose filters will be combined with the current query using OR.
+        /// </param>
+        /// <returns>A new query instance with the updated logical tree.</returns>
+        IQuery<TIndexItem> Or(IQuery<TIndexItem> otherQuery);
+
+        /// <summary>
+        /// Combines an existing query tree with an additional filter condition 
+        /// using a logical OR. If filters already exist, creates a combined tree.
+        /// </summary>
+        /// <param name="expr">
+        /// An expression representing a condition to combine with the existing 
+        /// filters using OR.
+        /// </param>
+        /// <returns>
+        /// An updated query with the existing filters combined with the 
+        /// specified condition using logical OR.
+        /// </returns>
+        IQuery<TIndexItem> Or(Expression<Func<TIndexItem, bool>> expr);
+
+        /// <summary>
         /// Filters the query results based on a specified predicate expression.
         /// </summary>
         /// <param name="predicates">
@@ -106,6 +152,18 @@ namespace WebExpress.WebIndex.Queries
         /// A query that returns items where the selected property equals the specified value.
         /// </returns>
         IQuery<TIndexItem> WhereEquals(Expression<Func<TIndexItem, Guid>> selector, Guid value);
+
+        /// <summary>
+        /// Filters the query to include only items that satisfy the given lambda expression condition.
+        /// </summary>
+        /// <param name="predicate">
+        /// A lambda expression representing a boolean condition. This condition will be used to 
+        /// filter items in the query.
+        /// </param>
+        /// <returns>
+        /// A query that includes only items matching the specified predicate.
+        /// </returns>
+        IQuery<TIndexItem> WhereEquals(Expression<Func<TIndexItem, bool>> predicate);
 
         /// <summary>
         /// Filters the query to include only items where the specified string property equals 
