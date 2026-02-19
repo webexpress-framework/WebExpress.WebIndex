@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
@@ -33,6 +34,28 @@ namespace WebExpress.WebIndex.Wql.Function
             }
 
             return DateTime.Now.Date;
+        }
+
+        /// <summary>
+        /// Builds a LINQ expression representing the result of the <c>day()</c> function, 
+        /// which returns the current date optionally offset
+        /// by a specified number of days.
+        /// </summary>
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree. This function does not use the parameter directly,
+        /// but it is required to satisfy the expression node contract.
+        /// </param>
+        /// <returns>
+        /// A constant expression containing the computed date value.
+        /// </returns>
+        public override Expression ToExpression(ParameterExpression param)
+        {
+            // evaluate the function using the existing execute logic
+            var result = Execute();
+
+            // wrap the result in a constant expression
+            return Expression.Constant(result, typeof(DateTime));
         }
     }
 }

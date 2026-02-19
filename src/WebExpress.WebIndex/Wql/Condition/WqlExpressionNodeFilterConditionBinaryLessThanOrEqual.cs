@@ -40,40 +40,28 @@ namespace WebExpress.WebIndex.Wql.Condition
         }
 
         /// <summary>
-        /// Applies the current filter condition to the specified query and returns the 
-        /// resulting query.
+        /// Builds a LINQ expression representing a "less than or equal" comparison between 
+        /// the attribute expression and the parameter expression.
         /// </summary>
-        /// <param name="query">
-        /// The query to which the filter condition will be applied. This parameter must 
-        /// not be null.
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => x.Property &lt;= value</c>).
         /// </param>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
-        /// condition exists; otherwise, the original query.
+        /// A binary expression, comparing the attribute value to the parameter value.
         /// </returns>
-        public override IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when either <c>Attribute</c> or <c>Parameter</c> is <c>null</c>.
+        /// </exception>
+        public override Expression ToExpression(ParameterExpression param)
         {
-            ArgumentNullException.ThrowIfNull(query);
             ArgumentNullException.ThrowIfNull(Attribute);
             ArgumentNullException.ThrowIfNull(Parameter);
 
-            var value = Parameter.GetValue()?.ToString();
-            var propertyName = Attribute.Property.Name;
+            Expression left = Attribute.ToExpression(param);
+            Expression right = Parameter.ToExpression(param);
 
-            // build the expression: item => item.Property <= value
-            var param = Expression.Parameter(typeof(TIndexItem), "item");
-            var property = Expression.Property(param, propertyName);
-            var valueExpression = Expression.Constant(value);
-
-            // ensure proper type conversion if necessary
-            var convertedProperty = Expression.Convert(property, valueExpression.Type);
-            var lessThanOrEqual = Expression.LessThanOrEqual(convertedProperty, valueExpression);
-
-            // create the lambda expression
-            var lambda = Expression.Lambda<Func<TIndexItem, bool>>(lessThanOrEqual, param);
-
-            // apply the condition to the query
-            return query.WhereEquals(lambda);
+            return Expression.LessThanOrEqual(left, right);
         }
     }
 }

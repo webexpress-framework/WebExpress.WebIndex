@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using WebExpress.WebIndex.Queries;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -61,66 +61,31 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Applies the current filter condition to the specified query and returns the 
-        /// resulting query.
+        /// Builds the corresponding expression tree for this binary filter.
         /// </summary>
-        /// <param name="query">
-        /// The query to which the filter condition will be applied. This parameter must 
-        /// not be null.
-        /// </param>
-        /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
-        /// condition exists; otherwise, the original query.
-        /// </returns>
-        public override IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
+        /// <param name="parameter">The parameter representing the index item in the expression.</param>
+        /// <returns>The composed expression matching the binary filter (AND/OR).</returns>
+        public override Expression ToExpression(ParameterExpression parameter)
         {
-            ArgumentNullException.ThrowIfNull(query);
-
-            // apply the left and right filters to the query
-            var leftQuery = LeftFilter?.Apply(query) ?? query;
-            var rightQuery = RightFilter?.Apply(query) ?? query;
+            // recursively get expressions from both subtrees
+            var left = LeftFilter.ToExpression(parameter);
+            var right = RightFilter.ToExpression(parameter);
 
             switch (LogicalOperator)
             {
                 case WqlExpressionLogicalOperator.And:
-                    // combine the queries with AND logic
-                    return CombineQueriesWithAnd(leftQuery, rightQuery);
-
+                    {
+                        return Expression.AndAlso(left, right);
+                    }
                 case WqlExpressionLogicalOperator.Or:
-                    // combine the queries with OR logic
-                    return CombineQueriesWithOr(leftQuery, rightQuery);
-
+                    {
+                        return Expression.OrElse(left, right);
+                    }
                 default:
-                    throw new InvalidOperationException($"Unsupported logical operator: {LogicalOperator}");
+                    {
+                        throw new InvalidOperationException($"Unsupported logical operator: {LogicalOperator}");
+                    }
             }
-        }
-
-        /// <summary>
-        /// Combines two queries using AND logic.
-        /// </summary>
-        /// <param name="leftQuery">The left query.</param>
-        /// <param name="rightQuery">The right query.</param>
-        /// <returns>The resulting query.</returns>
-        private IQuery<TIndexItem> CombineQueriesWithAnd(IQuery<TIndexItem> leftQuery, IQuery<TIndexItem> rightQuery)
-        {
-            // merge filters from both queries using AND logic
-            var combinedFilters = leftQuery.Filters.Intersect(rightQuery.Filters);
-            var newQuery = new Query<TIndexItem>().Where(combinedFilters.ToArray());
-            return newQuery;
-        }
-
-        /// <summary>
-        /// Combines two queries using OR logic.
-        /// </summary>
-        /// <param name="leftQuery">The left query.</param>
-        /// <param name="rightQuery">The right query.</param>
-        /// <returns>The resulting query.</returns>
-        private IQuery<TIndexItem> CombineQueriesWithOr(IQuery<TIndexItem> leftQuery, IQuery<TIndexItem> rightQuery)
-        {
-            // merge filters from both queries using OR logic
-            var combinedFilters = leftQuery.Filters.Union(rightQuery.Filters);
-            var newQuery = new Query<TIndexItem>().Where(combinedFilters.ToArray());
-            return newQuery;
         }
 
         /// <summary>

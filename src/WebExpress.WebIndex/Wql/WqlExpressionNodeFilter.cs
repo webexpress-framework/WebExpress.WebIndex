@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using WebExpress.WebIndex.Queries;
+using System.Linq.Expressions;
 using WebExpress.WebIndex.Wql.Condition;
 
 namespace WebExpress.WebIndex.Wql
@@ -34,20 +34,25 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Applies the current filter condition to the specified query and returns the 
-        /// resulting query.
+        /// Builds a LINQ expression representing the filter condition
+        /// contained in this filter node.
         /// </summary>
-        /// <param name="query">
-        /// The query to which the filter condition will be applied. This parameter must 
-        /// not be null.
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => ...</c>).
         /// </param>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
-        /// condition exists; otherwise, the original query.
+        /// The expression produced by the underlying filter condition, or
+        /// expression constant with <c>true</c> if no condition exists.
         /// </returns>
-        public virtual IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <c>Condition</c> is <c>null</c>.
+        /// </exception>
+        public virtual Expression ToExpression(ParameterExpression param)
         {
-            return Condition?.Apply(query) ?? query;
+            ArgumentNullException.ThrowIfNull(Condition);
+
+            return Condition.ToExpression(param);
         }
 
         /// <summary>

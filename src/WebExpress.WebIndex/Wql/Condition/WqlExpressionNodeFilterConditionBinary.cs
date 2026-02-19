@@ -1,4 +1,6 @@
-﻿namespace WebExpress.WebIndex.Wql.Condition
+﻿using System.Linq.Expressions;
+
+namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
     /// Describes the binary condition expression of a wql statement.

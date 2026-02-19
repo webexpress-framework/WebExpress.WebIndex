@@ -21,10 +21,7 @@ namespace WebExpress.WebIndex.Test.Queries
 
             // validation
             Assert.Empty(q.Filters);
-            Assert.Null(q.OrderBy);
-            Assert.Null(q.OrderByDescending);
-            Assert.Null(q.ThenBy);
-            Assert.Null(q.ThenByDescending);
+            Assert.Empty(q.OrderBys);
             Assert.Null(q.Skip);
             Assert.Null(q.Take);
         }
@@ -396,8 +393,9 @@ namespace WebExpress.WebIndex.Test.Queries
                 .OrderByAsc(key);
 
             // validation
-            Assert.Equal(key, q.OrderBy);
-            Assert.Null(q.OrderByDescending);
+            Assert.Equal(key, q.OrderBys.First().KeySelector);
+            Assert.False(q.OrderBys.First().Descending);
+            Assert.Single(q.OrderBys);
         }
 
         /// <summary>
@@ -415,8 +413,8 @@ namespace WebExpress.WebIndex.Test.Queries
                 .OrderByDesc(key);
 
             // validation
-            Assert.Equal(key, q.OrderByDescending);
-            Assert.Null(q.OrderBy);
+            Assert.Equal(key, q.OrderBys.FirstOrDefault().KeySelector);
+            Assert.True(q.OrderBys.FirstOrDefault().Descending);
         }
 
         /// <summary>
@@ -434,8 +432,8 @@ namespace WebExpress.WebIndex.Test.Queries
                 .ThenByAsc(key);
 
             // validation
-            Assert.Equal(key, q.ThenBy);
-            Assert.Null(q.ThenByDescending);
+            Assert.Equal(key, q.OrderBys.Last().KeySelector);
+            Assert.False(q.OrderBys.Last().Descending);
         }
 
         /// <summary>
@@ -453,8 +451,8 @@ namespace WebExpress.WebIndex.Test.Queries
                 .ThenByDesc(key);
 
             // validation
-            Assert.Equal(key, q.ThenByDescending);
-            Assert.Null(q.ThenBy);
+            Assert.Equal(key, q.OrderBys.Last().KeySelector);
+            Assert.True(q.OrderBys.Last().Descending);
         }
 
         /// <summary>
@@ -498,9 +496,9 @@ namespace WebExpress.WebIndex.Test.Queries
             // arrange
             var data = new List<IndexItem>
             {
-                new IndexItem { Name = "Charlie", Value = 30 },
-                new IndexItem { Name = "Alpha",   Value = 10 },
-                new IndexItem { Name = "Bravo",   Value = 20 }
+                new() { Name = "Charlie", Value = 30 },
+                new() { Name = "Alpha",   Value = 10 },
+                new() { Name = "Bravo",   Value = 20 }
             }.AsQueryable();
 
             var query = new Query<IndexItem>()

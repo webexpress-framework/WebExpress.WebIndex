@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq.Expressions;
 using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql.Condition
@@ -43,17 +44,16 @@ namespace WebExpress.WebIndex.Wql.Condition
         public abstract IEnumerable<Guid> Apply();
 
         /// <summary>
-        /// Applies the current filter condition to the specified query and returns the 
-        /// resulting query.
+        /// Builds the LINQ expression that represents this WQL node within the 
+        /// generated expression tree.
         /// </summary>
-        /// <param name="query">
-        /// The query to which the filter condition will be applied. This parameter must 
-        /// not be null.
+        /// <param name="param">
+        /// The parameter expression representing the index item in the resulting
+        /// lambda expression (e.g., <c>x</c> in <c>x => ...</c>).
         /// </param>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
-        /// condition exists; otherwise, the original query.
+        /// An expression that models the semantic meaning of this WQL expression node.
         /// </returns>
-        public abstract IQuery<TIndexItem> Apply(IQuery<TIndexItem> query);
+        public abstract Expression ToExpression(ParameterExpression param);
     }
 }

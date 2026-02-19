@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
@@ -25,5 +26,27 @@ namespace WebExpress.WebIndex.Wql.Function
         {
             return DateTime.Now;
         }
+
+        /// <summary>
+        /// Builds a LINQ expression representing the result of the <c>now()</c> function, 
+        /// which returns the current date and time.
+        /// </summary>
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree. This function does not use the parameter directly,
+        /// but it is required to satisfy the expression node contract.
+        /// </param>
+        /// <returns>
+        /// A constant expression containing the current date and time.
+        /// </returns>
+        public override Expression ToExpression(ParameterExpression param)
+        {
+            // Evaluate the function using the existing Execute() logic
+            var result = Execute();
+
+            // Wrap the result in a constant expression
+            return Expression.Constant(result, typeof(DateTime));
+        }
+
     }
 }

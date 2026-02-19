@@ -14,6 +14,7 @@ namespace WebExpress.WebIndex.Queries
         where TIndexItem : IIndexItem
     {
         private readonly List<Expression<Func<TIndexItem, bool>>> _filters = [];
+        private readonly List<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> _orderBys = [];
 
         /// <summary>
         /// Returns the collection of filters applied to index items as boolean 
@@ -22,28 +23,9 @@ namespace WebExpress.WebIndex.Queries
         public IEnumerable<Expression<Func<TIndexItem, bool>>> Filters => _filters;
 
         /// <summary>
-        /// Returns the expression used to specify the property or value by which to order 
-        /// index items.
+        /// Returns the collection of sorting criteria applied to the query.
         /// </summary>
-        public Expression<Func<TIndexItem, object>> OrderBy { get; private set; }
-
-        /// <summary>
-        /// Returns the expression used to specify the property or value by which to sort items 
-        /// in descending order.
-        /// </summary>
-        public Expression<Func<TIndexItem, object>> OrderByDescending { get; private set; }
-
-        /// <summary>
-        /// Returns the expression used to specify an additional sorting criterion for the query 
-        /// after the primary ordering has been applied.
-        /// </summary>
-        public Expression<Func<TIndexItem, object>> ThenBy { get; private set; }
-
-        /// <summary>
-        /// Returns the expression used to specify a secondary descending sort order for the 
-        /// index items.
-        /// </summary>
-        public Expression<Func<TIndexItem, object>> ThenByDescending { get; private set; }
+        public IReadOnlyList<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> OrderBys => _orderBys.AsReadOnly();
 
         /// <summary>
         /// Returns the number of items to skip before starting to return results.
@@ -71,27 +53,10 @@ namespace WebExpress.WebIndex.Queries
         /// to select items from the index. Each expression should return 
         /// true for items to include.
         /// </param>
-        /// <param name="orderBy">
-        /// An expression that specifies the property to use for ordering 
-        /// the results in ascending order. If null, no ascending primary 
+        /// <param name="orderBys">
+        /// An collection of expressions that specifies the property to use for ordering 
+        /// the results in ascending order.
         /// ordering is applied.
-        /// </param>
-        /// <param name="orderByDescending">
-        /// An expression that specifies the property to use for ordering 
-        /// the results in descending order. If null, no descending 
-        /// primary ordering is applied.
-        /// </param>
-        /// <param name="thenBy">
-        /// An expression that specifies an additional property for 
-        /// secondary ordering in ascending order, applied after
-        /// the primary ordering. If null, no secondary ascending rdering 
-        /// is applied.
-        /// </param>
-        /// <param name="thenByDescending">
-        /// An expression that specifies an additional property for 
-        /// secondary ordering in descending order, applied after the 
-        /// primary ordering. If null, no secondary descending ordering 
-        /// is applied.
         /// </param>
         /// <param name="skip">
         /// The number of items to skip before starting to collect the 
@@ -104,19 +69,13 @@ namespace WebExpress.WebIndex.Queries
         private Query
         (
             List<Expression<Func<TIndexItem, bool>>> filters,
-            Expression<Func<TIndexItem, object>> orderBy,
-            Expression<Func<TIndexItem, object>> orderByDescending,
-            Expression<Func<TIndexItem, object>> thenBy,
-            Expression<Func<TIndexItem, object>> thenByDescending,
+            List<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> orderBys,
             int? skip,
             int? take
         )
         {
             _filters = filters;
-            OrderBy = orderBy;
-            OrderByDescending = orderByDescending;
-            ThenBy = thenBy;
-            ThenByDescending = thenByDescending;
+            _orderBys = orderBys;
             Skip = skip;
             Take = take;
         }
@@ -133,6 +92,7 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(otherQuery);
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
 
             if (otherQuery.Filters.Any())
             {
@@ -144,7 +104,7 @@ namespace WebExpress.WebIndex.Queries
                 newFilters.Add(combinedTree);
             }
 
-            return CreateNewQuery(newFilters);
+            return new Query<TIndexItem>(newFilters, neworderBys, Skip, Take);
         }
 
         /// <summary>
@@ -164,8 +124,9 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(expr);
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
 
-            if (newFilters.Any())
+            if (newFilters.Count != 0)
             {
                 var combinedTree = BuildGroupedFilterTree(Expression.AndAlso, newFilters, new List<Expression<Func<TIndexItem, bool>>> { expr });
                 newFilters.Clear();
@@ -176,7 +137,7 @@ namespace WebExpress.WebIndex.Queries
                 newFilters.Add(expr);
             }
 
-            return CreateNewQuery(newFilters);
+            return new Query<TIndexItem>(newFilters, neworderBys, Skip, Take);
         }
 
         /// <summary>
@@ -191,6 +152,7 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(otherQuery);
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
 
             if (otherQuery.Filters.Any())
             {
@@ -202,7 +164,7 @@ namespace WebExpress.WebIndex.Queries
                 newFilters.Add(combinedTree);
             }
 
-            return CreateNewQuery(newFilters);
+            return new Query<TIndexItem>(newFilters, neworderBys, Skip, Take);
         }
 
         /// <summary>
@@ -222,10 +184,11 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(expr);
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
 
-            if (newFilters.Any())
+            if (newFilters.Count != 0)
             {
-                var combinedTree = BuildGroupedFilterTree(Expression.OrElse, newFilters, new List<Expression<Func<TIndexItem, bool>>> { expr });
+                var combinedTree = BuildGroupedFilterTree(Expression.OrElse, newFilters, [expr]);
                 newFilters.Clear();
                 newFilters.Add(combinedTree);
             }
@@ -234,7 +197,7 @@ namespace WebExpress.WebIndex.Queries
                 newFilters.Add(expr);
             }
 
-            return CreateNewQuery(newFilters);
+            return new Query<TIndexItem>(newFilters, neworderBys, Skip, Take);
         }
 
         /// <summary>
@@ -253,10 +216,11 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(predicates);
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
 
             newFilters.AddRange(predicates);
 
-            return CreateNewQuery(newFilters);
+            return new Query<TIndexItem>(newFilters, neworderBys, Skip, Take);
         }
 
         /// <summary>
@@ -331,8 +295,9 @@ namespace WebExpress.WebIndex.Queries
             {
                 predicate
             };
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
 
-            return CreateNewQuery(newFilters);
+            return new Query<TIndexItem>(newFilters, neworderBys, Skip, Take);
         }
 
         /// <summary>
@@ -645,7 +610,7 @@ namespace WebExpress.WebIndex.Queries
         }
 
         /// <summary>
-        /// Specifies an ascending sort order for the query results based on the given key expression.
+        /// Adds an ascending sort order to the query's sorting criteria.
         /// </summary>
         /// <param name="key">
         /// An expression that identifies the key to use for ordering the results in ascending 
@@ -658,15 +623,18 @@ namespace WebExpress.WebIndex.Queries
         {
             ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
-            query.OrderBy = key;
-            query.OrderByDescending = null;
+            var orderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys) 
+            { 
+                (key, false) 
+            };
+            
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
 
-            return query;
+            return new Query<TIndexItem>(newFilters, orderBys, Skip, Take);
         }
 
         /// <summary>
-        /// Specifies a descending sort order for the query results based on the given key expression.
+        /// Adds a descending sort order to the query's sorting criteria.
         /// </summary>
         /// <param name="key">An expression that identifies the key to sort the results by 
         /// in descending order. Cannot be null.
@@ -678,15 +646,18 @@ namespace WebExpress.WebIndex.Queries
         {
             ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
-            query.OrderBy = null;
-            query.OrderByDescending = key;
+            var orderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys) 
+            { 
+                (key, true) 
+            };
 
-            return query;
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            
+            return new Query<TIndexItem>(newFilters, orderBys, Skip, Take);
         }
 
         /// <summary>
-        /// Adds a secondary ascending sort order to the query based on the specified key expression.
+        /// Adds another ascending sort order (ThenBy) criterion.
         /// </summary>
         /// <param name="key">
         /// An expression that specifies the key to use for the secondary ascending sort. 
@@ -697,17 +668,12 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> ThenByAsc(Expression<Func<TIndexItem, object>> key)
         {
-            ArgumentNullException.ThrowIfNull(key, nameof(key));
-
-            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
-            query.ThenBy = key;
-            query.ThenByDescending = null;
-
-            return query;
+            // simply add as additional orderBy
+            return OrderByAsc(key);
         }
 
         /// <summary>
-        /// Adds a secondary descending sort order to the query based on the specified key expression.
+        /// Adds another descending sort order (ThenByDescending) criterion.
         /// </summary>
         /// <param name="key">
         /// An expression that specifies the key to use for the secondary descending sort. 
@@ -718,13 +684,8 @@ namespace WebExpress.WebIndex.Queries
         /// </returns>
         public IQuery<TIndexItem> ThenByDesc(Expression<Func<TIndexItem, object>> key)
         {
-            ArgumentNullException.ThrowIfNull(key, nameof(key));
-
-            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
-            query.ThenBy = null;
-            query.ThenByDescending = key;
-
-            return query;
+            // simply add as additional orderBy, set descending
+            return OrderByDesc(key);
         }
 
         /// <summary>
@@ -747,11 +708,10 @@ namespace WebExpress.WebIndex.Queries
             ArgumentOutOfRangeException.ThrowIfNegative(skip, nameof(skip));
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take, nameof(take));
 
-            var query = CreateNewQuery(_filters) as Query<TIndexItem>;
-            query.Skip = skip;
-            query.Take = take;
-
-            return query;
+            var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
+            var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
+            
+            return new Query<TIndexItem>(newFilters, neworderBys, skip, take);
         }
 
         /// <summary>
@@ -775,27 +735,33 @@ namespace WebExpress.WebIndex.Queries
 
             // sorting
             IOrderedQueryable<TIndexItem> ordered = null;
+            for (int i = 0; i < _orderBys.Count; i++)
+            {
+                var expr = _orderBys[i];
+                if (i == 0)
+                {
+                    if (expr.Descending)
+                    {
+                        ordered = query.OrderByDescending(expr.KeySelector);
+                    }
+                    else
+                    {
+                        ordered = query.OrderBy(expr.KeySelector);
+                    }
+                }
+                else
+                {
+                    if (expr.Descending)
+                    {
+                        ordered = ordered.ThenByDescending(expr.KeySelector);
+                    }
+                    else
+                    {
+                        ordered = ordered.ThenBy(expr.KeySelector);
+                    }
+                }
+            }
 
-            if (OrderBy is not null)
-            {
-                ordered = query.OrderBy(OrderBy);
-            }
-            else if (OrderByDescending is not null)
-            {
-                ordered = query.OrderByDescending(OrderByDescending);
-            }
-
-            // secondary sorting
-            if (ThenBy is not null)
-            {
-                ordered = (ordered ?? query.OrderBy(_ => 0)).ThenBy(ThenBy);
-            }
-            else if (ThenByDescending is not null)
-            {
-                ordered = (ordered ?? query.OrderBy(_ => 0)).ThenByDescending(ThenByDescending);
-            }
-
-            // use ordered query if sorting was applied
             query = ordered ?? query;
 
             // paging
@@ -819,7 +785,7 @@ namespace WebExpress.WebIndex.Queries
         /// <param name="existingFilters">The current filters in the query.</param>
         /// <param name="newFilters">A list of filters from the other query to combine.</param>
         /// <returns>A combined filter expression that represents the logical tree.</returns>
-        private Expression<Func<TIndexItem, bool>> BuildGroupedFilterTree
+        private static Expression<Func<TIndexItem, bool>> BuildGroupedFilterTree
         (
             Func<Expression, Expression, BinaryExpression> logicalOperator,
             List<Expression<Func<TIndexItem, bool>>> existingFilters,
@@ -842,23 +808,6 @@ namespace WebExpress.WebIndex.Queries
             var finalBody = logicalOperator(combinedExistingBody, combinedNewBody);
 
             return Expression.Lambda<Func<TIndexItem, bool>>(finalBody, param);
-        }
-
-        /// <summary>
-        /// Creates a new query instance with the provided filters and the current state.
-        /// </summary>
-        /// <param name="filters">The new filters to apply to the new query instance.</param>
-        /// <returns>A new query instance.</returns>
-        private IQuery<TIndexItem> CreateNewQuery(List<Expression<Func<TIndexItem, bool>>> filters)
-        {
-            return new Query<TIndexItem>(
-                filters,
-                OrderBy,
-                OrderByDescending,
-                ThenBy,
-                ThenByDescending,
-                Skip,
-                Take);
         }
     }
 }

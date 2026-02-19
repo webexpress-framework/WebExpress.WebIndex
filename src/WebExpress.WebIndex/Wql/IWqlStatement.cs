@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using WebExpress.WebIndex.Queries;
 
@@ -47,6 +48,11 @@ namespace WebExpress.WebIndex.Wql
         WqlExpressionNodePartitioning<TIndexItem> Partitioning { get; }
 
         /// <summary>
+        /// Returns the syntax tree of the wql query.
+        /// </summary>
+        IEnumerable<IWqlExpressionNode<TIndexItem>> AbstractSyntaxTree { get; }
+
+        /// <summary>
         /// Applies the filter to the index.
         /// </summary>
         /// <returns>The data ids from the index.</returns>
@@ -56,8 +62,7 @@ namespace WebExpress.WebIndex.Wql
         /// Converts the current wql statemment to a query.
         /// </summary>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> that represents a query for 
-        /// retrieving indexed items.
+        /// An query that represents a query for retrieving indexed items.
         /// </returns>
         IQuery<TIndexItem> ToQuery();
     }

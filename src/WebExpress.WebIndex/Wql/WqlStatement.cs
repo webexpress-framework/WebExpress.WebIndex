@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql
@@ -55,7 +57,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns the syntax tree of the wql query.
         /// </summary>
-        public IEnumerable<IWqlExpressionNode<TIndexItem>> SyntaxTree
+        public IEnumerable<IWqlExpressionNode<TIndexItem>> AbstractSyntaxTree
         {
             get
             {
@@ -123,16 +125,80 @@ namespace WebExpress.WebIndex.Wql
         /// Converts the current wql statemment to a query.
         /// </summary>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> that represents a query for 
-        /// retrieving indexed items.
+        /// An query that represents a query for retrieving indexed items.
         /// </returns>
         public IQuery<TIndexItem> ToQuery()
         {
             var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
+            // filter
             if (Filter is not null)
             {
-                query = Filter.Apply(query);
+                // create the parameter: x => 
+                var param = Expression.Parameter(typeof(TIndexItem), "x");
+
+                // build the expression tree for the filter condition 
+                var body = Filter.ToExpression(param);
+
+                // wrap into a lambda: x => <body> 
+                var lambda = Expression.Lambda<Func<TIndexItem, bool>>(body, param);
+
+                // apply to the query 
+                query = query.Where(lambda);
+            }
+
+            // order
+            bool isFirst = true;
+            foreach (var att in Order?.Attributes ?? [])
+            {
+                var param = Expression.Parameter(typeof(TIndexItem), "x");
+                var propertyExpr = att.ToExpression(param);
+                var propertyExprObj = Expression.Convert(propertyExpr, typeof(object)); // ensure object type for LINQ
+                var keySelector = Expression.Lambda<Func<TIndexItem, object>>(propertyExprObj, param);
+
+                if (isFirst)
+                {
+                    if (att.Descending)
+                    {
+                        query = query.OrderByDesc(keySelector);
+                    }
+                    else
+                    {
+                        query = query.OrderByAsc(keySelector);
+                    }
+                    isFirst = false;
+                }
+                else
+                {
+                    if (att.Descending)
+                    {
+                        query = query.ThenByDesc(keySelector);
+                    }
+                    else
+                    {
+                        query = query.ThenByAsc(keySelector);
+                    }
+                }
+            }
+
+            if (Partitioning is not null)
+            {
+                int take = -1;
+                int skip = -1;
+
+                foreach (var function in Partitioning.PartitioningFunctions)
+                {
+                    if (function.Operator == WqlExpressionNodePartitioningOperator.Take)
+                    {
+                        take = function.Value;
+                    }
+                    else if (function.Operator == WqlExpressionNodePartitioningOperator.Skip)
+                    {
+                        skip = function.Value;
+                    }
+                }
+
+                query = query.WithPaging(take, skip);
             }
 
             return query;

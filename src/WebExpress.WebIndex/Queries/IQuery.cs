@@ -29,28 +29,9 @@ namespace WebExpress.WebIndex.Queries
         IEnumerable<Expression<Func<TIndexItem, bool>>> Filters { get; }
 
         /// <summary>
-        /// Returns the expression used to specify the property or value by which to order 
-        /// index items.
+        /// Returns the collection of sorting criteria applied to the query.
         /// </summary>
-        Expression<Func<TIndexItem, object>> OrderBy { get; }
-
-        /// <summary>
-        /// Returns the expression used to specify the property or value by which to sort items 
-        /// in descending order.
-        /// </summary>
-        Expression<Func<TIndexItem, object>> OrderByDescending { get; }
-
-        /// <summary>
-        /// Returns the expression used to specify an additional sorting criterion for the query 
-        /// after the primary ordering has been applied.
-        /// </summary>
-        Expression<Func<TIndexItem, object>> ThenBy { get; }
-
-        /// <summary>
-        /// Returns the expression used to specify a secondary descending sort order for the 
-        /// index items.
-        /// </summary>
-        Expression<Func<TIndexItem, object>> ThenByDescending { get; }
+        public IReadOnlyList<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> OrderBys { get; }
 
         /// <summary>
         /// Returns the number of items to skip before starting to return results.

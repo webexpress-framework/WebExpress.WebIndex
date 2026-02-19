@@ -31,44 +31,46 @@ namespace WebExpress.WebIndex.Wql.Condition
         }
 
         /// <summary>
-        /// Applies the current filter condition to the specified query and returns the 
-        /// resulting query.
+        /// Builds a LINQ expression representing a "NOT IN" set-membership comparison 
+        /// between the attribute expression and the list of parameter values.
         /// </summary>
-        /// <param name="query">
-        /// The query to which the filter condition will be applied. This parameter must 
-        /// not be null.
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => !values.Contains(x.Property)</c>).
         /// </param>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
-        /// condition exists; otherwise, the original query.
+        /// A unary expression that checks whether the attribute value is not contained 
+        /// in the provided set.
         /// </returns>
-        public override IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <c>Attribute</c> or <c>Parameters</c> is <c>null</c>.
+        /// </exception>
+        public override Expression ToExpression(ParameterExpression param)
         {
-            ArgumentNullException.ThrowIfNull(query);
             ArgumentNullException.ThrowIfNull(Attribute);
             ArgumentNullException.ThrowIfNull(Parameters);
 
-            var values = Parameters.Select(x => x.GetValue()?.ToString());
-            var propertyName = Attribute.Property.Name;
+            Expression left = Attribute.ToExpression(param);
 
-            // build the expression: item => !values.Contains(item.Property)
-            var param = Expression.Parameter(typeof(TIndexItem), "item");
-            var property = Expression.Property(param, propertyName);
-            var valueArray = Expression.Constant(values.ToList());
+            // extract raw values from parameters
+            var rawValues = Parameters.Select(p => p.GetValue()).ToList();
 
-            // use Enumerable.Contains to check if the property value is not in the set
-            var containsMethod = typeof(Enumerable).GetMethods()
+            // convert all values to the property type
+            var typedValues = rawValues
+                .Select(v => v is null ? null : Convert.ChangeType(v, left.Type))
+                .ToList();
+
+            // create a constant expression for the typed list
+            var listConstant = Expression.Constant(typedValues);
+
+            var containsMethod = typeof(Enumerable)
+                .GetMethods()
                 .First(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2)
-                .MakeGenericMethod(property.Type);
+                .MakeGenericMethod(left.Type);
 
-            var containsCall = Expression.Call(containsMethod, valueArray, property);
-            var notContains = Expression.Not(containsCall); // Negate the condition (!values.Contains(...))
+            var containsCall = Expression.Call(containsMethod, listConstant, left);
 
-            // create the lambda expression
-            var lambda = Expression.Lambda<Func<TIndexItem, bool>>(notContains, param);
-
-            // apply the condition to the query
-            return query.WhereEquals(lambda);
+            return Expression.Not(containsCall);
         }
     }
 }

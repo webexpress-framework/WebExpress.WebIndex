@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -29,6 +31,30 @@ namespace WebExpress.WebIndex.Wql
         /// </summary>
         internal WqlExpressionNodeAttribute()
         {
+        }
+
+        /// <summary> 
+        /// Creates a expression representing access to the attribute's underlying property on the given 
+        /// parameter expression. 
+        /// </summary> 
+        /// <param name="param">
+        /// The parameter expression that represents the index item in the generated 
+        /// expression tree (e.g., <c>x</c> in <c>x => x.Property</c>). 
+        /// </param> 
+        /// <returns> 
+        /// A expression that accesses the property defined by property. 
+        /// </returns> 
+        /// <exception cref="InvalidOperationException"> 
+        /// Thrown when no <see cref="PropertyInfo"/> is assigned to this attribute node. 
+        /// </exception>
+        public Expression ToExpression(ParameterExpression param) 
+        { 
+            if (Property is null) 
+            {
+                throw new InvalidOperationException( $"Attribute '{Name}' has no PropertyInfo assigned."); 
+            }
+
+            return Expression.Property(param, Property);
         }
 
         /// <summary>

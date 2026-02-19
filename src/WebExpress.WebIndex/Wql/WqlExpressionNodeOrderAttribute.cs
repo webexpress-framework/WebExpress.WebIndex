@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -62,6 +64,31 @@ namespace WebExpress.WebIndex.Wql
                     return unfiltered.OrderBy(x => property.GetValue(x));
                 }
             }
+        }
+
+        /// <summary>
+        /// Builds a LINQ expression representing the property used for ordering in 
+        /// this order-by attribute.
+        /// </summary>
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => x.Property</c>).
+        /// </param>
+        /// <returns>
+        /// An expression representing the property to order by.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <c>Attribute</c> is <c>null</c>.
+        /// </exception>
+        public Expression ToExpression(ParameterExpression parameter)
+        {
+            ArgumentNullException.ThrowIfNull(Attribute);
+
+            // build the property access expression: x => x.Property 
+            var body = Attribute.ToExpression(parameter); 
+            
+            // convert to object to satisfy order requirements 
+            return Expression.Convert(body, typeof(object));
         }
 
         /// <summary>

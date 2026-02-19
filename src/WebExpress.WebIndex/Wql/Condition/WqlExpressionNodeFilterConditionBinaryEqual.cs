@@ -35,35 +35,30 @@ namespace WebExpress.WebIndex.Wql.Condition
                 Distance = Options.Distance.HasValue ? Options.Distance.Value : 0
             }).AsQueryable();
         }
-
+       
         /// <summary>
-        /// Applies the current filter condition to the specified query and returns the 
-        /// resulting query.
+        /// Builds a LINQ expression representing an equality comparison between the 
+        /// attribute expression and the parameter expression.
         /// </summary>
-        /// <param name="query">
-        /// The query to which the filter condition will be applied. This parameter must 
-        /// not be null.
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => x.Attribute == value</c>).
         /// </param>
         /// <returns>
-        /// An <see cref="IQuery{TIndexItem}"/> representing the filtered query if a 
-        /// condition exists; otherwise, the original query.
+        /// A binary expression, comparing the attribute value to the parameter value.
         /// </returns>
-        public override IQuery<TIndexItem> Apply(IQuery<TIndexItem> query)
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when either <c>Attribute</c> or <c>Parameter</c> is <c>null</c>.
+        /// </exception>
+        public override Expression ToExpression(ParameterExpression param) 
         {
-            ArgumentNullException.ThrowIfNull(query);
             ArgumentNullException.ThrowIfNull(Attribute);
             ArgumentNullException.ThrowIfNull(Parameter);
 
-            var value = Parameter.GetValue()?.ToString();
-            var propertyName = Attribute.Property.Name;
+            Expression left = Attribute.ToExpression(param);
+            Expression right = Parameter.ToExpression(param);
 
-            var param = Expression.Parameter(typeof(TIndexItem), "item");
-            var property = Expression.Property(param, propertyName);
-            var constant = Expression.Constant(value);
-            var equalExpression = Expression.Equal(property, constant);
-            var lambda = Expression.Lambda<Func<TIndexItem, bool>>(equalExpression, param);
-
-            return query.WhereEquals(lambda);
+            return Expression.Equal(left, right);
         }
     }
 }
