@@ -1,2 +1,16 @@
 ﻿# Englisch
 indexmanager.initialization=The index manager has been initialized.
+
+wql.unexpected_token=Unexpected token.
+wql.condition_unknown=Unknown condition.
+wql.expected_operator=An operator is expected.
+wql.expected_binary_or_set_condition=A binary or set condition is expected.
+wql.expected_logicaloperator=A logical operator is expected.
+wql.attribute_unknown=Unknown attribute.
+wql.expected_terminated_string_token=A string token with a terminating quotation mark is expected.
+wql.expected_similarity=A similarity condition is expected.
+wql.expected_distance=A distance condition is expected.
+wql.function_unknown=Unknown function.
+wql.expected_skip_or_take=A skip or take condition is expected.
+wql.expected_token=A token is expected.
+wql.expected_token_matching=The token does not match the expected pattern or format.

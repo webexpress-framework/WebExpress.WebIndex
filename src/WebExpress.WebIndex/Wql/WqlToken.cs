@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents a token of the wql syntax.
     /// </summary>
-    public class WqlToken
+    public class WqlToken : IWqlToken
     {
         /// <summary>
         /// Returns the starting position of the token in the raw statement.

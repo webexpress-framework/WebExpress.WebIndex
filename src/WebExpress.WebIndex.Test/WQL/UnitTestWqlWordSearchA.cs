@@ -1,4 +1,6 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
+using WebExpress.WebIndex.Wql;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -197,6 +199,60 @@ namespace WebExpress.WebIndex.Test.WQL
             Assert.NotNull(wql.Filter);
             Assert.Null(wql.Order);
             Assert.Null(wql.Partitioning);
+        }
+
+        /// <summary>
+        /// Verifies that the abstract syntax tree (AST) is generated.
+        /// </summary>
+        [Fact]
+        public void AbstracrSyntaxTree()
+        {
+            // arrange
+            var wql = Fixture.ExecuteWql("text~'Helena'");
+
+            // act
+            var ast = wql.AbstractSyntaxTree;
+
+            // validation
+            Assert.NotNull(ast);
+        }
+
+        /// <summary>
+        /// Performs the incremental lookahead analysis.
+        /// </summary>
+        [Theory]
+        [InlineData("", true, 0, WqlExpressionType.None, WqlExpressionType.Attribute)]
+        [InlineData("text", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
+        [InlineData("text #", false, 2, WqlExpressionType.Operator, WqlExpressionType.Operator)]
+        [InlineData("text ~", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ (", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ )", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ and", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ or", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ &", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ ||", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ '", false, 3, WqlExpressionType.Parameter, WqlExpressionType.Parameter)]
+        [InlineData("text ~ \"", false, 3, WqlExpressionType.Parameter, WqlExpressionType.Parameter)]
+        [InlineData("text ~ Helena", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
+        [InlineData("text ~ 'Helena'", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
+        [InlineData("text ~ \"Helena\"", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
+        [InlineData("text ~ day(", false, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
+        [InlineData("text ~ day()", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
+        [InlineData("text ~ Helena and", false, 4, WqlExpressionType.LogicalOperator, WqlExpressionType.Attribute)]
+        public void Analyze(string wql, bool valid, int count, WqlExpressionType type, params WqlExpressionType[] expectedNextTokens)
+        {
+            // arrange
+            var parser = new WqlParser<UnitTestIndexTestDocumentA>();
+
+            // act
+            var ila = parser.Analyze(wql);
+
+            // validation
+            Assert.NotNull(ila);
+            Assert.True(ila.IsValidSoFar == valid);
+            Assert.Equal(type, ila.LastExpressionType);
+            Assert.Equal(count, ila.Items.Count());
+            Assert.Contains(expectedNextTokens, t => ila.ExpectedNextTokens.Contains(t));
         }
     }
 }

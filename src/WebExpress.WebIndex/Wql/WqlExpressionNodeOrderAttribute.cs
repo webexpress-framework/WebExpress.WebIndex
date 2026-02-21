@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -11,6 +12,11 @@ namespace WebExpress.WebIndex.Wql
     public class WqlExpressionNodeOrderAttribute<TIndexItem> : IWqlExpressionNode<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the tokens associated with this syntax tree node.
+        /// </summary>
+        public IEnumerable<IWqlToken> Tokens { get; internal set; }
+
         /// <summary>
         /// Returns the attribute expressions.
         /// </summary>
@@ -85,8 +91,8 @@ namespace WebExpress.WebIndex.Wql
             ArgumentNullException.ThrowIfNull(Attribute);
 
             // build the property access expression: x => x.Property 
-            var body = Attribute.ToExpression(parameter); 
-            
+            var body = Attribute.ToExpression(parameter);
+
             // convert to object to satisfy order requirements 
             return Expression.Convert(body, typeof(object));
         }

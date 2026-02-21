@@ -1,4 +1,6 @@
-﻿namespace WebExpress.WebIndex.Wql
+﻿using System.Collections.Generic;
+
+namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
     /// Describes the parameter option expression of a WQL statement.
@@ -7,6 +9,11 @@
     public class WqlExpressionNodeParameterOption<TIndexItem> : IWqlExpressionNode<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the tokens associated with this syntax tree node.
+        /// </summary>
+        public IEnumerable<IWqlToken> Tokens { get; internal set; }
+
         /// <summary>
         /// Returns the similarity value for the fuzzy search.
         /// </summary>

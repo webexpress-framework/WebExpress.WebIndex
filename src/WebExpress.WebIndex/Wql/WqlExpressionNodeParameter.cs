@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using WebExpress.WebIndex.Wql.Function;
 
@@ -11,6 +12,11 @@ namespace WebExpress.WebIndex.Wql
     public class WqlExpressionNodeParameter<TIndexItem> : IWqlExpressionNode<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the tokens associated with this syntax tree node.
+        /// </summary>
+        public IEnumerable<IWqlToken> Tokens { get; internal set; }
+
         /// <summary>
         /// Returns the value expressions.
         /// </summary>
@@ -52,21 +58,21 @@ namespace WebExpress.WebIndex.Wql
         /// A constant expression if the parameter is a literal value, or a method call 
         /// expression if the parameter represents a function invocation. 
         /// </returns> 
-        public Expression ToExpression(ParameterExpression param) 
-        { 
-            if (Function is not null) 
-            { 
+        public Expression ToExpression(ParameterExpression param)
+        {
+            if (Function is not null)
+            {
                 // delegate expression building to the function node 
-                return Function.ToExpression(param); 
-            } 
-            
-            if (Value is not null) 
-            { 
+                return Function.ToExpression(param);
+            }
+
+            if (Value is not null)
+            {
                 // wrap literal values in a constant expression 
-                return Expression.Constant(Value.GetValue()); 
-            } 
-            
-            throw new InvalidOperationException( "Parameter node contains neither a value nor a function."); 
+                return Expression.Constant(Value.GetValue());
+            }
+
+            throw new InvalidOperationException("Parameter node contains neither a value nor a function.");
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace WebExpress.WebIndex.Wql
@@ -10,6 +11,11 @@ namespace WebExpress.WebIndex.Wql
     public class WqlExpressionNodeValue<TIndexItem> : IWqlExpressionNode<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the tokens associated with this syntax tree node.
+        /// </summary>
+        public IEnumerable<IWqlToken> Tokens { get; internal set; }
+
         /// <summary>
         /// Returns the value as string.
         /// </summary>

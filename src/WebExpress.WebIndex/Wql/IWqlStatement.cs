@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
 using WebExpress.WebIndex.Queries;
 
@@ -50,7 +49,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns the syntax tree of the wql query.
         /// </summary>
-        IEnumerable<IWqlExpressionNode<TIndexItem>> AbstractSyntaxTree { get; }
+        IWqlSyntaxTree<TIndexItem> AbstractSyntaxTree { get; }
 
         /// <summary>
         /// Applies the filter to the index.

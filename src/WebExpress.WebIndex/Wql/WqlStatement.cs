@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -57,30 +56,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns the syntax tree of the wql query.
         /// </summary>
-        public IEnumerable<IWqlExpressionNode<TIndexItem>> AbstractSyntaxTree
-        {
-            get
-            {
-                var nodes = new List<IWqlExpressionNode<TIndexItem>>();
-
-                if (Filter is not null)
-                {
-                    nodes.Add(Filter);
-                }
-
-                if (Order is not null)
-                {
-                    nodes.Add(Order);
-                }
-
-                if (Partitioning is not null)
-                {
-                    nodes.Add(Partitioning);
-                }
-
-                return nodes;
-            }
-        }
+        public IWqlSyntaxTree<TIndexItem> AbstractSyntaxTree => new WqlSyntaxTree<TIndexItem>(Filter, Order, Partitioning);
 
         /// <summary>
         /// Initializes a new instance of the class.

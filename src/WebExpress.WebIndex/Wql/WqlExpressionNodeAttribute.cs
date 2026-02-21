@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -11,6 +12,11 @@ namespace WebExpress.WebIndex.Wql
     public class WqlExpressionNodeAttribute<TIndexItem> : IWqlExpressionNode<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the tokens associated with this syntax tree node.
+        /// </summary>
+        public IEnumerable<IWqlToken> Tokens { get; internal set; }
+
         /// <summary>
         /// Returns the name of the attribute.
         /// </summary>
@@ -47,11 +53,11 @@ namespace WebExpress.WebIndex.Wql
         /// <exception cref="InvalidOperationException"> 
         /// Thrown when no <see cref="PropertyInfo"/> is assigned to this attribute node. 
         /// </exception>
-        public Expression ToExpression(ParameterExpression param) 
-        { 
-            if (Property is null) 
+        public Expression ToExpression(ParameterExpression param)
+        {
+            if (Property is null)
             {
-                throw new InvalidOperationException( $"Attribute '{Name}' has no PropertyInfo assigned."); 
+                throw new InvalidOperationException($"Attribute '{Name}' has no PropertyInfo assigned.");
             }
 
             return Expression.Property(param, Property);
