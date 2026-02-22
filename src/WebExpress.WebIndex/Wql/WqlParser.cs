@@ -121,6 +121,10 @@ namespace WebExpress.WebIndex.Wql
         /// valid so far and which tokens would be permissible at the current position.
         /// </summary>
         /// <param name="input">The input WQL string.</param>
+        /// <returns>
+        /// An lookahead object that contains the results of the analysis, including 
+        /// valid tokens and expected next tokens.
+        /// </returns>
         public IWqlLookahead Analyze(string input)
         {
             var ilaQueue = new Queue<WqlLookaheadToken>();

@@ -11,6 +11,18 @@ namespace WebExpress.WebIndex.Wql
         where TIndexItem : IIndexItem
     {
         /// <summary>
+        /// Performs an incremental lookahead analysis (ILA) over the given
+        /// wql input. The method determines which portion of the input is syntactically 
+        /// valid so far and which tokens would be permissible at the current position.
+        /// </summary>
+        /// <param name="input">The input WQL string.</param>
+        /// <returns>
+        /// An lookahead object that contains the results of the analysis, including 
+        /// valid tokens and expected next tokens.
+        /// </returns>
+        IWqlLookahead Analyze(string input);
+
+        /// <summary>
         /// Parses a given wql query.
         /// </summary>
         /// <param name="input">An input string that contains a wql query.</param>
