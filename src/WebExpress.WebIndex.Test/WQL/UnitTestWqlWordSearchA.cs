@@ -238,7 +238,9 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("text ~ \"Helena\"", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
         [InlineData("text ~ day(", false, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
         [InlineData("text ~ day()", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
+        //[InlineData("text ~ day(\"param1\")", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
         [InlineData("text ~ Helena and", false, 4, WqlExpressionType.LogicalOperator, WqlExpressionType.Attribute)]
+        //[InlineData("text in ('Helena', 'Hans')", true, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
         public void Analyze(string wql, bool valid, int count, WqlExpressionType type, params WqlExpressionType[] expectedNextTokens)
         {
             // arrange

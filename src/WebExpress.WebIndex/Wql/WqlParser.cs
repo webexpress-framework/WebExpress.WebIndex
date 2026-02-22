@@ -87,7 +87,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Initializes a new instance of the parser and registers default conditions and functions.
         /// </summary>
-        internal WqlParser()
+        public WqlParser()
         {
             Attributes = GetFieldData(typeof(TIndexItem));
 
