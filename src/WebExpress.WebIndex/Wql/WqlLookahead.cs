@@ -25,7 +25,7 @@ namespace WebExpress.WebIndex.Wql
         /// Returns the type of the last token of the WQL expression.
         /// </summary>
         public WqlExpressionType LastExpressionType =>
-            Items.LastOrDefault()?.ExpreesionType ?? WqlExpressionType.None;
+            Items.LastOrDefault()?.ExpressionType ?? WqlExpressionType.None;
 
         /// <summary>
         /// Returns the set of tokens that would be syntactically valid at the

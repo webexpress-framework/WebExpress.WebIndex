@@ -16,7 +16,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns the type of the WQL expression represented by this instance.
         /// </summary>
-        WqlExpressionType ExpreesionType { get; }
+        WqlExpressionType ExpressionType { get; }
 
         /// <summary>
         /// Returns the set of tokens that would be syntactically valid at the

@@ -223,6 +223,7 @@ namespace WebExpress.WebIndex.Test.WQL
         [Theory]
         [InlineData("", true, 0, WqlExpressionType.None, WqlExpressionType.Attribute)]
         [InlineData("text", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
+        [InlineData("text ", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text #", false, 2, WqlExpressionType.Operator, WqlExpressionType.Operator)]
         [InlineData("text ~", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
         [InlineData("text ~ (", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]

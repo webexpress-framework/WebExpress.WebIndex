@@ -16,7 +16,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns the type of the WQL expression represented by this instance.
         /// </summary>
-        public WqlExpressionType ExpreesionType { get; }
+        public WqlExpressionType ExpressionType { get; }
 
         /// <summary>
         /// Returns the set of tokens that would be syntactically valid at the
@@ -37,13 +37,13 @@ namespace WebExpress.WebIndex.Wql
         /// The WqlToken to associate with this lookahead token. This parameter cannot 
         /// be null.
         /// </param>
-        /// <param name="expreesionType">
+        /// <param name="expressionType">
         /// The type of expression represented by the token.
         /// </param>
-        public WqlLookaheadToken(IWqlToken token, WqlExpressionType expreesionType)
+        public WqlLookaheadToken(IWqlToken token, WqlExpressionType expressionType)
         {
             Token = token;
-            ExpreesionType = expreesionType;
+            ExpressionType = expressionType;
         }
 
         /// <summary>
