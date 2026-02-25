@@ -23,11 +23,5 @@ namespace WebExpress.WebIndex.Wql
         /// current position (lookahead).
         /// </summary>
         IEnumerable<WqlExpressionType> ExpectedNextTokens { get; }
-
-        /// <summary>
-        /// Indicates whether the input is syntactically valid up to the current
-        /// position.
-        /// </summary>
-        bool IsValid { get; }
     }
 }

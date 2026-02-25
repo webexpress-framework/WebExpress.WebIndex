@@ -222,6 +222,7 @@ namespace WebExpress.WebIndex.Test.WQL
         /// </summary>
         [Theory]
         [InlineData("", true, 0, WqlExpressionType.None, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
+        [InlineData("(", false, 1, WqlExpressionType.OpenParenthesis, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
         [InlineData("text", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text ", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text #", false, 2, WqlExpressionType.Operator, WqlExpressionType.Operator)]
@@ -233,17 +234,16 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("text ~ or", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
         [InlineData("text ~ &", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
         [InlineData("text ~ ||", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
-        [InlineData("text ~ '", false, 3, WqlExpressionType.Parameter, WqlExpressionType.Parameter)]
-        [InlineData("text ~ \"", false, 3, WqlExpressionType.Parameter, WqlExpressionType.Parameter)]
-        [InlineData("text ~ Helena", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
-        [InlineData("text ~ 'Helena'", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
-        [InlineData("text ~ \"Helena\"", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
-        [InlineData("text ~ day(", false, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
-        [InlineData("text ~ day()", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
-        //[InlineData("text ~ day(\"param1\")", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
-        [InlineData("text ~ Helena and", false, 4, WqlExpressionType.LogicalOperator, WqlExpressionType.Attribute)]
-
-        //[InlineData("text in ('Helena', 'Hans')", true, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter, WqlExpressionType.OpenParenthesis)]
+        [InlineData("text ~ '", false, 3, WqlExpressionType.Quotation, WqlExpressionType.Parameter)]
+        [InlineData("text ~ \"", false, 3, WqlExpressionType.Quotation, WqlExpressionType.Parameter)]
+        [InlineData("text ~ Helena", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning)]
+        [InlineData("text ~ 'Helena'", true, 5, WqlExpressionType.Quotation, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning)]
+        [InlineData("text ~ \"Helena\"", true, 5, WqlExpressionType.Quotation, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning)]
+        [InlineData("text ~ day(", false, 4, WqlExpressionType.OpenParenthesis, WqlExpressionType.Parameter, WqlExpressionType.Quotation, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text ~ day()", true, 5, WqlExpressionType.CloseParenthesis, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning)]
+        [InlineData("text ~ day(\"", false, 5, WqlExpressionType.Quotation, WqlExpressionType.Parameter, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text ~ Helena and", false, 4, WqlExpressionType.LogicalOperator, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
+        [InlineData("text in ('Helena', 'Hans')", true, 11, WqlExpressionType.CloseParenthesis, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning)]
         public void Analyze(string wql, bool valid, int count, WqlExpressionType type, params WqlExpressionType[] expectedNextTokens)
         {
             // arrange

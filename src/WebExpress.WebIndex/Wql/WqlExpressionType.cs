@@ -33,24 +33,56 @@
         Parameter,
 
         /// <summary>
+        /// Represents a function that performs a specific operation.
+        /// </summary>
+        Function,
+
+        /// <summary>
         /// Represents an order in the system, encapsulating details about the items 
         /// purchased and their quantities.
         /// </summary>
         Order,
 
-
+        /// <summary>
+        /// Specifies the direction in which a collection is sorted, such as ascending 
+        /// or descending.
+        /// </summary>
         OrderDirection,
 
+        /// <summary>
+        /// Gets or sets the partitioning strategy used for data distribution.
+        /// </summary>
         Partitioning,
 
+        /// <summary>
+        /// Represents an operator that partitions a sequence into multiple segments based on 
+        /// specified criteria.
+        /// </summary>
         PartitioningOperator,
 
+        /// <summary>
+        /// Represents the opening parenthesis character used in expressions.
+        /// </summary>
         OpenParenthesis,
 
+        /// <summary>
+        /// Represents the closing parenthesis character used in expressions.
+        /// </summary>
         CloseParenthesis,
 
+        /// <summary>
+        /// Represents the quotation mark character used to delimit string literals.
+        /// </summary>
+        Quotation,
+
+        /// <summary>
+        /// Represents the separator character used to delimit values.
+        /// </summary>
         Separator,
 
+        /// <summary>
+        /// Represents a constant value used within an expression.
+        /// </summary>
         Literal
     }
 }

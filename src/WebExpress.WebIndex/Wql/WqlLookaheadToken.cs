@@ -25,12 +25,6 @@ namespace WebExpress.WebIndex.Wql
         public IEnumerable<WqlExpressionType> ExpectedNextTokens { get; init; } = [];
 
         /// <summary>
-        /// Indicates whether the input is syntactically valid up to the current
-        /// position.
-        /// </summary>
-        public bool IsValid { get; init; }
-
-        /// <summary>
         /// Initializes a new instance of the class using the specified WqlToken.
         /// </summary>
         /// <param name="token">
