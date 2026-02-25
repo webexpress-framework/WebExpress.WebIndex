@@ -23,6 +23,12 @@ namespace WebExpress.WebIndex.Wql.Condition
         /// </summary>
         public string Operator { get; internal set; }
 
+        /// <summary> 
+        /// Returns a value indicating whether this operator expects a scalar value 
+        /// instead of a list of values. 
+        /// </summary> 
+        public bool IsScalar { get; internal set; }
+
         /// <summary>
         /// Returns the culture in which to run the wql.
         /// </summary>
@@ -32,9 +38,10 @@ namespace WebExpress.WebIndex.Wql.Condition
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="token">One or more tokens that determine the operation. Multiple tokens are separated by spaces.</param>
-        protected WqlExpressionNodeFilterCondition(string token)
+        protected WqlExpressionNodeFilterCondition(string token, bool isScalar = true)
         {
             Operator = token;
+            IsScalar = isScalar;
         }
 
         /// <summary>

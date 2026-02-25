@@ -57,7 +57,7 @@ namespace WebExpress.WebIndex.Test.WQL
 
             // act
             var wql = Fixture.ExecuteWql($"text~'{term}'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             // validation
             var item = res?.FirstOrDefault();
@@ -84,7 +84,7 @@ namespace WebExpress.WebIndex.Test.WQL
 
             // act
             var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             // validation
             var item = res?.FirstOrDefault();

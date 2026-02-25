@@ -161,7 +161,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var wql = Fixture.ExecuteWql("text~'Helena'");
 
             // act
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             // validation
             var item = res?.FirstOrDefault();
@@ -186,7 +186,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var wql = Fixture.ExecuteWql("text~'Helena Helge'");
 
             // act
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             // validation
             var item = res?.FirstOrDefault();
@@ -221,10 +221,11 @@ namespace WebExpress.WebIndex.Test.WQL
         /// Performs the incremental lookahead analysis.
         /// </summary>
         [Theory]
-        [InlineData("", true, 0, WqlExpressionType.None, WqlExpressionType.Attribute)]
+        [InlineData("", true, 0, WqlExpressionType.None, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
         [InlineData("text", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text ", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text #", false, 2, WqlExpressionType.Operator, WqlExpressionType.Operator)]
+        [InlineData("text in", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter, WqlExpressionType.OpenParenthesis)]
         [InlineData("text ~", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
         [InlineData("text ~ (", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
         [InlineData("text ~ )", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
@@ -241,7 +242,8 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("text ~ day()", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
         //[InlineData("text ~ day(\"param1\")", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator)]
         [InlineData("text ~ Helena and", false, 4, WqlExpressionType.LogicalOperator, WqlExpressionType.Attribute)]
-        //[InlineData("text in ('Helena', 'Hans')", true, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+
+        //[InlineData("text in ('Helena', 'Hans')", true, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter, WqlExpressionType.OpenParenthesis)]
         public void Analyze(string wql, bool valid, int count, WqlExpressionType type, params WqlExpressionType[] expectedNextTokens)
         {
             // arrange

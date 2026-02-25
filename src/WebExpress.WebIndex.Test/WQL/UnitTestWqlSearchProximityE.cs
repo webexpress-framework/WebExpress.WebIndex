@@ -26,8 +26,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("name~'Olivia':6");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
             Assert.Equal(1, res.Count());
@@ -42,8 +43,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("name~'Olivia':0");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
             Assert.Equal(1, res.Count());

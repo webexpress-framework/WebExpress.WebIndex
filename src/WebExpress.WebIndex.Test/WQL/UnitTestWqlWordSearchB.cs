@@ -55,7 +55,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var wql = Fixture.ExecuteWql("name~'Name_12'");
 
             // act
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             // validation
             var item = res?.FirstOrDefault();

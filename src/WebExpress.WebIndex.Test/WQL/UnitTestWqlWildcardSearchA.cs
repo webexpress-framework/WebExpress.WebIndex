@@ -103,8 +103,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'?elena'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
             Assert.Contains("b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a", res.Select(x => x.Id.ToString()));
@@ -121,8 +122,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'He?ena'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
             Assert.Contains("b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a", res.Select(x => x.Id.ToString()));
@@ -139,8 +141,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'Helen?'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
             Assert.Contains("b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a", res.Select(x => x.Id.ToString()));
@@ -157,8 +160,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'*ena'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
             Assert.Contains("b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a", res.Select(x => x.Id.ToString()));
@@ -175,8 +179,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'He*a'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
             Assert.Contains("b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a", res.Select(x => x.Id.ToString()));
@@ -193,8 +198,9 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'Hel*'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
             Assert.Contains("b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a", res.Select(x => x.Id.ToString()));

@@ -114,7 +114,7 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Helena'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
             Assert.Equal(4, res.Count());
@@ -132,7 +132,7 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Helena and Helge!'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
             Assert.Equal(1, res.Count());
@@ -147,7 +147,7 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Hello Helena and Helge!'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
             Assert.Equal(1, res.Count());
@@ -165,7 +165,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // act
             // Hello Helena and Helge!
             var wql = Fixture.ExecuteWql("text='Hello Helena hello Helge!'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
             Assert.Equal(1, res.Count());

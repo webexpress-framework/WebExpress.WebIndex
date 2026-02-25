@@ -26,9 +26,10 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("name~'?livia'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
             Assert.Equal(1, res.Count());
@@ -43,9 +44,10 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("name~'Oli?ia'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
             Assert.Equal(1, res.Count());
@@ -60,9 +62,10 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("name~'Olivi?'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
             Assert.Equal(1, res.Count());
@@ -78,9 +81,10 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("name~'Olivi*'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
             Assert.Equal(1, res.Count());

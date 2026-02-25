@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Reflection;
 using WebExpress.WebIndex.Test.Document;
-using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebIndex.Test.Fixture
 {
@@ -43,16 +42,6 @@ namespace WebExpress.WebIndex.Test.Fixture
         {
             IndexManager.Dispose();
             Directory.Delete(IndexManager.Context.IndexDirectory, true);
-        }
-
-        /// <summary>
-        /// Executes a wql statement.
-        /// </summary>
-        /// <param name="wql">The wql statement.</param>
-        /// <returns>The WQL parser.</returns>
-        public IWqlStatement<UnitTestIndexTestDocumentF> ExecuteWql(string wql)
-        {
-            return IndexManager.Retrieve<UnitTestIndexTestDocumentF>(wql);
         }
     }
 }

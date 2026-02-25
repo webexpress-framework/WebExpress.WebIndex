@@ -130,7 +130,7 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'Bob Dave':20");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
             Assert.Equal(2, res.Count());
@@ -146,7 +146,7 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'Dave Bob':20");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
             Assert.Equal(2, res.Count());

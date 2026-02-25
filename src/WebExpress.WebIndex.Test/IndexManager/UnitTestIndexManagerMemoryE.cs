@@ -33,9 +33,9 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             IndexManager.Create<UnitTestIndexTestDocumentE>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
 
+            // validation
             Assert.NotNull(IndexManager.GetIndexDocument<UnitTestIndexTestDocumentE>());
 
-            // postconditions
             Postconditions();
         }
 
@@ -57,13 +57,11 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             IndexManager.ReIndex(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
-            Assert.NotNull(wql);
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
+            Assert.NotNull(items);
+            Assert.NotEmpty(items);
 
-            var item = wql.Apply();
-            Assert.NotEmpty(item);
-
-            // postconditions
             Postconditions();
         }
 
@@ -85,13 +83,11 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             await IndexManager.ReIndexAsync(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
-            Assert.NotNull(wql);
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
+            Assert.NotNull(items);
+            Assert.NotEmpty(items);
 
-            var item = wql.Apply();
-            Assert.NotEmpty(item);
-
-            // postconditions
             Postconditions();
         }
 
@@ -107,20 +103,17 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentE>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
-            Assert.NotNull(wql);
-
-            var before = wql.Apply().ToList();
+            var before = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
+            Assert.NotNull(before);
             Assert.True(before.Any());
 
             // act
             IndexManager.Delete(randomItem);
 
-            wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
-            Assert.NotNull(wql);
-
-            var after = wql.Apply().ToList();
-            Assert.True(before.Count - 1 == after.Count);
+            // validation
+            var after = IndexManager.Retrieve<UnitTestIndexTestDocumentE>($"name = '{randomItem.Name}'");
+            Assert.NotNull(after);
+            Assert.Equal(before.Count() - 1, after.Count());
 
             // postconditions
             Postconditions();
@@ -144,13 +137,11 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 Name = "Aurora"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>("name = 'Aurora'");
-            var item = wql.Apply();
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentE>("name = 'Aurora'");
+            Assert.NotNull(items);
+            Assert.Equal(1, items.Count());
 
-            Assert.NotNull(wql);
-            Assert.Equal(1, item.Count());
-
-            // postconditions
             Postconditions();
         }
 
@@ -173,13 +164,11 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 Name = "Aurora"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>("name = 'Aurora'");
-            var item = wql.Apply();
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentE>("name = 'Aurora'");
+            Assert.NotNull(items);
+            Assert.Equal(1, items.Count());
 
-            Assert.NotNull(wql);
-            Assert.Equal(1, item.Count());
-
-            // postconditions
             Postconditions();
         }
 
@@ -202,13 +191,10 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 Name = "Aurora"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentE>("name = 'Aurora'");
-            Assert.NotNull(wql);
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentE>("name = 'Aurora'");
+            Assert.NotNull(items);
+            Assert.Equal(1, items.Count());
 
-            var item = wql.Apply();
-            Assert.Equal(1, item.Count());
-
-            // postconditions
             Postconditions();
         }
 
@@ -231,12 +217,12 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             IndexManager.Clear<UnitTestIndexTestDocumentE>();
 
+            // validation
             documents = IndexManager.All<UnitTestIndexTestDocumentE>();
 
             Assert.NotNull(documents);
             Assert.False(documents.Any());
 
-            // postconditions
             Postconditions();
         }
 
@@ -254,9 +240,9 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             var all = IndexManager.All<UnitTestIndexTestDocumentE>();
 
+            // validation
             Assert.True(all.Select(x => x.Id).OrderBy(x => x).SequenceEqual(Fixture.TestData.Select(x => x.Id).OrderBy(x => x)));
 
-            // postconditions
             Postconditions();
         }
 
@@ -276,10 +262,11 @@ namespace WebExpress.WebIndex.Test.IndexManager
 
             // act
             var document = IndexManager.GetIndexDocument<UnitTestIndexTestDocumentE>();
+
+            // validation
             Assert.NotNull(document);
             Assert.True(document.GetType() == typeof(IndexDocument<UnitTestIndexTestDocumentE>));
 
-            // postconditions
             Postconditions();
         }
 
@@ -298,9 +285,10 @@ namespace WebExpress.WebIndex.Test.IndexManager
 
             // act
             var document = IndexManager.GetIndexDocument<UnitTestIndexTestDocumentE>();
+
+            // validation
             Assert.Null(document);
 
-            // postconditions
             Postconditions();
         }
     }

@@ -56,13 +56,11 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             IndexManager.ReIndex(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
-            Assert.NotNull(wql);
-
-            var item = wql.Apply();
+            // validation
+            var item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
+            Assert.NotNull(item);
             Assert.Equal(4, item.Count());
 
-            // postconditions
             Postconditions();
         }
 
@@ -83,13 +81,12 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // act
             await IndexManager.ReIndexAsync(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
-            Assert.NotNull(wql);
+            // validation
+            var item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
+            Assert.NotNull(item);
 
-            var item = wql.Apply();
             Assert.Equal(4, item.Count());
 
-            // postconditions
             Postconditions();
         }
 
@@ -104,22 +101,19 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentA>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
-            Assert.NotNull(wql);
+            var item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
 
-            var item = wql.Apply();
+            Assert.NotNull(item);
             Assert.Equal(4, item.Count());
 
             // act
             IndexManager.Delete(Fixture.TestData[0]);
 
-            wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
-            Assert.NotNull(wql);
-
-            item = wql.Apply();
+            // validation
+            item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helena'");
+            Assert.NotNull(item);
             Assert.Equal(3, item.Count());
 
-            // postconditions
             Postconditions();
         }
 
@@ -141,13 +135,12 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 Text = "Hello Aurora!"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Aurora'");
-            var item = wql.Apply();
+            // validation
+            var item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Aurora'");
 
-            Assert.NotNull(wql);
+            Assert.NotNull(item);
             Assert.Equal(1, item.Count());
 
-            // postconditions
             Postconditions();
         }
 
@@ -169,19 +162,15 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 Text = "Hello Helena, hello Aurora!"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Aurora'");
-            Assert.NotNull(wql);
-
-            var item = wql.Apply();
+            // validation
+            var item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Aurora'");
+            Assert.NotNull(item);
             Assert.Equal(1, item.Count());
 
-            wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helge'");
-            Assert.NotNull(wql);
-
-            item = wql.Apply();
+            item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helge'");
+            Assert.NotNull(item);
             Assert.Equal(1, item.Count());
 
-            // postconditions
             Postconditions();
         }
 
@@ -203,19 +192,15 @@ namespace WebExpress.WebIndex.Test.IndexManager
                 Text = "Hello Helena, hello Aurora!"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Aurora'");
-            Assert.NotNull(wql);
-
-            var item = wql.Apply();
+            // validation
+            var item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Aurora'");
+            Assert.NotNull(item);
             Assert.Equal(1, item.Count());
 
-            wql = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helge'");
-            Assert.NotNull(wql);
-
-            item = wql.Apply();
+            item = IndexManager.Retrieve<UnitTestIndexTestDocumentA>("text ~ 'Helge'");
+            Assert.NotNull(item);
             Assert.Equal(1, item.Count());
 
-            // postconditions
             Postconditions();
         }
 

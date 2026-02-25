@@ -293,7 +293,8 @@ namespace WebExpress.WebIndex
 
             if (document is not null)
             {
-                await Task.Run(() => document.Dispose()).ConfigureAwait(false);
+                await Task.Run(() => document.Dispose())
+                    .ConfigureAwait(false);
             }
         }
 
@@ -344,7 +345,8 @@ namespace WebExpress.WebIndex
 
             if (document is not null)
             {
-                await document.DropAsync().ConfigureAwait(false);
+                await document.DropAsync()
+                    .ConfigureAwait(false);
             }
         }
 
@@ -389,7 +391,8 @@ namespace WebExpress.WebIndex
                 return;
             }
 
-            await document.AddAsync(item).ConfigureAwait(false);
+            await document.AddAsync(item)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -433,7 +436,8 @@ namespace WebExpress.WebIndex
                 return;
             }
 
-            await document.UpdateAsync(item).ConfigureAwait(false);
+            await document.UpdateAsync(item)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -465,7 +469,8 @@ namespace WebExpress.WebIndex
                 return 0;
             }
 
-            return await document.CountAsync().ConfigureAwait(false);
+            return await document.CountAsync()
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -506,7 +511,8 @@ namespace WebExpress.WebIndex
             where TIndexItem : IIndexItem
         {
             var item = All<TIndexItem>().FirstOrDefault(x => x.Id == id);
-            await DeleteAsync(item).ConfigureAwait(false);
+            await DeleteAsync(item)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -523,7 +529,8 @@ namespace WebExpress.WebIndex
                 return;
             }
 
-            await document.RemoveAsync(item).ConfigureAwait(false);
+            await document.RemoveAsync(item)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -555,26 +562,35 @@ namespace WebExpress.WebIndex
                 return;
             }
 
-            await document.ClearAsync().ConfigureAwait(false);
+            await document.ClearAsync()
+                .ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Parses and returns a WQL statement instance for the given query string.
-        /// </summary>
-        /// <typeparam name="TIndexItem">The item type implementing IIndexItem.</typeparam>
-        /// <param name="wql">The WQL query string.</param>
-        public IWqlStatement<TIndexItem> Retrieve<TIndexItem>(string wql)
+        /// <summary> 
+        /// Parses the specified WQL query string and returns a corresponding 
+        /// <see cref="IQueryable{TIndexItem}"/> instance. 
+        /// </summary> 
+        /// <typeparam name="TIndexItem"> 
+        /// The item type implementing IIndexItem.
+        /// </typeparam> 
+        /// <param name="wql">
+        /// The WQL query string to parse.
+        /// </param>
+        /// <returns> 
+        /// The result contains an IQueryable of TIndexItem produced from the WQL statement. 
+        /// </returns>
+        public IQueryable<TIndexItem> Retrieve<TIndexItem>(string wql)
             where TIndexItem : IIndexItem
         {
             if (string.IsNullOrWhiteSpace(wql))
             {
-                return null;
+                return Enumerable.Empty<TIndexItem>().AsQueryable();
             }
 
             var document = GetIndexDocument<TIndexItem>();
             if (document is null)
             {
-                return null;
+                return Enumerable.Empty<TIndexItem>().AsQueryable();
             }
 
             var parser = new WqlParser<TIndexItem>(document);
@@ -591,26 +607,54 @@ namespace WebExpress.WebIndex
                 generic.Invoke(parser, null);
             }
 
-            return parser.Parse(wql);
+            var statement = parser.Parse(wql);
+
+            return statement.Apply();
         }
 
         /// <summary>
-        /// Asynchronously parses and returns a WQL statement instance for the given query string.
+        /// Parses the specified WQL statement and returns the corresponding
+        /// <see cref="IQueryable{TIndexItem}"/> instance.
         /// </summary>
-        /// <typeparam name="TIndexItem">The item type implementing IIndexItem.</typeparam>
-        /// <param name="wql">The WQL query string.</param>
-        public async Task<IWqlStatement<TIndexItem>> RetrieveAsync<TIndexItem>(string wql)
+        /// <typeparam name="TIndexItem">
+        /// The item type implementing IIndexItem.
+        /// </typeparam>
+        /// <param name="wql">
+        /// The WQL statement to evaluate.
+        /// </param>
+        /// <returns> 
+        /// The result contains an IQueryable of TIndexItem produced from the WQL statement. 
+        /// </returns>
+        public IQueryable<TIndexItem> Retrieve<TIndexItem>(IWqlStatement<TIndexItem> wql)
+            where TIndexItem : IIndexItem
+        {
+            return Retrieve<TIndexItem>(wql?.Raw);
+        }
+
+        /// <summary> 
+        /// Asynchronously returns an IQueryable of TIndexItem based on the 
+        /// specified WQL statement. 
+        /// </summary> 
+        /// <typeparam name="TIndexItem"> 
+        /// The item type implementing IIndexItem. 
+        /// </typeparam> 
+        /// <param name="wql">The WQL statement to evaluate.</param> 
+        /// <returns> 
+        /// A task representing the asynchronous operation. The task result 
+        /// contains an IQueryable of TIndexItem produced from the WQL statement. 
+        /// </returns>
+        public async Task<IQueryable<TIndexItem>> RetrieveAsync<TIndexItem>(string wql)
             where TIndexItem : IIndexItem
         {
             if (string.IsNullOrWhiteSpace(wql))
             {
-                return null;
+                return Enumerable.Empty<TIndexItem>().AsQueryable();
             }
 
             var document = GetIndexDocument<TIndexItem>();
             if (document is null)
             {
-                return null;
+                return Enumerable.Empty<TIndexItem>().AsQueryable();
             }
 
             return await Task.Run(() =>
@@ -629,8 +673,33 @@ namespace WebExpress.WebIndex
                     generic.Invoke(parser, null);
                 }
 
-                return parser.Parse(wql);
-            }).ConfigureAwait(false);
+                var statement = parser.Parse(wql);
+
+                return statement.Apply();
+            })
+                .ConfigureAwait(false);
+        }
+
+        /// <summary> 
+        /// Asynchronously returns an IQueryable of TIndexItem based on the 
+        /// specified WQL statement. 
+        /// </summary> 
+        /// <typeparam name="TIndexItem"> 
+        /// The item type implementing IIndexItem. 
+        /// </typeparam> 
+        /// <param name="wql">The WQL statement to evaluate.</param> 
+        /// <returns> 
+        /// A task representing the asynchronous operation. The task result 
+        /// contains an IQueryable of TIndexItem produced from the WQL statement. 
+        /// </returns>
+        public async Task<IQueryable<TIndexItem>> RetrieveAsync<TIndexItem>(IWqlStatement<TIndexItem> wql)
+            where TIndexItem : IIndexItem
+        {
+            return await Task.Run(() =>
+            {
+                return Retrieve<TIndexItem>(wql?.Raw);
+            })
+                .ConfigureAwait(false);
         }
 
         /// <summary>

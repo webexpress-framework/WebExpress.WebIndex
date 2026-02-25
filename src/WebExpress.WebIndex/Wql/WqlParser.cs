@@ -372,7 +372,7 @@ namespace WebExpress.WebIndex.Wql
                     binary.Culture = Culture;
                     binary.Attribute = attribute;
 
-                    binary.Parameter = ParseParameter(tokenQueue, ilaQueue);
+                    binary.Parameter = ParseParameter(tokenQueue, ilaQueue, true);
                     binary.Options = ParseParameterOptions(tokenQueue, ilaQueue);
 
                     return binary;
@@ -381,16 +381,35 @@ namespace WebExpress.WebIndex.Wql
                 {
                     var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
 
-                    ReadToken(tokenQueue, "(");
-                    parameters.Add(ParseParameter(tokenQueue, ilaQueue));
+                    var openToken = ReadToken(tokenQueue, "(");
+
+                    ilaQueue.Enqueue(new WqlLookaheadToken(openToken, WqlExpressionType.OpenParenthesis)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Parameter],
+                        IsValid = true
+                    });
+
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
 
                     while (PeekToken(tokenQueue, ","))
                     {
-                        ReadToken(tokenQueue, ",");
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue));
+                        var SeparatorToken = ReadToken(tokenQueue, ",");
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false));
+
+                        ilaQueue.Enqueue(new WqlLookaheadToken(SeparatorToken, WqlExpressionType.Separator)
+                        {
+                            ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Separator],
+                            IsValid = true
+                        });
                     }
 
-                    ReadToken(tokenQueue, ")");
+                    var closeToken = ReadToken(tokenQueue, ")");
+
+                    ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning],
+                        IsValid = true
+                    });
 
                     set.Culture = Culture;
                     set.Attribute = attribute;
@@ -508,8 +527,13 @@ namespace WebExpress.WebIndex.Wql
         /// Parses a parameter node which can be a function call, a number, or a string.
         /// </summary>
         /// <param name="tokenQueue">The token queue.</param>
+        /// <param name="ilaQueue">The lookahead token queue.</param>
+        /// <param name="isScalar"> 
+        /// Indicates whether the parameter is expected to be a scalar value. 
+        /// If false, the parser may accept or construct a list of values. 
+        /// </param>
         /// <returns>The parameter node.</returns>
-        private WqlExpressionNodeParameter<TIndexItem> ParseParameter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
+        private WqlExpressionNodeParameter<TIndexItem> ParseParameter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, bool isScalar)
         {
             var functionOrValueToken = PeekToken(tokenQueue);
             var function = Functions
@@ -557,7 +581,9 @@ namespace WebExpress.WebIndex.Wql
                 {
                     ilaQueue.Enqueue(new WqlLookaheadToken(new WqlTokenCombine(openToken, valueToken), WqlExpressionType.Parameter)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.Parameter],
+                        ExpectedNextTokens = isScalar
+                            ? [WqlExpressionType.Parameter, WqlExpressionType.Separator]
+                            : [WqlExpressionType.Parameter],
                         IsValid = true
                     });
 
@@ -781,12 +807,12 @@ namespace WebExpress.WebIndex.Wql
                 }
                 else
                 {
-                    parameters.Add(ParseParameter(tokenQueue, ilaQueue));
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
 
                     while (PeekToken(tokenQueue, ","))
                     {
                         tokenList.Add(ReadToken(tokenQueue, ","));
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue));
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
                     }
 
                     tokenList.Add(ReadToken(tokenQueue, ")"));
@@ -893,6 +919,7 @@ namespace WebExpress.WebIndex.Wql
         /// Parses an optional descending/ascending direction.
         /// </summary>
         /// <param name="tokenQueue">The token queue.</param>
+        /// <param name="ilaQueue">The lookahead token queue.</param>
         /// <returns>True if descending, otherwise false (ascending/default).</returns>
         private static bool ParseDescendingOrder(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
         {

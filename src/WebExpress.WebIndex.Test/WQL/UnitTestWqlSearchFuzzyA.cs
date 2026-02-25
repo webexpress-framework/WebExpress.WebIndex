@@ -130,7 +130,7 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text~'Helena' ~50");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
             // validation

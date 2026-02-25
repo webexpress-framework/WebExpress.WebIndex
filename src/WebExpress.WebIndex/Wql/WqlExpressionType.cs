@@ -30,6 +30,27 @@
         /// <summary>
         /// Represents a parameter that can be used in various contexts.
         /// </summary>
-        Parameter
+        Parameter,
+
+        /// <summary>
+        /// Represents an order in the system, encapsulating details about the items 
+        /// purchased and their quantities.
+        /// </summary>
+        Order,
+
+
+        OrderDirection,
+
+        Partitioning,
+
+        PartitioningOperator,
+
+        OpenParenthesis,
+
+        CloseParenthesis,
+
+        Separator,
+
+        Literal
     }
 }
