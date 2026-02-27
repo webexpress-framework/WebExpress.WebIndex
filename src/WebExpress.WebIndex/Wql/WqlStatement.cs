@@ -14,11 +14,6 @@ namespace WebExpress.WebIndex.Wql
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the index document.
-        /// </summary>
-        public IIndexDocument<TIndexItem> IndexDocument { get; set; }
-
-        /// <summary>
         /// Returns the original wql statement.
         /// </summary>
         public string Raw { get; internal set; }
@@ -70,18 +65,19 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data from the index.</returns>
-        public IQueryable<TIndexItem> Apply()
+        public IQueryable<TIndexItem> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
             var filtered = Enumerable.Empty<TIndexItem>().AsQueryable();
 
             if (Filter is not null)
             {
-                filtered = Filter.Apply().Select(x => IndexDocument.DocumentStore.GetItem(x)).AsQueryable();
+                filtered = Filter.Apply(indexDocument).Select(x => indexDocument.DocumentStore.GetItem(x)).AsQueryable();
             }
             else
             {
-                filtered = IndexDocument?.DocumentStore.All.AsQueryable();
+                filtered = indexDocument?.DocumentStore.All.AsQueryable();
             }
 
             if (Order is not null)

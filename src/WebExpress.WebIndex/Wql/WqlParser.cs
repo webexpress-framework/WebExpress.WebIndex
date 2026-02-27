@@ -105,17 +105,6 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Initializes a new instance of the parser bound to an index document.
-        /// </summary>
-        /// <param name="indexFiled">The index document.</param>
-        internal WqlParser(IIndexDocument<TIndexItem> indexFiled)
-            : this()
-        {
-            IndexDocument = indexFiled;
-            Attributes = indexFiled.Fields;
-        }
-
-        /// <summary>
         /// Performs an incremental lookahead analysis (ILA) over the given
         /// wql input. The method determines which portion of the input is syntactically 
         /// valid so far and which tokens would be permissible at the current position.
@@ -173,7 +162,6 @@ namespace WebExpress.WebIndex.Wql
                 return new WqlStatement<TIndexItem>(input)
                 {
                     Culture = Culture,
-                    IndexDocument = IndexDocument,
                     Error = new WqlExpressionError()
                     {
                         Culture = Culture,
@@ -198,8 +186,7 @@ namespace WebExpress.WebIndex.Wql
         {
             var wql = new WqlStatement<TIndexItem>(input)
             {
-                Culture = Culture,
-                IndexDocument = IndexDocument
+                Culture = Culture
             };
 
             if (string.IsNullOrWhiteSpace(input))
@@ -219,7 +206,6 @@ namespace WebExpress.WebIndex.Wql
                     PeekToken(tokenQueue)
                 );
             }
-
 
             return wql;
         }
@@ -504,33 +490,55 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The attribute node.</returns>
         private WqlExpressionNodeAttribute<TIndexItem> ParseAttribute(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
         {
-            var attributeToken = PeekToken(tokenQueue);
-            var attribute = Attributes
-                .Where(x => x.Name.Equals(attributeToken?.Value, StringComparison.OrdinalIgnoreCase))
-                .FirstOrDefault();
-
-            ReadToken(tokenQueue);
-
-            if (attribute is not null)
+            try
             {
-                ilaQueue.Enqueue(new WqlLookaheadToken(attributeToken, WqlExpressionType.Attribute)
-                {
-                    ExpectedNextTokens = [WqlExpressionType.Operator],
-                });
+                var attributeToken = PeekToken(tokenQueue);
 
-                return new WqlExpressionNodeAttribute<TIndexItem>
+                if (attributeToken is null)
                 {
-                    Name = attribute.Name,
-                    Property = attribute.PropertyInfo,
-                    ReverseIndex = IndexDocument?.GetReverseIndex(attribute)
-                };
+                    throw new WqlParseException
+                    (
+                        "webexpress.webindex:wql.attribute_unknown",
+                        attributeToken
+                    );
+                }
+
+                var path = WqlPropertyPath<TIndexItem>.Parse(attributeToken.Value);
+                var property = path.Resolve(typeof(TIndexItem));
+
+                ReadToken(tokenQueue);
+
+                if (property is not null)
+                {
+                    ilaQueue.Enqueue(new WqlLookaheadToken(attributeToken, WqlExpressionType.Attribute)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Operator],
+                    });
+
+                    return new WqlExpressionNodeAttribute<TIndexItem>
+                    {
+                        Name = path.ToString()
+                    };
+                }
+
+                throw new WqlParseException
+                (
+                    "webexpress.webindex:wql.attribute_unknown",
+                    attributeToken
+                );
             }
-
-            throw new WqlParseException
-            (
-                "webexpress.webindex:wql.attribute_unknown",
-                attributeToken
-            );
+            catch (WqlParseException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                throw new WqlParseException
+                (
+                    "webexpress.webindex:wql.attribute_unknown",
+                    []
+                );
+            }
         }
 
         /// <summary>
@@ -547,8 +555,7 @@ namespace WebExpress.WebIndex.Wql
         {
             var functionOrValueToken = PeekToken(tokenQueue);
             var function = Functions
-                .Where(x => PeekToken(tokenQueue, x.Key))
-                .FirstOrDefault();
+                .FirstOrDefault(x => PeekToken(tokenQueue, x.Key));
 
             if (tokenQueue.Count == 0)
             {
@@ -929,13 +936,25 @@ namespace WebExpress.WebIndex.Wql
                 var attributes = new List<WqlExpressionNodeOrderAttribute<TIndexItem>>();
                 var i = 0;
 
-                ReadToken(tokenQueue, "order");
-                ReadToken(tokenQueue, "by");
+                var orderToken = ReadToken(tokenQueue, "order");
+                var byToken = ReadToken(tokenQueue, "by");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(new WqlTokenCombine(orderToken, byToken), WqlExpressionType.Order)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Attribute]
+                });
+
                 attributes.Add(ParseOrderAttribute(tokenQueue, i++, ilaQueue));
 
                 while (PeekToken(tokenQueue, ","))
                 {
-                    ReadToken(tokenQueue, ",");
+                    var separatorToken = ReadToken(tokenQueue, ",");
+
+                    ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Attribute]
+                    });
+
                     attributes.Add(ParseOrderAttribute(tokenQueue, i++, ilaQueue));
                 }
 
@@ -946,12 +965,24 @@ namespace WebExpress.WebIndex.Wql
                 var attributes = new List<WqlExpressionNodeOrderAttribute<TIndexItem>>();
                 var i = 0;
 
-                ReadToken(tokenQueue, "orderby");
+                var orderbyToken = ReadToken(tokenQueue, "orderby");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(orderbyToken, WqlExpressionType.Order)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Attribute]
+                });
+
                 attributes.Add(ParseOrderAttribute(tokenQueue, i++, ilaQueue));
 
                 while (PeekToken(tokenQueue, ","))
                 {
-                    ReadToken(tokenQueue, ",");
+                    var separatorToken = ReadToken(tokenQueue, ",");
+
+                    ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Attribute]
+                    });
+
                     attributes.Add(ParseOrderAttribute(tokenQueue, i++, ilaQueue));
                 }
 
@@ -974,15 +1005,47 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The order attribute node.</returns>
         private WqlExpressionNodeOrderAttribute<TIndexItem> ParseOrderAttribute(Queue<WqlToken> tokenQueue, int position, Queue<WqlLookaheadToken> ilaQueue)
         {
-            var attribute = ParseAttribute(tokenQueue, ilaQueue);
-            var descending = ParseDescendingOrder(tokenQueue, ilaQueue);
+            var attributeToken = PeekToken(tokenQueue);
 
-            return new WqlExpressionNodeOrderAttribute<TIndexItem>
+            if (attributeToken is null)
             {
-                Attribute = attribute,
-                Descending = descending,
-                Position = position
-            };
+                throw new WqlParseException
+                (
+                    "webexpress.webindex:wql.attribute_unknown",
+                    attributeToken
+                );
+            }
+
+            var path = WqlPropertyPath<TIndexItem>.Parse(attributeToken.Value);
+            var property = path.Resolve(typeof(TIndexItem));
+
+            ReadToken(tokenQueue);
+
+            if (property is not null)
+            {
+                ilaQueue.Enqueue(new WqlLookaheadToken(attributeToken, WqlExpressionType.Attribute)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Separator, WqlExpressionType.OrderDirection, WqlExpressionType.PartitioningOperator],
+                });
+
+                var descending = ParseDescendingOrder(tokenQueue, ilaQueue);
+
+                return new WqlExpressionNodeOrderAttribute<TIndexItem>
+                {
+                    Attribute = new WqlExpressionNodeAttribute<TIndexItem>()
+                    {
+                        Name = path.ToString()
+                    },
+                    Descending = descending,
+                    Position = position
+                };
+            }
+
+            throw new WqlParseException
+            (
+                "webexpress.webindex:wql.attribute_unknown",
+                attributeToken
+            );
         }
 
         /// <summary>
@@ -995,12 +1058,24 @@ namespace WebExpress.WebIndex.Wql
         {
             if (PeekToken(tokenQueue, "asc"))
             {
-                ReadToken(tokenQueue, "asc");
+                var orderToken = ReadToken(tokenQueue, "asc");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(orderToken, WqlExpressionType.OrderDirection)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.PartitioningOperator],
+                });
+
                 return false;
             }
             else if (PeekToken(tokenQueue, "desc"))
             {
-                ReadToken(tokenQueue, "desc");
+                var orderToken = ReadToken(tokenQueue, "desc");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(orderToken, WqlExpressionType.OrderDirection)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.PartitioningOperator],
+                });
+
                 return true;
             }
             else
@@ -1029,7 +1104,20 @@ namespace WebExpress.WebIndex.Wql
             while (PeekToken(tokenQueue, "take") || PeekToken(tokenQueue, "skip"))
             {
                 var op = ParsePartitioningOperator(tokenQueue, ilaQueue);
+
+                var valueToken = PeekToken(tokenQueue)
+                    ?? throw new WqlParseException
+                    (
+                        "webexpress.webindex:wql.expected_value",
+                        []
+                    );
+
                 var number = ParseNumberValue(tokenQueue);
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(valueToken, WqlExpressionType.Partitioning)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Partitioning],
+                });
 
                 function.Add(new WqlExpressionNodePartitioningFunction<TIndexItem>()
                 {
@@ -1058,12 +1146,24 @@ namespace WebExpress.WebIndex.Wql
 
             if (partitioningOperatorToken?.Value == "take")
             {
-                ReadToken(tokenQueue, "take");
+                var operatorToken = ReadToken(tokenQueue, "take");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(operatorToken, WqlExpressionType.PartitioningOperator)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Partitioning],
+                });
+
                 return WqlExpressionNodePartitioningOperator.Take;
             }
             else if (partitioningOperatorToken?.Value == "skip")
             {
-                ReadToken(tokenQueue, "skip");
+                var operatorToken = ReadToken(tokenQueue, "skip");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(operatorToken, WqlExpressionType.PartitioningOperator)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Partitioning],
+                });
+
                 return WqlExpressionNodePartitioningOperator.Skip;
             }
 

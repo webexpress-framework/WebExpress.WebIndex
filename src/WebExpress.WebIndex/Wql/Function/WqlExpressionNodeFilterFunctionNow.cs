@@ -41,10 +41,10 @@ namespace WebExpress.WebIndex.Wql.Function
         /// </returns>
         public override Expression ToExpression(ParameterExpression param)
         {
-            // Evaluate the function using the existing Execute() logic
+            // evaluate the function using the existing Execute() logic
             var result = Execute();
 
-            // Wrap the result in a constant expression
+            // wrap the result in a constant expression
             return Expression.Constant(result, typeof(DateTime));
         }
 

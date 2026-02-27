@@ -168,7 +168,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // validation
             var items = IndexManager.Retrieve<UnitTestIndexTestDocumentB>("name = 'Aurora'");
             Assert.NotNull(items);
-            Assert.Equal(1, items.Count());
+            Assert.Single(items);
 
             Postconditions();
         }
@@ -195,7 +195,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // validation
             var items = IndexManager.Retrieve<UnitTestIndexTestDocumentB>("name = 'Aurora'");
             Assert.NotNull(items);
-            Assert.Equal(1, items.Count());
+            Assert.Single(items);
 
             Postconditions();
         }
@@ -222,7 +222,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             // validation
             var items = IndexManager.Retrieve<UnitTestIndexTestDocumentB>("name = 'Aurora'");
             Assert.NotNull(items);
-            Assert.Equal(1, items.Count());
+            Assert.Single(items);
 
             Postconditions();
         }

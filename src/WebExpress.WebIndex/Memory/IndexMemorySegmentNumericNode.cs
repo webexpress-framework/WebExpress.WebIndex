@@ -139,7 +139,7 @@ namespace WebExpress.WebIndex.Memory
                     }
 
                     break;
-                case IndexRetrieveMethod.GratherThan:
+                case IndexRetrieveMethod.GreaterThan:
                     if (Value > search)
                     {
                         foreach (var postting in Postings)
@@ -165,7 +165,7 @@ namespace WebExpress.WebIndex.Memory
                     }
 
                     break;
-                case IndexRetrieveMethod.GratherThanOrEqual:
+                case IndexRetrieveMethod.GreaterThanOrEqual:
                     // searches the binary tree for the largest value that is less or equals than the specified value
                     if (Value >= search)
                     {

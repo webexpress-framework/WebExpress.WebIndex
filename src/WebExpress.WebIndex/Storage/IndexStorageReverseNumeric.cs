@@ -228,11 +228,11 @@ namespace WebExpress.WebIndex.Storage
                     {
                         return Numeric.Retrieve(value, options);
                     }
-                case IndexRetrieveMethod.GratherThan:
+                case IndexRetrieveMethod.GreaterThan:
                     {
                         return Numeric.Retrieve(value, options);
                     }
-                case IndexRetrieveMethod.GratherThanOrEqual:
+                case IndexRetrieveMethod.GreaterThanOrEqual:
                     {
                         return Numeric.Retrieve(value, options);
                     }

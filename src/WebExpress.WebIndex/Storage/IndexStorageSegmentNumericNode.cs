@@ -377,7 +377,7 @@ namespace WebExpress.WebIndex.Storage
                         break;
                     }
 
-                case IndexRetrieveMethod.GratherThan:
+                case IndexRetrieveMethod.GreaterThan:
                     {
                         if (Value > search)
                         {
@@ -406,7 +406,7 @@ namespace WebExpress.WebIndex.Storage
                         break;
                     }
 
-                case IndexRetrieveMethod.GratherThanOrEqual:
+                case IndexRetrieveMethod.GreaterThanOrEqual:
                     {
                         if (Value >= search)
                         {

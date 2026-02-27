@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 
 namespace WebExpress.WebIndex.Test.WQL
 {
@@ -27,6 +28,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // act
             var wql = Fixture.ExecuteWql(wqlString);
 
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -53,10 +55,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [InlineData("Description='lorem'", "lorem")]
         public void SingleMatch(string wqlString, string expected)
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql(wqlString);
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentB>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var description in res.Select(x => x.Description))
             {
@@ -70,10 +76,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("Description='lorem ipsum'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentB>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var description in res.Select(x => x.Description))
             {

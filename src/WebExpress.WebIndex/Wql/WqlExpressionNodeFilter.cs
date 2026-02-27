@@ -27,10 +27,11 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data from the index.</returns>
-        public virtual IEnumerable<Guid> Apply()
+        public virtual IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            return Condition?.Apply() ?? [];
+            return Condition?.Apply(indexDocument) ?? [];
         }
 
         /// <summary>

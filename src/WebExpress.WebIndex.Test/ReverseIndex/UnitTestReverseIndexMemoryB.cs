@@ -255,7 +255,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
             }
 
             // act
-            var items = reverseIndex.Retrieve(number, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.GratherThan });
+            var items = reverseIndex.Retrieve(number, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.GreaterThan });
             var prices = Fixture.TestData.Where(x => items.Contains(x.Id)).Select(x => x.Price).ToList();
 
             Assert.NotNull(items);
@@ -291,7 +291,7 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
             }
 
             // act
-            var items = reverseIndex.Retrieve(number, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.GratherThanOrEqual });
+            var items = reverseIndex.Retrieve(number, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.GreaterThanOrEqual });
             var prices = Fixture.TestData.Where(x => items.Contains(x.Id)).Select(x => x.Price).ToList();
 
             Assert.NotNull(items);

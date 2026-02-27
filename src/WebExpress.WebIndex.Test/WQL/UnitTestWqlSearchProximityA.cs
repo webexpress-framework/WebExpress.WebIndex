@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -160,10 +161,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityInvalidMatch1()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text~'Bob Dave':1");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }
@@ -174,10 +179,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityInvalidMatch2()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text~'Dave Bob':1");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }
@@ -188,10 +197,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityPhraseMatch()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text='Bob Dave':20");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var item in res)
             {
@@ -206,10 +219,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityInvalidPhraseMatch()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text='Bob Dave':1");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }

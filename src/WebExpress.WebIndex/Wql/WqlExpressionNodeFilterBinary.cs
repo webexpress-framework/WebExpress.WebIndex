@@ -37,12 +37,13 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data ids from the index.</returns>
-        public override IEnumerable<Guid> Apply()
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
             var filtered = Enumerable.Empty<Guid>();
-            var leftFiltered = LeftFilter.Apply();
-            var rightFiltered = RightFilter.Apply();
+            var leftFiltered = LeftFilter.Apply(indexDocument);
+            var rightFiltered = RightFilter.Apply(indexDocument);
 
             switch (LogicalOperator)
             {

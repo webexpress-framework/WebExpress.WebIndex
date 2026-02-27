@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -22,21 +22,37 @@ namespace WebExpress.WebIndex.Wql.Condition
 
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public override IQueryable<Guid> Apply()
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            var property = Attribute?.Property;
+            // get attribute by name
+            var attribute = indexDocument.Fields
+                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (attribute == null || Parameter == null)
+            {
+                return [];
+            }
+
+            // get the reverse index for the attribute
+            var reverseIndex = indexDocument.GetReverseIndex(attribute);
+
+            // get the value for comparison
             var value = Parameter.GetValue();
 
-            //var filtered = unfiltered.Where
-            //(
-            //    x => property != null && property.GetValue(x).Equals(value)
-            //);
-
-            return null; //filtered.AsQueryable();
+            // get all matching guids where the attribute value is greater than or equal to the given value
+            return reverseIndex?.Retrieve(value, new IndexRetrieveOptions
+            {
+                Method = IndexRetrieveMethod.GreaterThanOrEqual,
+                Distance = Options.Distance ?? 0
+            }) ?? [];
         }
 
         /// <summary>

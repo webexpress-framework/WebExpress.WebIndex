@@ -62,7 +62,7 @@ namespace WebExpress.WebIndex.Test.WQL
 
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("Name_12", item.Name);
             Assert.NotNull(wql.Filter);
             Assert.Null(wql.Order);

@@ -23,12 +23,12 @@
         /// <summary>
         /// Query based on a greater than comparison (>).
         /// </summary>
-        GratherThan,
+        GreaterThan,
 
         /// <summary>
         /// Query based on a greater than or equal to comparison (>=).
         /// </summary>
-        GratherThanOrEqual,
+        GreaterThanOrEqual,
 
         /// <summary>
         /// Query based on a less than comparison (<).

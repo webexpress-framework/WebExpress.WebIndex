@@ -368,10 +368,10 @@ methods and properties of this class:
 - `Task DeleteAsync<TIndexItem>(TIndexItem item)`: Removes an item from the index asynchronously.
 - `void Clear<TIndexItem>()`: Removed all data from the index.
 - `Task ClearAsync<TIndexItem>()`: Removed all data from the index asynchronously.
-- `IQueryable<TIndexItem> Retrieve<TIndexItem>(string wql)`: Executes a WQL statement.
-- `IQueryable<TIndexItem> Retrieve<TIndexItem>(IWqlStatement<TIndexItem> wql)`: Executes a WQL statement.
-- `Task<IQueryable<TIndexItem>> RetrieveAsync<TIndexItem>(string wql)`: Executes a wql statement asynchronously.
-- `Task<IQueryable<TIndexItem>> RetrieveAsync<TIndexItem>(IWqlStatement<TIndexItem> wql)`: Executes a wql statement asynchronously.
+- `IEnumerable<TIndexItem> Retrieve<TIndexItem>(string wql)`: Executes a WQL statement.
+- `IEnumerable<TIndexItem> Retrieve<TIndexItem>(IWqlStatement<TIndexItem> wql)`: Executes a WQL statement.
+- `Task<IEnumerable<TIndexItem>> RetrieveAsync<TIndexItem>(string wql)`: Executes a wql statement asynchronously.
+- `Task<IEnumerable<TIndexItem>> RetrieveAsync<TIndexItem>(IWqlStatement<TIndexItem> wql)`: Executes a wql statement asynchronously.
 - `IEnumerable<TIndexItem> All<TIndexItem>()`: Returns all documents from the index.
 - `IIndexDocument<TIndexItem> GetIndexDocument<TIndexItem>()`: Returns an index type based on its type.
 - `void Dispose()`: Disposes of the resources used by the current instance.

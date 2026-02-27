@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -21,13 +21,63 @@ namespace WebExpress.WebIndex.Wql.Condition
         {
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public override IQueryable<Guid> Apply()
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            return null;
+            // get the relevant attribute by name
+            var attribute = indexDocument.Fields
+                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (attribute is null)
+            {
+                return [];
+            }
+
+            // get reverse index for the attribute
+            var reverseIndex = indexDocument.GetReverseIndex(attribute);
+
+            if (reverseIndex == null || Parameters == null || !Parameters.Any())
+            {
+                return [];
+            }
+
+            // extract all unique parameter values as string
+            var excludeValues = Parameters
+                .Select(p => p.GetValue()?.ToString())
+                .Where(v => v != null)
+                .Distinct()
+                .ToList();
+
+            // get all ids for every value to be excluded
+            var excludedGuids = new HashSet<Guid>();
+            foreach (var val in excludeValues)
+            {
+                var ids = reverseIndex.Retrieve(val, new IndexRetrieveOptions
+                {
+                    Method = IndexRetrieveMethod.Phrase,
+                    Distance = 0
+                });
+
+                if (ids != null)
+                {
+                    foreach (var id in ids)
+                    {
+                        excludedGuids.Add(id);
+                    }
+                }
+            }
+
+            // finally select all guids not in the excluded set
+            return indexDocument.All
+                .Select(x => x.Id)
+                .Except(excludedGuids);
         }
 
         /// <summary>

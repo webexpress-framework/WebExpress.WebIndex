@@ -31,7 +31,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("Name_12", res.Select(x => x.Name));
         }
     }

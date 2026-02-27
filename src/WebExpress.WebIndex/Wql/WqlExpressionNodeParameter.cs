@@ -13,11 +13,6 @@ namespace WebExpress.WebIndex.Wql
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the tokens associated with this syntax tree node.
-        /// </summary>
-        public IEnumerable<IWqlToken> Tokens { get; internal set; }
-
-        /// <summary>
         /// Returns the value expressions.
         /// </summary>
         public WqlExpressionNodeValue<TIndexItem> Value { get; internal set; }

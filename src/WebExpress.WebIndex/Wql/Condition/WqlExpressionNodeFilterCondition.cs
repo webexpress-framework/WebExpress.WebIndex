@@ -44,11 +44,15 @@ namespace WebExpress.WebIndex.Wql.Condition
             IsScalar = isScalar;
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public abstract IEnumerable<Guid> Apply();
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public abstract IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument);
 
         /// <summary>
         /// Builds the LINQ expression that represents this WQL node within the 

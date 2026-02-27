@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -14,7 +13,8 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data ids from the index.</returns>
-        IEnumerable<Guid> Apply();
+        IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument);
     }
 }

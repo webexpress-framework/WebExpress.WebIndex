@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -46,28 +47,28 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The filtered data.</returns>
         public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
         {
-            var property = Attribute.Property;
+            var attribute = typeof(TIndexItem).GetProperty(Attribute.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
             if (Position > 0 && unfiltered is IOrderedQueryable<TIndexItem> orderedQueryable)
             {
                 if (Descending)
                 {
-                    return orderedQueryable.ThenByDescending(x => property.GetValue(x));
+                    return orderedQueryable.ThenByDescending(x => attribute.GetValue(x));
                 }
                 else
                 {
-                    return orderedQueryable.ThenBy(x => property.GetValue(x));
+                    return orderedQueryable.ThenBy(x => attribute.GetValue(x));
                 }
             }
             else
             {
                 if (Descending)
                 {
-                    return unfiltered.OrderByDescending(x => property.GetValue(x));
+                    return unfiltered.OrderByDescending(x => attribute.GetValue(x));
                 }
                 else
                 {
-                    return unfiltered.OrderBy(x => property.GetValue(x));
+                    return unfiltered.OrderBy(x => attribute.GetValue(x));
                 }
             }
         }

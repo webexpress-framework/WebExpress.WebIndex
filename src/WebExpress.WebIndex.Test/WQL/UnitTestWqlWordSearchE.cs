@@ -60,7 +60,7 @@ namespace WebExpress.WebIndex.Test.WQL
 
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Name ~ 'Olivia'", wql.ToString());
             Assert.Equal("Olivia", item.Name);
             Assert.NotNull(wql.Filter);

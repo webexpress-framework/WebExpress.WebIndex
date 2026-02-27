@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -13,24 +12,9 @@ namespace WebExpress.WebIndex.Wql
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the tokens associated with this syntax tree node.
-        /// </summary>
-        public IEnumerable<IWqlToken> Tokens { get; internal set; }
-
-        /// <summary>
         /// Returns the name of the attribute.
         /// </summary>
         public string Name { get; internal set; }
-
-        /// <summary>
-        /// Returns the property info of the attribute.
-        /// </summary>
-        public PropertyInfo Property { get; internal set; }
-
-        /// <summary>
-        /// Returns the reverse index.
-        /// </summary>
-        public IIndexReverse<TIndexItem> ReverseIndex { get; internal set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -55,12 +39,10 @@ namespace WebExpress.WebIndex.Wql
         /// </exception>
         public Expression ToExpression(ParameterExpression param)
         {
-            if (Property is null)
-            {
-                throw new InvalidOperationException($"Attribute '{Name}' has no PropertyInfo assigned.");
-            }
+            var property = typeof(TIndexItem).GetProperty(Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+                ?? throw new InvalidOperationException($"Attribute '{Name}' has no PropertyInfo assigned.");
 
-            return Expression.Property(param, Property);
+            return Expression.Property(param, property);
         }
 
         /// <summary>

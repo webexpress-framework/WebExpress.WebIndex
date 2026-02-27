@@ -32,7 +32,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("FirstName ~ '?livia'", wql.ToString());
             Assert.Equal("Olivia", item.FirstName);
             Assert.NotNull(wql.Filter);
@@ -54,7 +54,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("FirstName ~ 'Ol?via'", wql.ToString());
             Assert.Equal("Olivia", item.FirstName);
             Assert.NotNull(wql.Filter);
@@ -76,7 +76,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("FirstName ~ 'Olivi?'", wql.ToString());
             Assert.Equal("Olivia", item.FirstName);
             Assert.NotNull(wql.Filter);
@@ -98,7 +98,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("FirstName ~ 'Olivi*'", wql.ToString());
             Assert.Equal("Olivia", item.FirstName);
             Assert.NotNull(wql.Filter);

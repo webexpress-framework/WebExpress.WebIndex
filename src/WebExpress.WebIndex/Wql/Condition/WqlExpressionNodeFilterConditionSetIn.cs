@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -20,21 +21,60 @@ namespace WebExpress.WebIndex.Wql.Condition
         {
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public override IQueryable<Guid> Apply()
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            var property = Attribute?.Property;
-            //var value = Parameter.GetValue();
+            // get the relevant attribute by name
+            var attribute = indexDocument.Fields
+                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
 
-            //var filtered = unfiltered.Where
-            //(
-            //    x => property != null && property.GetValue(x).Equals(value)
-            //);
+            if (attribute == null || Parameters == null || !Parameters.Any())
+            {
+                return [];
+            }
 
-            return null; //filtered.AsQueryable();
+            // get reverse index for the attribute
+            var reverseIndex = indexDocument.GetReverseIndex(attribute);
+
+            if (reverseIndex == null)
+            {
+                return [];
+            }
+
+            // extract all unique parameter values as string
+            var includeValues = Parameters
+                .Select(p => p.GetValue()?.ToString())
+                .Where(v => v != null)
+                .Distinct()
+                .ToList();
+
+            // collect matching guids for each value
+            var resultGuids = new HashSet<Guid>();
+            foreach (var val in includeValues)
+            {
+                var ids = reverseIndex.Retrieve(val, new IndexRetrieveOptions
+                {
+                    Method = IndexRetrieveMethod.Phrase,
+                    Distance = 0
+                });
+
+                if (ids != null)
+                {
+                    foreach (var id in ids)
+                    {
+                        resultGuids.Add(id);
+                    }
+                }
+            }
+
+            return resultGuids;
         }
 
         /// <summary>

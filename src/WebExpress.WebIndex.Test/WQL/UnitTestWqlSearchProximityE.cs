@@ -31,7 +31,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("d50774b3-5d95-4fb4-97fb-d107dd6fb9a0", res.Select(x => x.Id.ToString()));
         }
 
@@ -48,7 +48,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("d50774b3-5d95-4fb4-97fb-d107dd6fb9a0", res.Select(x => x.Id.ToString()));
         }
     }

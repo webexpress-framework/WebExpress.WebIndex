@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -26,6 +27,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Helena'");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -37,6 +40,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text=\"Helena\"");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -48,6 +53,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text=Helena");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -59,6 +66,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Helena Helge'");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -70,6 +79,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text=Helena Helge order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -81,6 +92,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Helena Helge order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -92,6 +105,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("text='Helena Helge\" order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -103,6 +118,8 @@ namespace WebExpress.WebIndex.Test.WQL
         {
             // act
             var wql = Fixture.ExecuteWql("='Helena Helge\" order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -135,7 +152,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("c7d8f9e0-3a2b-4c5d-8e6f-9a1b0c2d4e5f", res.Select(x => x.Id.ToString()));
         }
 
@@ -150,7 +167,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("c7d8f9e0-3a2b-4c5d-8e6f-9a1b0c2d4e5f", res.Select(x => x.Id.ToString()));
         }
 
@@ -168,7 +185,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var res = Fixture.IndexManager.Retrieve(wql);
 
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("c7d8f9e0-3a2b-4c5d-8e6f-9a1b0c2d4e5f", res.Select(x => x.Id.ToString()));
         }
 
@@ -178,10 +195,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void EmptyMatch1()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text=''");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }
@@ -192,10 +213,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void EmptyMatch2()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text='Sophie'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }
@@ -206,10 +231,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void NotExactMatch1()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text='Hello Helena, Aurora and Helge!'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }
@@ -220,10 +249,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void NotExactMatch2()
         {
-            // act
+            // arrange
             var wql = Fixture.ExecuteWql("text='Helena Helge'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             Assert.Empty(res);
         }

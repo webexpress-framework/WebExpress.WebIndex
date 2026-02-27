@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -21,21 +21,37 @@ namespace WebExpress.WebIndex.Wql.Condition
         {
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public override IQueryable<Guid> Apply()
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
+            // find the relevant attribute by name
+            var attribute = indexDocument.Fields
+                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (attribute == null || Parameter == null)
+            {
+                return [];
+            }
+
+            // get the reverse index for the attribute
+            var reverseIndex = indexDocument?.GetReverseIndex(attribute);
             var value = Parameter.GetValue()?.ToString();
 
-            return Attribute.ReverseIndex?.Retrieve(value, new IndexRetrieveOptions()
+            // retrieve matching identifiers if reverse index and value exist
+            return reverseIndex?.Retrieve(value, new IndexRetrieveOptions()
             {
                 Method = IndexRetrieveMethod.Phrase,
                 Distance = Options.Distance.HasValue ? Options.Distance.Value : 0
-            }).AsQueryable();
+            }) ?? [];
         }
-       
+
         /// <summary>
         /// Builds a LINQ expression representing an equality comparison between the 
         /// attribute expression and the parameter expression.
@@ -50,7 +66,7 @@ namespace WebExpress.WebIndex.Wql.Condition
         /// <exception cref="ArgumentNullException">
         /// Thrown when either <c>Attribute</c> or <c>Parameter</c> is <c>null</c>.
         /// </exception>
-        public override Expression ToExpression(ParameterExpression param) 
+        public override Expression ToExpression(ParameterExpression param)
         {
             ArgumentNullException.ThrowIfNull(Attribute);
             ArgumentNullException.ThrowIfNull(Parameter);

@@ -54,8 +54,9 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data ids from the index.</returns>
-        IQueryable<TIndexItem> Apply();
+        IQueryable<TIndexItem> Apply(IIndexDocument<TIndexItem> indexDocument);
 
         /// <summary>
         /// Converts the current wql statemment to a query.
