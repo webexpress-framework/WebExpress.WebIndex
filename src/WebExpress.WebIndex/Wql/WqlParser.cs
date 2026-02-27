@@ -245,9 +245,9 @@ namespace WebExpress.WebIndex.Wql
                         []
                     );
 
-                ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.OpenParenthesis)
+                ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis]
+                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
                 });
 
                 if (PeekToken(tokenQueue, "and") ||
@@ -344,8 +344,7 @@ namespace WebExpress.WebIndex.Wql
             }
 
             var condition = Conditions
-                .Where(x => PeekToken(tokenQueue, x.Key.Split(' ')))
-                .FirstOrDefault();
+                .FirstOrDefault(x => PeekToken(tokenQueue, x.Key?.Split(' ')));
 
             try
             {
@@ -364,15 +363,15 @@ namespace WebExpress.WebIndex.Wql
                 }
 
                 var operationTokens = ReadToken(tokenQueue, condition.Key.Split(' ')).ToList();
-                ilaQueue.Enqueue(new WqlLookaheadToken(new WqlTokenCombine(operationTokens), WqlExpressionType.Operator)
-                {
-                    ExpectedNextTokens = [WqlExpressionType.Parameter]
-                });
-
                 var instance = Activator.CreateInstance(condition.Value) as WqlExpressionNodeFilterCondition<TIndexItem>;
 
                 if (instance is WqlExpressionNodeFilterConditionBinary<TIndexItem> binary)
                 {
+                    ilaQueue.Enqueue(new WqlLookaheadToken(new WqlTokenCombine(operationTokens), WqlExpressionType.Operator)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Parameter]
+                    });
+
                     binary.Culture = Culture;
                     binary.Attribute = attribute;
 
@@ -383,8 +382,12 @@ namespace WebExpress.WebIndex.Wql
                 }
                 else if (instance is WqlExpressionNodeFilterConditionSet<TIndexItem> set)
                 {
-                    var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
+                    ilaQueue.Enqueue(new WqlLookaheadToken(new WqlTokenCombine(operationTokens), WqlExpressionType.Operator)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.OpenParenthesis]
+                    });
 
+                    var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
                     var openToken = ReadToken(tokenQueue, "(");
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(openToken, WqlExpressionType.OpenParenthesis)
@@ -396,13 +399,14 @@ namespace WebExpress.WebIndex.Wql
 
                     while (PeekToken(tokenQueue, ","))
                     {
-                        var SeparatorToken = ReadToken(tokenQueue, ",");
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false));
+                        var separatorToken = ReadToken(tokenQueue, ",");
 
-                        ilaQueue.Enqueue(new WqlLookaheadToken(SeparatorToken, WqlExpressionType.Separator)
+                        ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
                         {
                             ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Separator]
                         });
+
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false));
                     }
 
                     var closeToken = ReadToken(tokenQueue, ")");
@@ -837,8 +841,7 @@ namespace WebExpress.WebIndex.Wql
         {
             var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
             var function = Functions
-                .Where(x => PeekToken(tokenQueue, x.Key))
-                .FirstOrDefault();
+                .FirstOrDefault(x => PeekToken(tokenQueue, x.Key));
             var nameToken = ReadToken(tokenQueue);
             var tokenList = new List<IWqlToken>()
             {
@@ -861,9 +864,7 @@ namespace WebExpress.WebIndex.Wql
 
             try
             {
-                var instance = Activator.CreateInstance(function.Value) as WqlExpressionNodeFilterFunction<TIndexItem>;
-
-                if (instance is null)
+                if (Activator.CreateInstance(function.Value) is not WqlExpressionNodeFilterFunction<TIndexItem> instance)
                 {
                     throw new WqlParseException
                     (
@@ -896,11 +897,24 @@ namespace WebExpress.WebIndex.Wql
 
                     while (PeekToken(tokenQueue, ","))
                     {
-                        tokenList.Add(ReadToken(tokenQueue, ","));
+                        var separatorToken = ReadToken(tokenQueue, ",");
+                        tokenList.Add(separatorToken);
+
+                        ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
+                        {
+                            ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Function]
+                        });
+
                         parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
                     }
 
-                    tokenList.Add(ReadToken(tokenQueue, ")"));
+                    var closeToken = ReadToken(tokenQueue, ")");
+                    tokenList.Add(closeToken);
+
+                    ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
+                    });
                 }
 
                 instance.Parameters = parameters;
@@ -966,6 +980,34 @@ namespace WebExpress.WebIndex.Wql
                 var i = 0;
 
                 var orderbyToken = ReadToken(tokenQueue, "orderby");
+
+                ilaQueue.Enqueue(new WqlLookaheadToken(orderbyToken, WqlExpressionType.Order)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Attribute]
+                });
+
+                attributes.Add(ParseOrderAttribute(tokenQueue, i++, ilaQueue));
+
+                while (PeekToken(tokenQueue, ","))
+                {
+                    var separatorToken = ReadToken(tokenQueue, ",");
+
+                    ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Attribute]
+                    });
+
+                    attributes.Add(ParseOrderAttribute(tokenQueue, i++, ilaQueue));
+                }
+
+                return new WqlExpressionNodeOrder<TIndexItem> { Attributes = attributes };
+            }
+            else if (PeekToken(tokenQueue, "order"))
+            {
+                var attributes = new List<WqlExpressionNodeOrderAttribute<TIndexItem>>();
+                var i = 0;
+
+                var orderbyToken = ReadToken(tokenQueue, "order");
 
                 ilaQueue.Enqueue(new WqlLookaheadToken(orderbyToken, WqlExpressionType.Order)
                 {
@@ -1116,7 +1158,7 @@ namespace WebExpress.WebIndex.Wql
 
                 ilaQueue.Enqueue(new WqlLookaheadToken(valueToken, WqlExpressionType.Partitioning)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.Partitioning],
+                    ExpectedNextTokens = [WqlExpressionType.PartitioningOperator],
                 });
 
                 function.Add(new WqlExpressionNodePartitioningFunction<TIndexItem>()

@@ -78,11 +78,6 @@
         /// <summary>
         /// Represents the separator character used to delimit values.
         /// </summary>
-        Separator,
-
-        /// <summary>
-        /// Represents a constant value used within an expression.
-        /// </summary>
-        Literal
+        Separator
     }
 }
