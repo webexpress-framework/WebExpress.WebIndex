@@ -191,6 +191,11 @@ namespace WebExpress.WebIndex.Wql
 
             if (string.IsNullOrWhiteSpace(input))
             {
+                ilaQueue.Enqueue(new WqlLookaheadToken(new WqlToken() { Value = "" }, WqlExpressionType.None)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
+                });
+
                 return wql;
             }
 
@@ -494,10 +499,10 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The attribute node.</returns>
         private WqlExpressionNodeAttribute<TIndexItem> ParseAttribute(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
         {
+            var attributeToken = PeekToken(tokenQueue);
+
             try
             {
-                var attributeToken = PeekToken(tokenQueue);
-
                 if (attributeToken is null)
                 {
                     throw new WqlParseException
@@ -507,10 +512,10 @@ namespace WebExpress.WebIndex.Wql
                     );
                 }
 
+                ReadToken(tokenQueue);
+
                 var path = WqlPropertyPath<TIndexItem>.Parse(attributeToken.Value);
                 var property = path.Resolve(typeof(TIndexItem));
-
-                ReadToken(tokenQueue);
 
                 if (property is not null)
                 {
@@ -537,11 +542,15 @@ namespace WebExpress.WebIndex.Wql
             }
             catch (Exception)
             {
-                throw new WqlParseException
-                (
-                    "webexpress.webindex:wql.attribute_unknown",
-                    []
-                );
+                ilaQueue.Enqueue(new WqlLookaheadToken(attributeToken, WqlExpressionType.Attribute)
+                {
+                    ExpectedNextTokens = [WqlExpressionType.Operator],
+                });
+
+                return new WqlExpressionNodeAttribute<TIndexItem>
+                {
+                    Name = attributeToken.Value
+                };
             }
         }
 

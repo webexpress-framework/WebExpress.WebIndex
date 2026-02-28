@@ -221,8 +221,9 @@ namespace WebExpress.WebIndex.Test.WQL
         /// Performs the incremental lookahead analysis.
         /// </summary>
         [Theory]
-        [InlineData("", true, 0, WqlExpressionType.None, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
+        [InlineData("", true, 1, WqlExpressionType.None, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
         [InlineData("(", false, 1, WqlExpressionType.OpenParenthesis, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
+        [InlineData("t", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text ", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
         [InlineData("text #", false, 2, WqlExpressionType.Operator, WqlExpressionType.Operator)]
