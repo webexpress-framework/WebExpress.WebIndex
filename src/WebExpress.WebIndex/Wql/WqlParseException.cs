@@ -39,7 +39,7 @@ namespace WebExpress.WebIndex.Wql
         public WqlParseException(string message, IEnumerable<IWqlToken> tokens)
             : base(message)
         {
-            Token = tokens;
+            Token = tokens ?? [];
         }
     }
 }

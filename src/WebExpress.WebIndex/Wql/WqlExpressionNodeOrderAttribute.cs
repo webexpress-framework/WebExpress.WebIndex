@@ -47,7 +47,8 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The filtered data.</returns>
         public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
         {
-            var attribute = typeof(TIndexItem).GetProperty(Attribute.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var attribute = typeof(TIndexItem).GetProperty(Attribute.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+                ?? throw new InvalidOperationException($"No public instance property matching '{Attribute.Name}' was found on type '{typeof(TIndexItem).Name}'.");
 
             if (Position > 0 && unfiltered is IOrderedQueryable<TIndexItem> orderedQueryable)
             {

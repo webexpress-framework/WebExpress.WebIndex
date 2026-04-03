@@ -102,13 +102,16 @@ namespace WebExpress.WebIndex.Wql.Condition
             // extract raw values from parameters
             var rawValues = Parameters.Select(p => p.GetValue()).ToList();
 
-            // convert all values to the property type
-            var typedValues = rawValues
-                .Select(v => v is null ? null : Convert.ChangeType(v, left.Type))
-                .ToList();
+            // build a strongly-typed array constant matching left.Type so that
+            // Enumerable.Contains<T> receives an IEnumerable<T> argument
+            var typedArray = Array.CreateInstance(left.Type, rawValues.Count);
+            for (int i = 0; i < rawValues.Count; i++)
+            {
+                typedArray.SetValue(rawValues[i] is null ? null : Convert.ChangeType(rawValues[i], left.Type), i);
+            }
 
-            // create a constant expression for the typed list
-            var listConstant = Expression.Constant(typedValues);
+            // create a constant expression for the typed array
+            var listConstant = Expression.Constant(typedArray, typedArray.GetType());
 
             var containsMethod = typeof(Enumerable)
                 .GetMethods()

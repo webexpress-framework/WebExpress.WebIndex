@@ -69,7 +69,6 @@ namespace WebExpress.WebIndex.Test.WQL
             Assert.NotNull(res);
             Assert.NotNull(item);
             Assert.Single(res);
-            Assert.Single(res);
             Assert.Equal("Olivia", item.Name);
         }
 
@@ -87,7 +86,6 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Single(res);
             Assert.Single(res);
             Assert.Equal("Olivia", item.Name);
         }

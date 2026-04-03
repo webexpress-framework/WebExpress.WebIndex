@@ -78,9 +78,10 @@ namespace WebExpress.WebIndex.Wql.Condition
             Expression left = Attribute.ToExpression(param);
             Expression right = Parameter.ToExpression(param);
 
-            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)]);
+            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string), typeof(StringComparison)]);
+            var comparison = Expression.Constant(StringComparison.OrdinalIgnoreCase);
 
-            return Expression.Call(left, containsMethod, right);
+            return Expression.Call(left, containsMethod, right, comparison);
         }
     }
 }

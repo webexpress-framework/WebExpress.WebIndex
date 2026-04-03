@@ -45,21 +45,20 @@ namespace WebExpress.WebIndex.Wql
                 throw new ArgumentException("Token list cannot be null or empty.", nameof(tokens));
             }
 
-            var firstToken = tokens.FirstOrDefault();
-            var lastToken = tokens.LastOrDefault();
+            var nonNullTokens = tokens.Where(t => t != null).ToList();
 
-            Offset = firstToken?.Offset ?? 0;
-
-            if (lastToken is not null)
+            if (nonNullTokens.Count == 0)
             {
-                Length = (lastToken.Offset + lastToken.Length) - Offset;
-            }
-            else
-            {
-                Length = firstToken.Length;
+                throw new ArgumentException("Token list must contain at least one non-null token.", nameof(tokens));
             }
 
-            Value = string.Concat(tokens.Where(x => x != null).Select(t => t.Value));
+            var firstToken = nonNullTokens.First();
+            var lastToken = nonNullTokens.Last();
+
+            Offset = firstToken.Offset;
+            Length = (lastToken.Offset + lastToken.Length) - Offset;
+
+            Value = string.Concat(nonNullTokens.Select(t => t.Value));
         }
 
         /// <summary>
@@ -72,26 +71,25 @@ namespace WebExpress.WebIndex.Wql
         /// </param>
         internal WqlTokenCombine(IEnumerable<IWqlToken> tokens)
         {
-            if (tokens == null || !tokens.Any())
+            if (tokens == null)
             {
-                throw new ArgumentException("Token list cannot be null or empty.", nameof(tokens));
+                throw new ArgumentException("Token list cannot be null.", nameof(tokens));
             }
 
-            var firstToken = tokens.FirstOrDefault();
-            var lastToken = tokens.LastOrDefault();
+            var nonNullTokens = tokens.Where(t => t != null).ToList();
 
-            Offset = firstToken?.Offset ?? 0;
-
-            if (lastToken is not null)
+            if (nonNullTokens.Count == 0)
             {
-                Length = (lastToken.Offset + lastToken.Length) - Offset;
-            }
-            else
-            {
-                Length = firstToken.Length;
+                throw new ArgumentException("Token list must contain at least one non-null token.", nameof(tokens));
             }
 
-            Value = string.Concat(tokens.Select(t => t.Value));
+            var firstToken = nonNullTokens.First();
+            var lastToken = nonNullTokens.Last();
+
+            Offset = firstToken.Offset;
+            Length = (lastToken.Offset + lastToken.Length) - Offset;
+
+            Value = string.Concat(nonNullTokens.Select(t => t.Value));
         }
 
         /// <summary>

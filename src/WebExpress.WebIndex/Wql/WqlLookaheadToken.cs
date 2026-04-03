@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -36,6 +37,8 @@ namespace WebExpress.WebIndex.Wql
         /// </param>
         public WqlLookaheadToken(IWqlToken token, WqlExpressionType expressionType)
         {
+            ArgumentNullException.ThrowIfNull(token);
+
             Token = token;
             ExpressionType = expressionType;
         }

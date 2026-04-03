@@ -44,14 +44,14 @@ namespace WebExpress.WebIndex.Wql
         /// </param>
         /// <returns>
         /// The expression produced by the underlying filter condition, or
-        /// expression constant with <c>true</c> if no condition exists.
+        /// a constant <c>true</c> expression if no condition exists.
         /// </returns>
-        /// <exception cref="ArgumentNullException">
-        /// Thrown when <c>Condition</c> is <c>null</c>.
-        /// </exception>
         public virtual Expression ToExpression(ParameterExpression param)
         {
-            ArgumentNullException.ThrowIfNull(Condition);
+            if (Condition is null)
+            {
+                return Expression.Constant(true);
+            }
 
             return Condition.ToExpression(param);
         }
