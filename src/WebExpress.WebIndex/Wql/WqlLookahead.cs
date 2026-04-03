@@ -13,7 +13,7 @@ namespace WebExpress.WebIndex.Wql
         /// Returns the list of lookahead items representing each token that was
         /// successfully processed, including metadata such as token type.
         /// </summary>
-        public IEnumerable<IWqlLookaheadToken> Items { get; init; }
+        public IEnumerable<IWqlLookaheadToken> Items { get; init; } = [];
 
         /// <summary>
         /// Indicates whether the input is syntactically valid up to the current

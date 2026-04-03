@@ -29,7 +29,7 @@ namespace WebExpress.WebIndex.Wql.Function
 
         /// <summary>
         /// Builds a LINQ expression representing the result of the <c>now()</c> function, 
-        /// which returns the current date and time.
+        /// which returns the current date and time at query evaluation time.
         /// </summary>
         /// <param name="param">
         /// The parameter expression representing the index item in the generated
@@ -37,15 +37,15 @@ namespace WebExpress.WebIndex.Wql.Function
         /// but it is required to satisfy the expression node contract.
         /// </param>
         /// <returns>
-        /// A constant expression containing the current date and time.
+        /// A member access expression that reads <c>DateTime.Now</c> each time the 
+        /// expression is evaluated, rather than freezing the timestamp at query 
+        /// construction time.
         /// </returns>
         public override Expression ToExpression(ParameterExpression param)
         {
-            // evaluate the function using the existing Execute() logic
-            var result = Execute();
-
-            // wrap the result in a constant expression
-            return Expression.Constant(result, typeof(DateTime));
+            var nowProperty = typeof(DateTime).GetProperty(nameof(DateTime.Now))
+                ?? throw new InvalidOperationException("DateTime.Now property not found.");
+            return Expression.Property(null, nowProperty);
         }
 
     }

@@ -5,10 +5,12 @@
     /// </summary>
     public class IndexItem : IIndexItem
     {
+        private readonly Guid _id = Guid.NewGuid();
+
         /// <summary>
-        /// Returns a new unique identifier each time the property is accessed.
+        /// Returns the unique identifier associated with this instance.
         /// </summary>
-        public Guid Id => Guid.NewGuid();
+        public Guid Id => _id;
 
         /// <summary>
         /// Returns or sets the name associated with the object.

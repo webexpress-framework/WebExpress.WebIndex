@@ -40,7 +40,7 @@ namespace WebExpress.WebIndex.Wql
         public Expression ToExpression(ParameterExpression param)
         {
             var property = typeof(TIndexItem).GetProperty(Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
-                ?? throw new InvalidOperationException($"Attribute '{Name}' has no PropertyInfo assigned.");
+                ?? throw new InvalidOperationException($"No public instance property matching '{Name}' was found on type '{typeof(TIndexItem).Name}'.");
 
             return Expression.Property(param, property);
         }
