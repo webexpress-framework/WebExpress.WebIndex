@@ -1,7 +1,7 @@
 namespace WebExpress.WebIndex.Test.Data
 {
     /// <summary>
-    /// Provides unit tests for deterministic identifier behavior of <see cref="IndexItem"/>.
+    /// Provides unit tests for deterministic identifier behavior of IndexItem.
     /// </summary>
     public class UnitTestIndexItem
     {
@@ -10,7 +10,7 @@ namespace WebExpress.WebIndex.Test.Data
         /// value across multiple accesses on the same instance.
         /// </summary>
         [Fact]
-        public void IdIsStableAcrossMultipleAccesses()
+        public void IsStable()
         {
             // arrange
             var item = new IndexItem();
@@ -29,7 +29,7 @@ namespace WebExpress.WebIndex.Test.Data
         /// Verifies that two different IndexItem instances have distinct identifiers.
         /// </summary>
         [Fact]
-        public void DifferentInstancesHaveDistinctIds()
+        public void DistinctIds()
         {
             // arrange
             var item1 = new IndexItem();
@@ -43,7 +43,7 @@ namespace WebExpress.WebIndex.Test.Data
         /// Verifies that the Id is a non-empty Guid.
         /// </summary>
         [Fact]
-        public void IdIsNotEmpty()
+        public void IdNotEmpty()
         {
             // arrange
             var item = new IndexItem();
