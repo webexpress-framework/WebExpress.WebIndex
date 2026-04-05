@@ -46,10 +46,21 @@ jobs:
         docfx metadata
         docfx build
 
+    - name: Generate API toc.yaml
+      run: |
+        echo "### YamlMime:TableOfContent" > docs/api/toc.yaml
+        echo "[" >> docs/api/toc.yaml
+        find docs/_site/api -maxdepth 1 -type f -name '*.html' | sort | while read file; do
+          name=$(basename "$file" .html)
+          echo "  { \"name\": \"$name\", \"href\": \"$name.html\" }," >> docs/api/toc.yaml
+        done
+        sed -i '$ s/},/}/' docs/api/toc.yaml
+        echo "]" >> docs/api/toc.yaml
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: '_site'
+        path: './docs/_site'
 
     - name: Deploy to GitHub Pages
       id: deployment
