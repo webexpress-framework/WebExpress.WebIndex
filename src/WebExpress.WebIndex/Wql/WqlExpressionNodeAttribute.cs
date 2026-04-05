@@ -35,10 +35,16 @@ namespace WebExpress.WebIndex.Wql
         /// A expression that accesses the property defined by property. 
         /// </returns> 
         /// <exception cref="InvalidOperationException"> 
-        /// Thrown when no <see cref="PropertyInfo"/> is assigned to this attribute node. 
+        /// Thrown when <see cref="Name"/> is <c>null</c> or no matching public instance 
+        /// property is found on <typeparamref name="TIndexItem"/>. 
         /// </exception>
         public Expression ToExpression(ParameterExpression param)
         {
+            if (Name is null)
+            {
+                throw new InvalidOperationException($"The attribute name cannot be null for type '{typeof(TIndexItem).Name}'.");
+            }
+
             var property = typeof(TIndexItem).GetProperty(Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
                 ?? throw new InvalidOperationException($"No public instance property matching '{Name}' was found on type '{typeof(TIndexItem).Name}'.");
 
