@@ -56,11 +56,11 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("stühle", "stuhl", "de")]
         public void PluralToSingular(string pluralWord, string singularWord, string cultureString)
         {
-            // preconditions
+            // arrange
             var culture = CultureInfo.GetCultureInfo(cultureString);
             var pipeStage = new IndexPipeStageConverterSingular(Fixture.Context);
 
-            // test execution
+            // act
             var res = pipeStage.Process(IndexTermTokenizer.Tokenize(pluralWord, culture), culture)
                 .FirstOrDefault();
 

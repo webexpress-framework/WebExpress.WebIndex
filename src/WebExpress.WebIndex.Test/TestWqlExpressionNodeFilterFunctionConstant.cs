@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Wql.Function;
+﻿using WebExpress.WebIndex.Wql;
+using WebExpress.WebIndex.Wql.Function;
 
 namespace WebExpress.WebIndex.Test
 {
@@ -8,6 +9,11 @@ namespace WebExpress.WebIndex.Test
     /// <typeparam name="UnitTestIndexTestDocumentA">The type of the index item.</typeparam>
     internal class TestWqlExpressionNodeFilterFunctionConstant<TIndexItem> : IWqlExpressionNodeFilterFunction<TIndexItem> where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the tokens associated with this syntax tree node.
+        /// </summary>
+        public IEnumerable<IWqlToken> Tokens { get; internal set; }
+
         // <summary>
         // Returns the name of the function.
         // </summary>

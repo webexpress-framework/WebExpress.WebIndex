@@ -73,7 +73,7 @@ namespace WebExpress.WebIndex.Term.Pipeline
         /// <returns>Transformed token sequence with misspellings corrected where applicable.</returns>
         public IEnumerable<IndexTermToken> Process(IEnumerable<IndexTermToken> input, CultureInfo culture)
         {
-            if (input == null)
+            if (input is null)
             {
                 yield break;
             }
@@ -225,7 +225,7 @@ namespace WebExpress.WebIndex.Term.Pipeline
         {
             var fileName = Path.GetFileName(filePath);
             const string prefix = "misspelledwords.";
-            if (fileName == null || !fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            if (fileName is null || !fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }

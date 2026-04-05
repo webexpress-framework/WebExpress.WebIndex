@@ -37,11 +37,11 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("kfz", "auto", "de")]
         public void Synonym(string synonymWord, string normalWord, string cultureString)
         {
-            // preconditions
+            // arrange
             var culture = CultureInfo.GetCultureInfo(cultureString);
             var pipeStage = new IndexPipeStageConverterSynonym(Fixture.Context);
 
-            // test execution
+            // act
             var res = pipeStage.Process(IndexTermTokenizer.Tokenize(synonymWord, culture), culture)
                 .FirstOrDefault();
 

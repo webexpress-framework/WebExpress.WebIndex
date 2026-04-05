@@ -24,14 +24,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name='Olivia'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Name = 'Olivia'", wql.ToString());
             Assert.Contains("Olivia", item.Name);
             Assert.NotNull(wql.Filter);

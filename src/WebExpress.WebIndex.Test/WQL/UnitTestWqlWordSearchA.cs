@@ -1,4 +1,6 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
+using WebExpress.WebIndex.Wql;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -24,7 +26,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql1()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena'");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -34,7 +39,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql2()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~\"Helena\"");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -44,7 +52,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql3()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~Helena");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -54,7 +65,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseValidWql4()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge'");
+
+            // validation
             Assert.False(wql.HasErrors);
         }
 
@@ -64,7 +78,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql1()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~Helena Helge");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -74,7 +91,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql2()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -84,7 +104,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql3()
         {
+            // act
             var wql = Fixture.ExecuteWql("text~'Helena Helge\" order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -94,7 +117,10 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ParseInvalidWql4()
         {
+            // act
             var wql = Fixture.ExecuteWql("~'Helena Helge\" order by text");
+
+            // validation
             Assert.True(wql.HasErrors);
         }
 
@@ -102,20 +128,27 @@ namespace WebExpress.WebIndex.Test.WQL
         /// Tests word search, which searches for terms in a document regardless of their case or position.
         /// </summary>
         [Fact]
-        public void SingleWordFromQueryable()
+        public void SingleWordQuery()
         {
+            // arrange
             var wql = Fixture.ExecuteWql("text~'Helena'");
-            var res = wql?.Apply(Fixture.TestData.AsQueryable());
+            var data = Fixture.TestData;
+
+            // act
+            var query = wql?.ToQuery();
+
+            // validation
+            var res = query.Apply(data.AsQueryable());
             var item = res?.FirstOrDefault();
 
-            Assert.NotNull(res);
-            Assert.NotNull(item);
-            Assert.Equal(4, res.Count());
-            Assert.Equal("Text ~ 'Helena'", wql.ToString());
-            Assert.Contains("Helena", item.Text);
-            Assert.NotNull(wql.Filter);
-            Assert.Null(wql.Order);
-            Assert.Null(wql.Partitioning);
+            Assert.NotNull(res); // ensure the result set is not null
+            Assert.NotNull(item); // ensure there is at least one item in the result
+            Assert.Equal(4, res.Count()); // verify the total number of matched results
+            Assert.Equal("Text ~ 'Helena'", wql.ToString()); // check the string representation of the WQL query
+            Assert.Contains("Helena", item.Text); // ensure the matched item contains "Helena" in its text
+            Assert.NotNull(wql.Filter); // validate that a filter exists in the WQL query
+            Assert.Null(wql.Order); // ensure no explicit ordering is applied
+            Assert.Null(wql.Partitioning); // ensure no partitioning is present
         }
 
         /// <summary>
@@ -124,8 +157,13 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleWord()
         {
+            // arrange
             var wql = Fixture.ExecuteWql("text~'Helena'");
-            var res = wql?.Apply();
+
+            // act
+            var res = Fixture.IndexManager.Retrieve(wql);
+
+            // validation
             var item = res?.FirstOrDefault();
 
             Assert.NotNull(res);
@@ -144,8 +182,13 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleWords()
         {
+            // arrange
             var wql = Fixture.ExecuteWql("text~'Helena Helge'");
-            var res = wql?.Apply();
+
+            // act
+            var res = Fixture.IndexManager.Retrieve(wql);
+
+            // validation
             var item = res?.FirstOrDefault();
 
             Assert.NotNull(res);
@@ -156,6 +199,89 @@ namespace WebExpress.WebIndex.Test.WQL
             Assert.NotNull(wql.Filter);
             Assert.Null(wql.Order);
             Assert.Null(wql.Partitioning);
+        }
+
+        /// <summary>
+        /// Verifies that the abstract syntax tree (AST) is generated.
+        /// </summary>
+        [Fact]
+        public void AbstracrSyntaxTree()
+        {
+            // arrange
+            var wql = Fixture.ExecuteWql("text~'Helena'");
+
+            // act
+            var ast = wql.AbstractSyntaxTree;
+
+            // validation
+            Assert.NotNull(ast);
+        }
+
+        /// <summary>
+        /// Performs the incremental lookahead analysis.
+        /// </summary>
+        [Theory]
+        [InlineData("", true, 1, WqlExpressionType.None, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("(", false, 1, WqlExpressionType.OpenParenthesis, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
+        [InlineData("t", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
+        [InlineData("text", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
+        [InlineData("text ", false, 1, WqlExpressionType.Attribute, WqlExpressionType.Operator)]
+        [InlineData("text #", false, 2, WqlExpressionType.Operator, WqlExpressionType.Operator)]
+        [InlineData("text in", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter, WqlExpressionType.OpenParenthesis)]
+        [InlineData("text ~", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ (", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ )", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ and", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ or", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ &", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ ||", false, 2, WqlExpressionType.Operator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ '", false, 3, WqlExpressionType.Quotation, WqlExpressionType.Parameter)]
+        [InlineData("text ~ \"", false, 3, WqlExpressionType.Quotation, WqlExpressionType.Parameter)]
+        [InlineData("text ~ Helena", true, 3, WqlExpressionType.Parameter, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ 'Helena'", true, 5, WqlExpressionType.Quotation, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ \"Helena\"", true, 5, WqlExpressionType.Quotation, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ day(", false, 4, WqlExpressionType.OpenParenthesis, WqlExpressionType.Parameter, WqlExpressionType.Quotation, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text ~ day()", true, 5, WqlExpressionType.CloseParenthesis, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ day('Helena')", true, 8, WqlExpressionType.CloseParenthesis, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ day('Helena',", false, 8, WqlExpressionType.Separator, WqlExpressionType.LogicalOperator, WqlExpressionType.Parameter)]
+        [InlineData("text ~ day(\"", false, 5, WqlExpressionType.Quotation, WqlExpressionType.Parameter, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text ~ Helena and", false, 4, WqlExpressionType.LogicalOperator, WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis)]
+        [InlineData("text in #", false, 2, WqlExpressionType.Operator, WqlExpressionType.OpenParenthesis)]
+        [InlineData("text in (", false, 3, WqlExpressionType.OpenParenthesis, WqlExpressionType.Parameter, WqlExpressionType.Function)]
+        [InlineData("text in ('Helena'", false, 6, WqlExpressionType.Quotation, WqlExpressionType.Separator, WqlExpressionType.Order, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text in ('Helena' ,", false, 7, WqlExpressionType.Separator, WqlExpressionType.Parameter, WqlExpressionType.Function)]
+        [InlineData("text in ('Helena', 'Hans')", true, 11, WqlExpressionType.CloseParenthesis, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("(text ~ 'Helena')", true, 7, WqlExpressionType.CloseParenthesis, WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("(text ~ 'Helena'", false, 6, WqlExpressionType.Quotation, WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("order", false, 1, WqlExpressionType.Order, WqlExpressionType.Attribute)]
+        [InlineData("orderby", false, 1, WqlExpressionType.Order, WqlExpressionType.Attribute)]
+        [InlineData("order by", false, 1, WqlExpressionType.Order, WqlExpressionType.Attribute)]
+        [InlineData("orderby text", true, 2, WqlExpressionType.Attribute, WqlExpressionType.OrderDirection, WqlExpressionType.Separator, WqlExpressionType.PartitioningOperator)]
+        [InlineData("order by text", true, 2, WqlExpressionType.Attribute, WqlExpressionType.OrderDirection, WqlExpressionType.Separator, WqlExpressionType.PartitioningOperator)]
+        [InlineData("orderby text,", false, 3, WqlExpressionType.Separator, WqlExpressionType.Attribute)]
+        [InlineData("order by text,", false, 3, WqlExpressionType.Separator, WqlExpressionType.Attribute)]
+        [InlineData("orderby text asc", true, 3, WqlExpressionType.OrderDirection, WqlExpressionType.PartitioningOperator)]
+        [InlineData("order by text asc", true, 3, WqlExpressionType.OrderDirection, WqlExpressionType.PartitioningOperator)]
+        [InlineData("orderby text desc", true, 3, WqlExpressionType.OrderDirection, WqlExpressionType.PartitioningOperator)]
+        [InlineData("order by text desc", true, 3, WqlExpressionType.OrderDirection, WqlExpressionType.PartitioningOperator)]
+        [InlineData("skip", false, 1, WqlExpressionType.PartitioningOperator, WqlExpressionType.Partitioning)]
+        [InlineData("skip 5", true, 2, WqlExpressionType.Partitioning, WqlExpressionType.PartitioningOperator)]
+        [InlineData("take", false, 1, WqlExpressionType.PartitioningOperator, WqlExpressionType.Partitioning)]
+        [InlineData("take 5", true, 2, WqlExpressionType.Partitioning, WqlExpressionType.PartitioningOperator)]
+        public void Analyze(string wql, bool valid, int count, WqlExpressionType type, params WqlExpressionType[] expectedNextTokens)
+        {
+            // arrange
+            var parser = new WqlParser<UnitTestIndexTestDocumentA>();
+
+            // act
+            var ila = parser.Analyze(wql);
+
+            // validation
+            Assert.NotNull(ila);
+            Assert.True(ila.IsValidSoFar == valid);
+            Assert.Equal(type, ila.LastExpressionType);
+            Assert.Equal(count, ila.Items.Count());
+            Assert.Contains(expectedNextTokens, t => ila.ExpectedNextTokens.Contains(t));
         }
     }
 }

@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using System.Linq.Expressions;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -13,11 +13,6 @@ namespace WebExpress.WebIndex.Wql
     public class WqlStatement<TIndexItem> : IWqlStatement<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        /// <summary>
-        /// Returns the index document.
-        /// </summary>
-        public IIndexDocument<TIndexItem> IndexDocument { get; set; }
-
         /// <summary>
         /// Returns the original wql statement.
         /// </summary>
@@ -41,7 +36,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns true if there are any errors that occurred during parsing, false otherwise.
         /// </summary>
-        public bool HasErrors => Error != null;
+        public bool HasErrors => Error is not null;
 
         /// <summary>
         /// Returns the part in error of the original wql statement.
@@ -56,30 +51,7 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Returns the syntax tree of the wql query.
         /// </summary>
-        public IEnumerable<IWqlExpressionNode<TIndexItem>> SyntaxTree
-        {
-            get
-            {
-                var nodes = new List<IWqlExpressionNode<TIndexItem>>();
-
-                if (Filter != null)
-                {
-                    nodes.Add(Filter);
-                }
-
-                if (Order != null)
-                {
-                    nodes.Add(Order);
-                }
-
-                if (Partitioning != null)
-                {
-                    nodes.Add(Partitioning);
-                }
-
-                return nodes;
-            }
-        }
+        public IWqlSyntaxTree<TIndexItem> AbstractSyntaxTree => new WqlSyntaxTree<TIndexItem>(Filter, Order, Partitioning);
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -93,26 +65,27 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data from the index.</returns>
-        public IQueryable<TIndexItem> Apply()
+        public IQueryable<TIndexItem> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
             var filtered = Enumerable.Empty<TIndexItem>().AsQueryable();
 
-            if (Filter != null)
+            if (Filter is not null)
             {
-                filtered = Filter.Apply().Select(x => IndexDocument.DocumentStore.GetItem(x)).AsQueryable();
+                filtered = Filter.Apply(indexDocument).Select(x => indexDocument.DocumentStore.GetItem(x)).AsQueryable();
             }
             else
             {
-                filtered = IndexDocument?.DocumentStore.All.AsQueryable();
+                filtered = indexDocument?.DocumentStore.All.AsQueryable();
             }
 
-            if (Order != null)
+            if (Order is not null)
             {
                 filtered = Order.Apply(filtered);
             }
 
-            if (Partitioning != null)
+            if (Partitioning is not null)
             {
                 filtered = Partitioning.Apply(filtered);
             }
@@ -121,69 +94,86 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Applies the filter to the index.
+        /// Converts the current wql statemment to a query.
         /// </summary>
-        /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
-        /// <returns>The data ids from the index.</returns>
-        public IQueryable Apply(Type dataType)
+        /// <returns>
+        /// An query that represents a query for retrieving indexed items.
+        /// </returns>
+        public IQuery<TIndexItem> ToQuery()
         {
-            return Apply();
-        }
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
-        /// <summary>
-        /// Applies the filter to the unfiltered data object.
-        /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
-        {
-            var filtered = unfiltered;
-
-            if (Filter != null)
+            // filter
+            if (Filter is not null)
             {
-                filtered = Filter.Apply(filtered);
+                // create the parameter: x => 
+                var param = Expression.Parameter(typeof(TIndexItem), "x");
+
+                // build the expression tree for the filter condition 
+                var body = Filter.ToExpression(param);
+
+                // wrap into a lambda: x => <body> 
+                var lambda = Expression.Lambda<Func<TIndexItem, bool>>(body, param);
+
+                // apply to the query 
+                query = query.Where(lambda);
             }
 
-            if (Order != null)
+            // order
+            bool isFirst = true;
+            foreach (var att in Order?.Attributes ?? [])
             {
-                filtered = Order.Apply(filtered);
+                var param = Expression.Parameter(typeof(TIndexItem), "x");
+                var propertyExpr = att.ToExpression(param);
+                var propertyExprObj = Expression.Convert(propertyExpr, typeof(object)); // ensure object type for LINQ
+                var keySelector = Expression.Lambda<Func<TIndexItem, object>>(propertyExprObj, param);
+
+                if (isFirst)
+                {
+                    if (att.Descending)
+                    {
+                        query = query.OrderByDesc(keySelector);
+                    }
+                    else
+                    {
+                        query = query.OrderByAsc(keySelector);
+                    }
+                    isFirst = false;
+                }
+                else
+                {
+                    if (att.Descending)
+                    {
+                        query = query.ThenByDesc(keySelector);
+                    }
+                    else
+                    {
+                        query = query.ThenByAsc(keySelector);
+                    }
+                }
             }
 
-            if (Partitioning != null)
+            if (Partitioning is not null)
             {
-                filtered = Partitioning.Apply(filtered);
+                int take = -1;
+                int skip = -1;
+
+                foreach (var function in Partitioning.PartitioningFunctions)
+                {
+                    if (function.Operator == WqlExpressionNodePartitioningOperator.Take)
+                    {
+                        take = function.Value;
+                    }
+                    else if (function.Operator == WqlExpressionNodePartitioningOperator.Skip)
+                    {
+                        skip = function.Value;
+                    }
+                }
+
+                query = query.WithPaging(take, skip);
             }
 
-            return filtered;
-        }
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public string GetSqlQueryString()
-        {
-            var sql = new StringBuilder();
-            var name = typeof(TIndexItem).Name;
-
-            sql.Append($"select * from {name}");
-
-            if (Filter != null)
-            {
-                sql.Append($" where {Filter.GetSqlQueryString()}");
-            }
-
-            //if (Order != null)
-            //{
-            //    sql.Add(Order);
-            //}
-
-            //if (Partitioning != null)
-            //{
-            //    sql.Add(Partitioning);
-            //}
-
-            return sql.ToString();
+            return query;
         }
 
         /// <summary>
@@ -192,7 +182,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The WQL expression as a string.</returns>
         public override string ToString()
         {
-            if (Error != null)
+            if (Error is not null)
             {
                 return Raw;
             }
@@ -200,10 +190,10 @@ namespace WebExpress.WebIndex.Wql
             return string.Format
             (
                 "{0} {1} {2} {3}",
-                Filter != null ? Filter.ToString() : "",
-                Order != null ? Order.ToString() : "",
-                Partitioning != null ? Partitioning.ToString() : "",
-                Error != null ? Error.ToString() : ""
+                Filter is not null ? Filter.ToString() : "",
+                Order is not null ? Order.ToString() : "",
+                Partitioning is not null ? Partitioning.ToString() : "",
+                Error is not null ? Error.ToString() : ""
             ).Trim();
         }
     }

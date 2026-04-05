@@ -24,13 +24,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Name_12':2");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("Name_12", res.Select(x => x.Name));
         }
     }

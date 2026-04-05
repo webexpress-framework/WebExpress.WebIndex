@@ -27,15 +27,15 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void Create()
         {
-            // preconditions
+            // arrange
             Preconditions();
 
-            // test execution
+            // act
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
 
+            // validation
             Assert.NotNull(IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>());
 
-            // postconditions
             Postconditions();
         }
 
@@ -49,21 +49,19 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [InlineData("fr")]
         public void ReIndex(string culture)
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.RandomItem;
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo(culture), IndexType.Memory);
 
-            // test execution
+            // act
             IndexManager.ReIndex(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text}'");
-            Assert.NotNull(wql);
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text}'");
+            Assert.NotNull(items);
+            Assert.NotEmpty(items);
 
-            var item = wql.Apply();
-            Assert.NotEmpty(item);
-
-            // postconditions
             Postconditions();
         }
 
@@ -80,24 +78,22 @@ namespace WebExpress.WebIndex.Test.IndexManager
             var v = vocabulary;
             var l = wordLength;
 
-            // preconditions
+            // arrange
             Preconditions();
 
             var data = UnitTestIndexTestDocumentFactoryC.GenerateTestData(i, w, v, l);
 
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo(culture), IndexType.Memory);
 
-            // test execution
+            // act
             await IndexManager.ReIndexAsync(data);
 
+            // validation
             var randomItem = IndexManager.All<UnitTestIndexTestDocumentC>().Skip(new Random().Next() % data.Count()).FirstOrDefault();
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text.Split(' ').FirstOrDefault()}'");
-            Assert.NotNull(wql);
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text.Split(' ').FirstOrDefault()}'");
+            Assert.NotNull(items);
+            Assert.NotEmpty(items);
 
-            var item = wql.Apply();
-            Assert.NotEmpty(item);
-
-            // postconditions
             Postconditions();
         }
 
@@ -107,28 +103,24 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void Delete()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.RandomItem;
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text}'");
-            Assert.NotNull(wql);
-
-            var before = wql.Apply().ToList();
+            var before = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text}'");
+            Assert.NotNull(before);
             Assert.True(before.Any());
 
-            // test execution
+            // act
             IndexManager.Delete(randomItem);
 
-            wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text}'");
-            Assert.NotNull(wql);
+            // validation
+            var after = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text}'");
+            Assert.NotNull(after);
+            Assert.Equal(before.Count() - 1, after.Count());
 
-            var after = wql.Apply().ToList();
-            Assert.True(before.Count - 1 == after.Count);
-
-            // postconditions
             Postconditions();
         }
 
@@ -138,25 +130,23 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void Add()
         {
-            // preconditions
+            // arrange
             Preconditions();
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
 
-            // test execution
+            // act
             IndexManager.Insert(new UnitTestIndexTestDocumentC()
             {
                 Id = Guid.Parse("ED242C79-E41B-4214-BFBC-C4673E87433B"),
                 Text = "Hello Aurora!"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>("text = 'Aurora'");
-            var item = wql.Apply();
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentC>("text = 'Aurora'");
+            Assert.NotNull(items);
+            Assert.Single(items);
 
-            Assert.NotNull(wql);
-            Assert.Equal(1, item.Count());
-
-            // postconditions
             Postconditions();
         }
 
@@ -166,26 +156,24 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void Update()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.RandomItem;
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
 
-            // test execution
+            // act
             IndexManager.Update(new UnitTestIndexTestDocumentC()
             {
                 Id = randomItem.Id,
                 Text = "Aurora"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>("text = 'Aurora'");
-            var item = wql.Apply();
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentC>("text = 'Aurora'");
+            Assert.NotNull(items);
+            Assert.Single(items);
 
-            Assert.NotNull(wql);
-            Assert.Equal(1, item.Count());
-
-            // postconditions
             Postconditions();
         }
 
@@ -195,26 +183,24 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public async Task UpdateAsync()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var randomItem = Fixture.RandomItem;
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             await IndexManager.ReIndexAsync(Fixture.TestData);
 
-            // test execution
+            // act
             await IndexManager.UpdateAsync(new UnitTestIndexTestDocumentC()
             {
                 Id = randomItem.Id,
                 Text = "Aurora"
             });
 
-            var wql = IndexManager.Retrieve<UnitTestIndexTestDocumentC>("text = 'Aurora'");
-            Assert.NotNull(wql);
+            // validation
+            var items = IndexManager.Retrieve<UnitTestIndexTestDocumentC>("text = 'Aurora'");
+            Assert.NotNull(items);
+            Assert.Single(items);
 
-            var item = wql.Apply();
-            Assert.Equal(1, item.Count());
-
-            // postconditions
             Postconditions();
         }
 
@@ -224,7 +210,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void Clear()
         {
-            // preconditions
+            // arrange
             Preconditions();
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
@@ -234,15 +220,15 @@ namespace WebExpress.WebIndex.Test.IndexManager
             Assert.NotNull(documents);
             Assert.True(documents.Any());
 
-            // test execution
+            // act
             IndexManager.Clear<UnitTestIndexTestDocumentC>();
 
+            // validation
             documents = IndexManager.All<UnitTestIndexTestDocumentC>();
 
             Assert.NotNull(documents);
             Assert.False(documents.Any());
 
-            // postconditions
             Postconditions();
         }
 
@@ -252,17 +238,17 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void All()
         {
-            // preconditions
+            // arrange
             Preconditions();
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.ReIndex(Fixture.TestData);
 
-            // test execution
+            // act
             var all = IndexManager.All<UnitTestIndexTestDocumentC>();
 
+            // validation
             Assert.True(all.Select(x => x.Id).OrderBy(x => x).SequenceEqual(Fixture.TestData.Select(x => x.Id).OrderBy(x => x)));
 
-            // postconditions
             Postconditions();
         }
 
@@ -272,7 +258,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void GetDocument()
         {
-            // preconditions
+            // arrange
             Preconditions();
             IndexManager.Create<UnitTestIndexTestDocumentA>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.Create<UnitTestIndexTestDocumentB>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
@@ -280,12 +266,13 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentD>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.Create<UnitTestIndexTestDocumentE>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
 
-            // test execution
+            // act
             var document = IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>();
+
+            // validation
             Assert.NotNull(document);
             Assert.True(document.GetType() == typeof(IndexDocument<UnitTestIndexTestDocumentC>));
 
-            // postconditions
             Postconditions();
         }
 
@@ -295,18 +282,19 @@ namespace WebExpress.WebIndex.Test.IndexManager
         [Fact]
         public void GetDocument_Not()
         {
-            // preconditions
+            // arrange
             Preconditions();
             IndexManager.Create<UnitTestIndexTestDocumentA>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.Create<UnitTestIndexTestDocumentB>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.Create<UnitTestIndexTestDocumentD>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
             IndexManager.Create<UnitTestIndexTestDocumentE>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
 
-            // test execution
+            // act
             var document = IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>();
+
+            // validation
             Assert.Null(document);
 
-            // postconditions
             Postconditions();
         }
     }

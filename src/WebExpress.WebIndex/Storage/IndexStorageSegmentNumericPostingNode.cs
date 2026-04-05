@@ -111,7 +111,7 @@ namespace WebExpress.WebIndex.Storage
                 var node = this;
                 var parent = null as IndexStorageSegmentNumericPostingNode;
 
-                while (node.Left != null)
+                while (node.Left is not null)
                 {
                     parent = node;
                     node = node.Left;
@@ -254,7 +254,7 @@ namespace WebExpress.WebIndex.Storage
             inorderSuccessor.RightAddr = inorderSuccessorParent?.Addr ?? 0ul;
             Context.IndexFile.Write(inorderSuccessor);
 
-            if (inorderSuccessorParent != null)
+            if (inorderSuccessorParent is not null)
             {
                 inorderSuccessorParent.LeftAddr = 0ul;
                 Context.IndexFile.Write(inorderSuccessorParent);

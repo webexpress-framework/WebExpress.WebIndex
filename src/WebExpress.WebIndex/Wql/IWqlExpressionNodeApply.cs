@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -14,20 +13,8 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data ids from the index.</returns>
-        IEnumerable<Guid> Apply();
-
-        /// <summary>
-        /// Applies the filter to the unfiltered data object.
-        /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered);
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        string GetSqlQueryString();
+        IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument);
     }
 }

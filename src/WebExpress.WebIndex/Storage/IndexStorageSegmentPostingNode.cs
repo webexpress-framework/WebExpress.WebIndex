@@ -115,7 +115,7 @@ namespace WebExpress.WebIndex.Storage
                 var node = this;
                 var parent = null as IndexStorageSegmentPostingNode;
 
-                while (node.Left != null)
+                while (node.Left is not null)
                 {
                     parent = node;
                     node = node.Left;
@@ -385,7 +385,7 @@ namespace WebExpress.WebIndex.Storage
                         Position = pos
                     };
 
-                    if (last == null)
+                    if (last is null)
                     {
                         // insert at the beginning
                         var tempAddr = PositionAddr;

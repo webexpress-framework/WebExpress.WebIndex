@@ -356,7 +356,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Left != null && search < Value)
+                        if (Left is not null && search < Value)
                         {
                             // recurse on the left subtree
                             foreach (var value in Left.Retrieve(search, options))
@@ -365,7 +365,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Right != null && search > Value)
+                        if (Right is not null && search > Value)
                         {
                             // recurse on the right subtree
                             foreach (var value in Right.Retrieve(search, options))
@@ -377,7 +377,7 @@ namespace WebExpress.WebIndex.Storage
                         break;
                     }
 
-                case IndexRetrieveMethod.GratherThan:
+                case IndexRetrieveMethod.GreaterThan:
                     {
                         if (Value > search)
                         {
@@ -387,7 +387,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Left != null)
+                        if (Left is not null)
                         {
                             foreach (var value in Left.Retrieve(search, options))
                             {
@@ -395,7 +395,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Right != null)
+                        if (Right is not null)
                         {
                             foreach (var value in Right.Retrieve(search, options))
                             {
@@ -406,7 +406,7 @@ namespace WebExpress.WebIndex.Storage
                         break;
                     }
 
-                case IndexRetrieveMethod.GratherThanOrEqual:
+                case IndexRetrieveMethod.GreaterThanOrEqual:
                     {
                         if (Value >= search)
                         {
@@ -416,7 +416,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Left != null)
+                        if (Left is not null)
                         {
                             foreach (var value in Left.Retrieve(search, options))
                             {
@@ -424,7 +424,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Right != null)
+                        if (Right is not null)
                         {
                             foreach (var value in Right.Retrieve(search, options))
                             {
@@ -445,7 +445,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Left != null)
+                        if (Left is not null)
                         {
                             foreach (var value in Left.Retrieve(search, options))
                             {
@@ -453,7 +453,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Right != null && search > Value)
+                        if (Right is not null && search > Value)
                         {
                             foreach (var value in Right.Retrieve(search, options))
                             {
@@ -474,7 +474,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Left != null)
+                        if (Left is not null)
                         {
                             foreach (var value in Left.Retrieve(search, options))
                             {
@@ -482,7 +482,7 @@ namespace WebExpress.WebIndex.Storage
                             }
                         }
 
-                        if (Right != null && search >= Value)
+                        if (Right is not null && search >= Value)
                         {
                             foreach (var value in Right.Retrieve(search, options))
                             {
@@ -509,7 +509,7 @@ namespace WebExpress.WebIndex.Storage
         {
             var node = this[value];
 
-            if (node == null)
+            if (node is null)
             {
                 yield break;
             }

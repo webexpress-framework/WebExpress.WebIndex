@@ -24,14 +24,15 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterFirst()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'?livia'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Olivia", item.Name);
         }
 
@@ -41,14 +42,15 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterMiddle()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Oli?ia'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Olivia", item.Name);
         }
 
@@ -58,15 +60,15 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterEnd()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivi?'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Olivia", item.Name);
         }
 
@@ -76,15 +78,15 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharacters()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivi*'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Olivia", item.Name);
         }
     }

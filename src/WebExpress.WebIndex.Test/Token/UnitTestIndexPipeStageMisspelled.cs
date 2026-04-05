@@ -48,7 +48,7 @@ namespace WebExpress.WebIndex.Test.Token
             var culture = CultureInfo.GetCultureInfo("en");
             var pipeStage = new IndexPipeStageConverterMisspelled(Fixture.Context);
 
-            // test execution
+            // act
             var tokens = IndexTermTokenizer.Tokenize(input, culture);
             var result = pipeStage.Process(tokens, culture).Select(x => x.Value).ToList();
 
@@ -81,7 +81,7 @@ namespace WebExpress.WebIndex.Test.Token
             var culture = CultureInfo.GetCultureInfo("de");
             var pipeStage = new IndexPipeStageConverterMisspelled(Fixture.Context);
 
-            // test execution
+            // act
             var tokens = IndexTermTokenizer.Tokenize(input, culture);
             var result = pipeStage.Process(tokens, culture).Select(x => x.Value).ToList();
 

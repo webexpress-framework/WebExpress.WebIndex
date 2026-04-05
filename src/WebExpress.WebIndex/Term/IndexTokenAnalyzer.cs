@@ -75,7 +75,7 @@ namespace WebExpress.WebIndex.Term
                 var resource = resources
                     .FirstOrDefault(x => x.EndsWith($".{fileName}", StringComparison.OrdinalIgnoreCase));
 
-                if (resource == null)
+                if (resource is null)
                 {
                     // resource not found, skip silently
                     continue;
@@ -87,7 +87,7 @@ namespace WebExpress.WebIndex.Term
                     {
                         // open resource stream safely
                         using var contentStream = assembly.GetManifestResourceStream(resource);
-                        if (contentStream == null)
+                        if (contentStream is null)
                         {
                             // no content available, skip
                             continue;
@@ -133,7 +133,7 @@ namespace WebExpress.WebIndex.Term
         /// <param name="pipeStage">The pipe stage to add.</param>
         public void Register(IIndexPipeStage pipeStage)
         {
-            if (pipeStage == null)
+            if (pipeStage is null)
             {
                 return;
             }
@@ -147,7 +147,7 @@ namespace WebExpress.WebIndex.Term
         /// <param name="pipeStage">The pipe stage to remove.</param>
         public void Remove(IIndexPipeStage pipeStage)
         {
-            if (pipeStage == null)
+            if (pipeStage is null)
             {
                 return;
             }

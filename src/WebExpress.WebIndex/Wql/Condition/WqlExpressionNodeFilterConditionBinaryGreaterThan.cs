@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -21,49 +22,62 @@ namespace WebExpress.WebIndex.Wql.Condition
 
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public override IQueryable<Guid> Apply()
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            var property = Attribute?.Property;
-            var value = Parameter.GetValue();
+            // get attribute
+            var attribute = indexDocument.Fields
+                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
 
-            return Attribute.ReverseIndex?.Retrieve(value, new IndexRetrieveOptions()
+            if (attribute == null || Parameter == null)
             {
-                Method = IndexRetrieveMethod.GratherThan
-            }).AsQueryable();
-        }
+                return [];
+            }
 
-        /// <summary>
-        /// Applies the filter to the unfiltered data object.
-        /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public override IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
-        {
-            var comparer = new Comparer(Culture);
-            var property = Attribute.Property;
+            // get the reverse index for the attribute
+            var reverseIndex = indexDocument.GetReverseIndex(attribute);
+
+            // get the value for comparison
             var value = Parameter.GetValue();
-            var filtered = unfiltered.Where
-            (
-                x => comparer.Compare(property.GetValue(x), value) > 0
-            );
 
-            return filtered;
+            // get all matching guids where the attribute value is greater than the given value
+            return reverseIndex?.Retrieve(value, new IndexRetrieveOptions
+            {
+                Method = IndexRetrieveMethod.GreaterThan,
+                Distance = Options.Distance ?? 0
+            }) ?? [];
         }
 
         /// <summary>
-        /// Returns the sql query string.
+        /// Builds a LINQ expression representing a "greater than" comparison between 
+        /// the attribute expression and the parameter expression.
         /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public override string GetSqlQueryString()
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => x.Property &gt; value</c>).
+        /// </param>
+        /// <returns>
+        /// A binary expression, comparing the attribute value to the parameter value.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when either <c>Attribute</c> or <c>Parameter</c> is <c>null</c>.
+        /// </exception>
+        public override Expression ToExpression(ParameterExpression param)
         {
-            var property = Attribute?.Property;
-            var value = Parameter.Value;
+            ArgumentNullException.ThrowIfNull(Attribute);
+            ArgumentNullException.ThrowIfNull(Parameter);
 
-            return $"{property.Name} like '{value}'";
+            Expression left = Attribute.ToExpression(param);
+            Expression right = Parameter.ToExpression(param);
+
+            return Expression.GreaterThan(left, right);
         }
     }
 }

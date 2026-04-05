@@ -93,7 +93,7 @@ namespace WebExpress.WebIndex.Storage
             var current = BuildSchemaModel();
             var stored = ReadSchemaModel();
 
-            if (stored == null)
+            if (stored is null)
             {
                 // unreadable or incompatible stored schema -> trigger migration
                 return true;
@@ -245,7 +245,7 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         private static void NormalizeSchemaModel(SchemaModel model)
         {
-            if (model == null)
+            if (model is null)
             {
                 return;
             }
@@ -259,7 +259,7 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         private static string GetStableTypeName(PropertyInfo property)
         {
-            if (property == null)
+            if (property is null)
             {
                 return "Object";
             }
@@ -268,7 +268,7 @@ namespace WebExpress.WebIndex.Storage
 
             // unwrap Nullable<T>
             var underlying = Nullable.GetUnderlyingType(t);
-            if (underlying != null)
+            if (underlying is not null)
             {
                 t = underlying;
             }

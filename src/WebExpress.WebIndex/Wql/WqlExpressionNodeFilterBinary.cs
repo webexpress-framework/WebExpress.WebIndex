@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -36,12 +37,13 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data ids from the index.</returns>
-        public override IEnumerable<Guid> Apply()
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
             var filtered = Enumerable.Empty<Guid>();
-            var leftFiltered = LeftFilter.Apply();
-            var rightFiltered = RightFilter.Apply();
+            var leftFiltered = LeftFilter.Apply(indexDocument);
+            var rightFiltered = RightFilter.Apply(indexDocument);
 
             switch (LogicalOperator)
             {
@@ -60,54 +62,31 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Builds the corresponding expression tree for this binary filter.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public override IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
+        /// <param name="parameter">The parameter representing the index item in the expression.</param>
+        /// <returns>The composed expression matching the binary filter (AND/OR).</returns>
+        public override Expression ToExpression(ParameterExpression parameter)
         {
-            var filtered = unfiltered;
-            var leftFiltered = LeftFilter.Apply(filtered);
-            var rightFiltered = RightFilter.Apply(filtered);
+            // recursively get expressions from both subtrees
+            var left = LeftFilter.ToExpression(parameter);
+            var right = RightFilter.ToExpression(parameter);
 
             switch (LogicalOperator)
             {
                 case WqlExpressionLogicalOperator.And:
-                    filtered = leftFiltered.Intersect(rightFiltered);
-                    break;
-
+                    {
+                        return Expression.AndAlso(left, right);
+                    }
                 case WqlExpressionLogicalOperator.Or:
-                    filtered = leftFiltered.Union(rightFiltered);
-                    break;
+                    {
+                        return Expression.OrElse(left, right);
+                    }
                 default:
-                    break;
+                    {
+                        throw new InvalidOperationException($"Unsupported logical operator: {LogicalOperator}");
+                    }
             }
-
-            return filtered.AsQueryable();
-        }
-
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public override string GetSqlQueryString()
-        {
-            var leftFiltered = LeftFilter.GetSqlQueryString();
-            var rightFiltered = RightFilter.GetSqlQueryString();
-
-            switch (LogicalOperator)
-            {
-                case WqlExpressionLogicalOperator.And:
-                    return $"{leftFiltered} and {rightFiltered}";
-
-                case WqlExpressionLogicalOperator.Or:
-                    return $"{leftFiltered} or {rightFiltered}";
-
-                default:
-                    break;
-            }
-
-            return "";
         }
 
         /// <summary>

@@ -271,7 +271,7 @@ namespace WebExpress.WebIndex.Storage
                 while (addr != 0)
                 {
                     var item = Context.IndexFile.Read<IndexStorageSegmentFree>(addr, Context);
-                    if (item == null)
+                    if (item is null)
                     {
                         break;
                     }

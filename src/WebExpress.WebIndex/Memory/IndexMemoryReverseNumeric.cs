@@ -117,8 +117,8 @@ namespace WebExpress.WebIndex.Memory
                 return options.Method switch
                 {
                     IndexRetrieveMethod.Phrase => Numeric.Retrieve(value, options),
-                    IndexRetrieveMethod.GratherThan => Numeric.Retrieve(value, options),
-                    IndexRetrieveMethod.GratherThanOrEqual => Numeric.Retrieve(value, options),
+                    IndexRetrieveMethod.GreaterThan => Numeric.Retrieve(value, options),
+                    IndexRetrieveMethod.GreaterThanOrEqual => Numeric.Retrieve(value, options),
                     IndexRetrieveMethod.LessThan => Numeric.Retrieve(value, options),
                     IndexRetrieveMethod.LessThanOrEqual => Numeric.Retrieve(value, options),
                     _ => []

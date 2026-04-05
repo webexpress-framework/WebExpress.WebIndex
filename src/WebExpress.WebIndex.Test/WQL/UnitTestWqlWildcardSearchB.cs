@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -24,14 +25,15 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterFirst()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'?ame_12'");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
             var item = res?.FirstOrDefault();
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(item);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Equal("Name_12", item.Name);
         }
 
@@ -41,10 +43,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterMiddle()
         {
-            // test execution
+            // arrange
             var wql = Fixture.ExecuteWql("name~'Name_?23'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentB>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
 
             foreach (var item in res)
@@ -59,10 +65,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void SingleCharacterEnd()
         {
-            // test execution
+            // arrange
             var wql = Fixture.ExecuteWql("name~'Name_12?'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentB>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var item in res)
             {
@@ -76,10 +86,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleCharacters()
         {
-            // test execution
+            // arrange
             var wql = Fixture.ExecuteWql("name~'Name*'");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentB>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var item in res)
             {

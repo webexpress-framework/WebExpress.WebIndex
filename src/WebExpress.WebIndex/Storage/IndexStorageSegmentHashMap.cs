@@ -155,7 +155,7 @@ namespace WebExpress.WebIndex.Storage
                         count++;
                     }
 
-                    if (last == null)
+                    if (last is null)
                     {
                         // insert at the beginning
                         var tempAddr = bucket.ItemAddr;
@@ -215,7 +215,7 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>True if the item was found and removed; otherwise false.</returns>
         public bool Remove(IndexStorageSegmentItem segment)
         {
-            if (segment == null)
+            if (segment is null)
             {
                 return false;
             }
@@ -237,7 +237,7 @@ namespace WebExpress.WebIndex.Storage
                     if (current.Addr == segment.Addr)
                     {
                         // unlink current
-                        if (prev == null)
+                        if (prev is null)
                         {
                             bucket.ItemAddr = current.SuccessorAddr;
                             Context.IndexFile.Write(bucket);

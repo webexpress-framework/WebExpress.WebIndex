@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -24,10 +25,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch()
         {
-            // test execution
+            // arrange
             var wql = Fixture.ExecuteWql("description~'lorem ipsum':2");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentD>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var item in res)
             {

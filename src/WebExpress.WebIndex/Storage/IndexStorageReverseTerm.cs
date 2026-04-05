@@ -112,7 +112,7 @@ namespace WebExpress.WebIndex.Storage
             {
                 var node = Term[term.Value.ToString()];
 
-                if (node != null)
+                if (node is not null)
                 {
                     if (node.RemovePosting(item.Id))
                     {

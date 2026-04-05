@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -24,14 +25,17 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch1()
         {
-            // preconditions
-            var term = Fixture.RandomItem.Text.Split(' ').Skip(5).FirstOrDefault();
-            var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(10).FirstOrDefault();
+            // arrange
+            var randomItem = Fixture.RandomItem;
+            var term = randomItem.Text.Split(' ').Skip(5).FirstOrDefault();
+            var secondTerm = randomItem.Text.Split(' ').Skip(6).FirstOrDefault();
+            var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':1");
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>();
 
-            // test execution
-            var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':12");
-            var res = wql?.Apply();
+            // act
+            var res = wql?.Apply(document);
 
+            // valdation 
             Assert.NotNull(res);
             foreach (var item in res)
             {
@@ -45,20 +49,25 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch2()
         {
-            // preconditions
+            // arrange
             var term = Fixture.RandomItem.Text.Split(' ').Skip(5).FirstOrDefault();
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(20).FirstOrDefault();
-
-            // test execution
             var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':3");
-            var res = wql?.Apply();
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // valdation 
             Assert.NotNull(res);
             foreach (var item in res)
             {
                 Assert.Contains($"{term} {secondTerm}", item.Text);
             }
-            Assert.True(res.Count() <= Fixture.ExecuteWql($"text~'{secondTerm} {term}':12").Apply().Count());
+            Assert.True(res.Count() <= Fixture
+                .ExecuteWql($"text~'{secondTerm} {term}':12")
+                .Apply(document)
+                .Count());
 
         }
     }

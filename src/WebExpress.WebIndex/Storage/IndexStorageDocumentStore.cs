@@ -69,7 +69,7 @@ namespace WebExpress.WebIndex.Storage
         {
             get
             {
-                if (HashMap == null)
+                if (HashMap is null)
                 {
                     return Enumerable.Empty<TIndexItem>();
                 }
@@ -91,10 +91,7 @@ namespace WebExpress.WebIndex.Storage
         /// <exception cref="ArgumentNullException">Thrown when context or its IndexDirectory is null.</exception>
         public IndexStorageDocumentStore(IIndexContext context, uint capacity)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
+            ArgumentNullException.ThrowIfNull(context);
 
             if (string.IsNullOrWhiteSpace(context.IndexDirectory))
             {
@@ -261,7 +258,7 @@ namespace WebExpress.WebIndex.Storage
 
             var segment = list.FirstOrDefault(x => x.Id == item.Id);
 
-            if (segment == null)
+            if (segment is null)
             {
                 // nothing to delete
                 return;
@@ -322,7 +319,7 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>The deserialized item or default when unavailable.</returns>
         private TIndexItem GetItem(IndexStorageSegmentItem segment)
         {
-            if (segment == null)
+            if (segment is null)
             {
                 return default!;
             }
@@ -330,7 +327,7 @@ namespace WebExpress.WebIndex.Storage
             var bytes = new List<byte>();
             var addr = segment.NextChunkAddr;
 
-            if (segment.DataChunk != null && segment.DataChunk.Length > 0)
+            if (segment.DataChunk is not null && segment.DataChunk.Length > 0)
             {
                 bytes.AddRange(segment.DataChunk);
             }
@@ -339,7 +336,7 @@ namespace WebExpress.WebIndex.Storage
             while (addr != 0)
             {
                 var chunk = IndexFile.Read<IndexStorageSegmentChunk>(addr, StorageContext);
-                if (chunk?.DataChunk != null && chunk.DataChunk.Length > 0)
+                if (chunk?.DataChunk is not null && chunk.DataChunk.Length > 0)
                 {
                     bytes.AddRange(chunk.DataChunk);
                 }
@@ -408,7 +405,7 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>The decompressed string.</returns>
         private static string DecompressString(byte[] compressed)
         {
-            if (compressed == null || compressed.Length == 0)
+            if (compressed is null || compressed.Length == 0)
             {
                 return string.Empty;
             }

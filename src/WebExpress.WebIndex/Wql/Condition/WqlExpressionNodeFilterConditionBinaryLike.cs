@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
@@ -19,52 +21,67 @@ namespace WebExpress.WebIndex.Wql.Condition
         {
         }
 
-        /// <summary>
-        /// Applies the filter to the index.
-        /// </summary>
-        /// <returns>The data ids from the index.</returns>
-        public override IQueryable<Guid> Apply()
+        /// <summary> 
+        /// Applies the filter condition to the index using the specified attribute 
+        /// and returns the matching data identifiers. 
+        /// </summary> 
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns> 
+        /// A sequence of data identifiers that satisfy the filter condition. 
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            var value = Parameter.GetValue();
+            // get attribute by name
+            var attribute = indexDocument.Fields
+                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
 
-            return Attribute.ReverseIndex?.Retrieve(value?.ToString(), new IndexRetrieveOptions()
+            if (attribute == null || Parameter == null)
+            {
+                return [];
+            }
+
+            // get the reverse index for the attribute
+            var reverseIndex = indexDocument.GetReverseIndex(attribute);
+
+            // get value as string
+            var value = Parameter.GetValue()?.ToString();
+
+            // retrieve matching guids using fuzzy/default search
+            return reverseIndex?.Retrieve(value, new IndexRetrieveOptions
             {
                 Method = IndexRetrieveMethod.Default,
                 Distance = Options.Distance ?? 0
-            }).AsQueryable();
+            }) ?? [];
         }
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Builds a LINQ expression representing a string-based "LIKE" comparison between 
+        /// the attribute expression and the parameter
+        /// expression.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public override IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => x.Property.Contains(value)</c>).
+        /// </param>
+        /// <returns>
+        /// A method call expression on the attribute value using the parameter value 
+        /// as the argument.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when either <c>Attribute</c> or <c>Parameter</c> is <c>null</c>.
+        /// </exception>
+        public override Expression ToExpression(ParameterExpression param)
         {
-            var property = Attribute.Property;
-            var value = Parameter.GetValue().ToString();
-            var filtered = unfiltered.Where
-            (
-                x => property.GetValue(x).ToString().Contains
-                (
-                    value,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            );
+            ArgumentNullException.ThrowIfNull(Attribute);
+            ArgumentNullException.ThrowIfNull(Parameter);
 
-            return filtered;
-        }
+            Expression left = Attribute.ToExpression(param);
+            Expression right = Parameter.ToExpression(param);
 
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public override string GetSqlQueryString()
-        {
-            var property = Attribute?.Property;
-            var value = Parameter.Value;
+            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string), typeof(StringComparison)]);
+            var comparison = Expression.Constant(StringComparison.OrdinalIgnoreCase);
 
-            return $"{property.Name} like '%{value}%'";
+            return Expression.Call(left, containsMethod, right, comparison);
         }
     }
 }

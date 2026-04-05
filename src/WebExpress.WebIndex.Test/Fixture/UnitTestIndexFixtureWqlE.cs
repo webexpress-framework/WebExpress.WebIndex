@@ -49,7 +49,7 @@ namespace WebExpress.WebIndex.Test.Fixture
         /// <returns>The WQL parser.</returns>
         public IWqlStatement<UnitTestIndexTestDocumentE> ExecuteWql(string wql)
         {
-            return IndexManager.Retrieve<UnitTestIndexTestDocumentE>(wql);
+            return new WqlParser<UnitTestIndexTestDocumentE>().Parse(wql);
         }
     }
 }

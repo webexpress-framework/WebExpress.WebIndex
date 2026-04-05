@@ -65,13 +65,13 @@ namespace WebExpress.WebIndex.Test.Token
         )]
         public void StopWord(string cultureStr, string str, params string[] tokenStr)
         {
-            // preconditions
+            // arrange
             var culture = CultureInfo.GetCultureInfo(cultureStr);
             var pipeStage = new IndexPipeStageFilterStopWord(Fixture.Context);
 
             var token = IndexTermTokenizer.Tokenize(str.ToLower(), culture);
 
-            // test execution
+            // act
             var res = pipeStage.Process(token, culture)
                 .Select(x => x.Value)
                 .ToList();

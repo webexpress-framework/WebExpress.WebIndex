@@ -48,7 +48,7 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Create()
         {
-            // test execution
+            // act
             using var storageFile = new IndexStorageFile(_tempFileName);
 
             // validation
@@ -65,10 +65,10 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Alloc()
         {
-            // preconditions
+            // arrange
             using var storageFile = new IndexStorageFile(_tempFileName);
 
-            // test execution
+            // act
             ulong addr1 = storageFile.Alloc(100);
             ulong addr2 = storageFile.Alloc(200);
 
@@ -84,10 +84,10 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Delete()
         {
-            // preconditions
+            // arrange
             using var storageFile = new IndexStorageFile(_tempFileName);
 
-            // test execution
+            // act
             storageFile.Delete();
 
             // validation
@@ -100,10 +100,10 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Closes()
         {
-            // preconditions
+            // arrange
             var storageFile = new IndexStorageFile(_tempFileName);
 
-            // test execution
+            // act
             storageFile.Dispose();
 
             // validation
@@ -116,10 +116,10 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Flush()
         {
-            // preconditions
+            // arrange
             using var storageFile = new IndexStorageFile(_tempFileName);
 
-            // test execution
+            // act
             var res = Record.Exception(() => storageFile.Flush());
 
             // validation
@@ -132,10 +132,10 @@ namespace WebExpress.WebIndex.Test.Storage
         [Fact]
         public void Write()
         {
-            // preconditions
+            // arrange
             using var storageFile = new IndexStorageFile(_tempFileName);
 
-            // test execution
+            // act
             var ex1 = Record.Exception(() => storageFile.Write(null));
             var ex2 = Record.Exception(() => storageFile.Invalidation(null));
             var ex3 = Record.Exception(() => storageFile.InvalidationAll());

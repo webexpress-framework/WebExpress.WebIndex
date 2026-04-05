@@ -31,7 +31,7 @@ namespace WebExpress.WebIndex.Storage
         /// <exception cref="ArgumentNullException">Thrown when context is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the context does not provide a valid index file.</exception>
         public IndexStorageSegmentHeader(IndexStorageContext context)
-            : base(context, (context ?? throw new ArgumentNullException(nameof(context))).IndexFile != null
+            : base(context, (context ?? throw new ArgumentNullException(nameof(context))).IndexFile is not null
                 ? context.IndexFile.Alloc(SegmentSize)
                 : throw new InvalidOperationException("Index file is not available in the provided context."))
         {
@@ -73,7 +73,7 @@ namespace WebExpress.WebIndex.Storage
         /// </exception>
         public override void Read(BinaryReader reader)
         {
-            if (reader == null)
+            if (reader is null)
             {
                 throw new ArgumentNullException(nameof(reader));
             }
@@ -119,7 +119,7 @@ namespace WebExpress.WebIndex.Storage
         /// <exception cref="InvalidOperationException">Thrown when identifier is invalid.</exception>
         public override void Write(BinaryWriter writer)
         {
-            if (writer == null)
+            if (writer is null)
             {
                 throw new ArgumentNullException(nameof(writer));
             }

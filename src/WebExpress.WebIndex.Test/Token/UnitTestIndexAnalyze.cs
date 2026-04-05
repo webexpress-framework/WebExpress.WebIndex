@@ -46,7 +46,7 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("en", "http://example.com/abc", "http", "example", "com", "abc")]
         public void Token(string culture, string input, params string[] expected)
         {
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(input, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(expected, tokens.Select(x => x.Value));
@@ -63,10 +63,10 @@ namespace WebExpress.WebIndex.Test.Token
         [InlineData("fr", "BotanischeBindungenMicrosReiseZuVerdantia.de", 716)]
         public void Ressource(string culture, string ressource, int count)
         {
-            // preconditions
+            // arrange
             var input = Fixture.GetRessource(ressource);
 
-            // test execution
+            // act
             var tokens = Fixture.TokenAnalyzer.Analyze(input, CultureInfo.GetCultureInfo(culture));
 
             Assert.Equal(count, tokens.Count());

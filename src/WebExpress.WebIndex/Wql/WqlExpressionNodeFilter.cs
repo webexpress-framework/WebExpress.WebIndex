@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Linq.Expressions;
 using WebExpress.WebIndex.Wql.Condition;
 
 namespace WebExpress.WebIndex.Wql
@@ -27,31 +27,33 @@ namespace WebExpress.WebIndex.Wql
         /// <summary>
         /// Applies the filter to the index.
         /// </summary>
+        /// <param name="indexDocument">The index document.</param>
         /// <returns>The data from the index.</returns>
-        public virtual IEnumerable<Guid> Apply()
+        public virtual IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            return Condition?.Apply() ?? [];
+            return Condition?.Apply(indexDocument) ?? [];
         }
 
         /// <summary>
-        /// Applies the filter to the unfiltered data object.
+        /// Builds a LINQ expression representing the filter condition
+        /// contained in this filter node.
         /// </summary>
-        /// <param name="unfiltered">The unfiltered data.</param>
-        /// <returns>The filtered data.</returns>
-        public virtual IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
+        /// <param name="param">
+        /// The parameter expression representing the index item in the generated
+        /// expression tree (e.g., <c>x</c> in <c>x => ...</c>).
+        /// </param>
+        /// <returns>
+        /// The expression produced by the underlying filter condition, or
+        /// a constant <c>true</c> expression if no condition exists.
+        /// </returns>
+        public virtual Expression ToExpression(ParameterExpression param)
         {
-            return Condition?.Apply(unfiltered) ?? unfiltered;
-        }
+            if (Condition is null)
+            {
+                return Expression.Constant(true);
+            }
 
-        /// <summary>
-        /// Returns the sql query string.
-        /// </summary>
-        /// <returns>The sql part of the node.</returns>
-        public virtual string GetSqlQueryString()
-        {
-            var sql = Condition?.GetSqlQueryString() ?? "";
-
-            return sql;
+            return Condition.ToExpression(param);
         }
 
         /// <summary>

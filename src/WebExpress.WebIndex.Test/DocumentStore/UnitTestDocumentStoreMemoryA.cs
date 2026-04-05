@@ -27,10 +27,10 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void Create()
         {
-            // preconditions
+            // arrange
             var context = new IndexContext();
 
-            // test execution
+            // act
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(context, 5);
 
             // postconditions
@@ -43,20 +43,20 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void Add()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(Context, 5);
 
             documentStore.Clear();
 
-            // test execution
+            // act
             documentStore.Add(Fixture.TestData[0]);
             documentStore.Add(Fixture.TestData[1]);
 
             var i = documentStore.GetItem(Fixture.TestData[0].Id);
 
             // validation
-            Assert.True(i != null && i.Id == Fixture.TestData[0].Id);
+            Assert.True(i is not null && i.Id == Fixture.TestData[0].Id);
 
             // postconditions
             documentStore.Dispose();
@@ -69,7 +69,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void UpdateWithChange()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(Context, 5);
 
@@ -84,7 +84,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
                 Text = name,
             };
 
-            // test execution
+            // act
             documentStore.Update(changed);
 
             var all = documentStore.All;
@@ -103,7 +103,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void UpdateWithoutChanges()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(Context, 5);
 
@@ -111,7 +111,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
             documentStore.Add(Fixture.TestData[0]);
             documentStore.Add(Fixture.TestData[1]);
 
-            // test execution
+            // act
             documentStore.Update(Fixture.TestData[0]);
             var all = documentStore.All;
 
@@ -129,7 +129,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void Delete()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(Context, 5);
 
@@ -137,7 +137,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
             documentStore.Add(Fixture.TestData[0]);
             documentStore.Add(Fixture.TestData[1]);
 
-            // test execution
+            // act
             documentStore.Delete(Fixture.TestData[0]);
             var all = documentStore.All;
 
@@ -160,7 +160,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void Retrieve()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(Context, 5);
 
@@ -168,7 +168,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
             documentStore.Add(Fixture.TestData[0]);
             documentStore.Add(Fixture.TestData[1]);
 
-            // test execution
+            // act
             var item = documentStore.GetItem(Fixture.TestData[0].Id);
 
             Assert.NotNull(documentStore);
@@ -185,7 +185,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
         [Fact]
         public void All()
         {
-            // preconditions
+            // arrange
             Preconditions();
             var documentStore = new IndexMemoryDocumentStore<UnitTestIndexTestDocumentA>(Context, 5);
 
@@ -195,7 +195,7 @@ namespace WebExpress.WebIndex.Test.DocumentStore
                 documentStore.Add(item);
             }
 
-            // test execution
+            // act
             var all = documentStore.All;
 
             Assert.True(all.Select(x => x.Id).OrderBy(x => x).SequenceEqual(Fixture.TestData.Select(x => x.Id).OrderBy(x => x)));

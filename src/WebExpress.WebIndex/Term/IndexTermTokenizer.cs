@@ -167,7 +167,7 @@ namespace WebExpress.WebIndex.Term
                         char.IsSymbol(current) ||
                         (
                             char.IsPunctuation(current) &&
-                            (wildcards == null || !wildcards.Contains(current))
+                            (wildcards is null || !wildcards.Contains(current))
                         ))
                     {
                         if (currentToken.Length > 0)

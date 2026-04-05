@@ -24,13 +24,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch1()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivia':6");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("d50774b3-5d95-4fb4-97fb-d107dd6fb9a0", res.Select(x => x.Id.ToString()));
         }
 
@@ -40,13 +41,14 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void ProximityMatch2()
         {
-            // test execution
+            // act
             var wql = Fixture.ExecuteWql("name~'Olivia':0");
-            var res = wql?.Apply();
+            var res = Fixture.IndexManager.Retrieve(wql);
 
+            // validation
             Assert.NotNull(res);
             Assert.NotNull(res);
-            Assert.Equal(1, res.Count());
+            Assert.Single(res);
             Assert.Contains("d50774b3-5d95-4fb4-97fb-d107dd6fb9a0", res.Select(x => x.Id.ToString()));
         }
     }

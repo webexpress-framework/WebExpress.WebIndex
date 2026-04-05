@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Fixture;
+﻿using WebExpress.WebIndex.Test.Document;
+using WebExpress.WebIndex.Test.Fixture;
 using Xunit.Abstractions;
 
 namespace WebExpress.WebIndex.Test.WQL
@@ -24,14 +25,16 @@ namespace WebExpress.WebIndex.Test.WQL
         [Fact]
         public void MultipleMatch1()
         {
-            // preconditions
+            // arrange
             var term = Fixture.Term;
             var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(1).FirstOrDefault();
-
-            // test execution
+            var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>();
             var wql = Fixture.ExecuteWql($"text='{term} {secondTerm}'");
-            var res = wql?.Apply();
 
+            // act
+            var res = wql?.Apply(document);
+
+            // validation
             Assert.NotNull(res);
             foreach (var text in res.Select(x => x.Text))
             {

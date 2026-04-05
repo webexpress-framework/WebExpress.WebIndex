@@ -49,7 +49,7 @@ namespace WebExpress.WebIndex.Storage
                         while (addr != 0)
                         {
                             var item = Context.IndexFile.Read<IndexStorageSegmentFree>(addr, Context);
-                            if (item != null)
+                            if (item is not null)
                             {
                                 snapshot.Add(item);
                                 addr = item.SuccessorAddr;
@@ -86,7 +86,7 @@ namespace WebExpress.WebIndex.Storage
                         while (addr != 0)
                         {
                             var item = Context.IndexFile.Read<IndexStorageSegmentFree>(addr, Context);
-                            if (item != null)
+                            if (item is not null)
                             {
                                 snapshot.Add(item);
                                 addr = item.SuccessorAddr;
@@ -172,7 +172,7 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="segment">The segment to free.</param>
         public override void Free(IIndexStorageSegment segment)
         {
-            if (segment == null)
+            if (segment is null)
             {
                 return;
             }
