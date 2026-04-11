@@ -40,7 +40,8 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="rmdir /S /Q &quot;$(TargetDir)index&quot;" />
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))" Command="rmdir /S /Q &quot;$(TargetDir)index&quot;" ContinueOnError="true" />
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))" Command="rm -rf &quot;$(TargetDir)index&quot;" ContinueOnError="true" />
   </Target>
 
 </Project>
