@@ -42,34 +42,35 @@ namespace WebExpress.WebIndex.Wql
 
         /// <summary>
         /// Applies the filter to the unfiltered data object.
+        /// Supports dot-separated nested property paths.
         /// </summary>
         /// <param name="unfiltered">The unfiltered data.</param>
         /// <returns>The filtered data.</returns>
         public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
         {
-            var attribute = typeof(TIndexItem).GetProperty(Attribute.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
-                ?? throw new InvalidOperationException($"No public instance property matching '{Attribute.Name}' was found on type '{typeof(TIndexItem).Name}'.");
+            var path = WqlPropertyPath<TIndexItem>.Parse(Attribute.Name);
+            Func<TIndexItem, object> accessor = x => path.ResolveValue(x);
 
-            if (Position > 0 && unfiltered is IOrderedQueryable<TIndexItem> orderedQueryable)
+            if (Position > 0 && unfiltered is IOrderedEnumerable<TIndexItem> orderedEnumerable)
             {
                 if (Descending)
                 {
-                    return orderedQueryable.ThenByDescending(x => attribute.GetValue(x));
+                    return orderedEnumerable.ThenByDescending(accessor).AsQueryable();
                 }
                 else
                 {
-                    return orderedQueryable.ThenBy(x => attribute.GetValue(x));
+                    return orderedEnumerable.ThenBy(accessor).AsQueryable();
                 }
             }
             else
             {
                 if (Descending)
                 {
-                    return unfiltered.OrderByDescending(x => attribute.GetValue(x));
+                    return unfiltered.OrderByDescending(accessor).AsQueryable();
                 }
                 else
                 {
-                    return unfiltered.OrderBy(x => attribute.GetValue(x));
+                    return unfiltered.OrderBy(accessor).AsQueryable();
                 }
             }
         }

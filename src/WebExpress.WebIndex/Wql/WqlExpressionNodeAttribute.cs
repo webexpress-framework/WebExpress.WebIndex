@@ -25,14 +25,15 @@ namespace WebExpress.WebIndex.Wql
 
         /// <summary> 
         /// Creates a expression representing access to the attribute's underlying property on the given 
-        /// parameter expression. 
+        /// parameter expression. Supports dot-separated nested paths (e.g., <c>Address.City</c>).
         /// </summary> 
         /// <param name="param">
         /// The parameter expression that represents the index item in the generated 
         /// expression tree (e.g., <c>x</c> in <c>x => x.Property</c>). 
         /// </param> 
         /// <returns> 
-        /// A expression that accesses the property defined by property. 
+        /// A expression that accesses the property defined by property, potentially 
+        /// chained through nested objects.
         /// </returns> 
         /// <exception cref="InvalidOperationException"> 
         /// Thrown when <see cref="Name"/> is <c>null</c> or no matching public instance 
@@ -45,10 +46,20 @@ namespace WebExpress.WebIndex.Wql
                 throw new InvalidOperationException($"The attribute name cannot be null for type '{typeof(TIndexItem).Name}'.");
             }
 
-            var property = typeof(TIndexItem).GetProperty(Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
-                ?? throw new InvalidOperationException($"No public instance property matching '{Name}' was found on type '{typeof(TIndexItem).Name}'.");
+            var segments = Name.Split('.');
+            Expression current = param;
+            var currentType = typeof(TIndexItem);
 
-            return Expression.Property(param, property);
+            foreach (var segment in segments)
+            {
+                var property = currentType.GetProperty(segment, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+                    ?? throw new InvalidOperationException($"No public instance property matching '{segment}' was found on type '{currentType.Name}' (full path: '{Name}').");
+
+                current = Expression.Property(current, property);
+                currentType = property.PropertyType;
+            }
+
+            return current;
         }
 
         /// <summary>
