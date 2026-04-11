@@ -97,11 +97,20 @@ namespace WebExpress.WebIndex.Wql
             RegisterCondition<WqlExpressionNodeFilterConditionBinaryGreaterThanOrEqual<TIndexItem>>();
             RegisterCondition<WqlExpressionNodeFilterConditionBinaryLessThan<TIndexItem>>();
             RegisterCondition<WqlExpressionNodeFilterConditionBinaryLessThanOrEqual<TIndexItem>>();
+            RegisterCondition<WqlExpressionNodeFilterConditionBinaryNotEqual<TIndexItem>>();
+            RegisterCondition<WqlExpressionNodeFilterConditionBinaryIs<TIndexItem>>();
+            RegisterCondition<WqlExpressionNodeFilterConditionBinaryIsNot<TIndexItem>>();
             RegisterCondition<WqlExpressionNodeFilterConditionSetIn<TIndexItem>>();
             RegisterCondition<WqlExpressionNodeFilterConditionSetNotIn<TIndexItem>>();
 
             RegisterFunction<WqlExpressionNodeFilterFunctionDay<TIndexItem>>();
             RegisterFunction<WqlExpressionNodeFilterFunctionNow<TIndexItem>>();
+            RegisterFunction<WqlExpressionNodeFilterFunctionUpper<TIndexItem>>();
+            RegisterFunction<WqlExpressionNodeFilterFunctionLower<TIndexItem>>();
+            RegisterFunction<WqlExpressionNodeFilterFunctionLen<TIndexItem>>();
+            RegisterFunction<WqlExpressionNodeFilterFunctionTrim<TIndexItem>>();
+            RegisterFunction<WqlExpressionNodeFilterFunctionYear<TIndexItem>>();
+            RegisterFunction<WqlExpressionNodeFilterFunctionMonth<TIndexItem>>();
         }
 
         /// <summary>
@@ -1390,7 +1399,14 @@ namespace WebExpress.WebIndex.Wql
                     }
                     else
                     {
-                        // ignore
+                        // unterminated string — enqueue whatever was collected so parsing
+                        // can still produce a meaningful error message
+                        if (!currentToken.IsEmpty)
+                        {
+                            tokens.Enqueue(currentToken);
+                        }
+
+                        currentToken = new WqlToken() { Offset = i };
                     }
                 }
                 else
