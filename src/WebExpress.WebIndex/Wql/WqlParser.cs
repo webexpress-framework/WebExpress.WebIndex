@@ -1310,6 +1310,12 @@ namespace WebExpress.WebIndex.Wql
         private static Queue<WqlToken> Tokenize(string input)
         {
             var tokens = new Queue<WqlToken>();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                return tokens;
+            }
+
             var currentToken = new WqlToken();
 
             for (int i = 0; i < input.Length; i++)
