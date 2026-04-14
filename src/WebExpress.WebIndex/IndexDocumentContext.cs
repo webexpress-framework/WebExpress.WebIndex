@@ -8,7 +8,7 @@ namespace WebExpress.WebIndex
     public class IndexDocumemntContext : IndexContext, IIndexDocumemntContext
     {
         /// <summary>
-        /// Returns the token analyzer that is valid in the context of the IndexDocument.
+        /// Gets the token analyzer that is valid in the context of the IndexDocument.
         /// </summary>
         public IndexTokenAnalyzer TokenAnalyzer { get; private set; }
 

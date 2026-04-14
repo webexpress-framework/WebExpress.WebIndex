@@ -16,12 +16,12 @@ namespace WebExpress.WebIndex.Memory
         public char Character { get; set; }
 
         /// <summary>
-        /// Returns or sets the child nodes of the tree.
+        /// Gets or sets the child nodes of the tree.
         /// </summary>
         public List<IndexMemorySegmentTermNode> Children { get; set; } = [];
 
         /// <summary>
-        /// Returns or sets the postings. This is always on the leaf of an term.
+        /// Gets or sets the postings. This is always on the leaf of an term.
         /// </summary>
         public List<IndexMemorySegmentPosting> Postings { get; set; }
 
@@ -51,7 +51,7 @@ namespace WebExpress.WebIndex.Memory
         }
 
         /// <summary>
-        /// Returns all terms.
+        /// Gets all terms.
         /// </summary>
         public IEnumerable<(string, IndexMemorySegmentTermNode)> Terms
         {

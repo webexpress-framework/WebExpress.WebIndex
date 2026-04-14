@@ -20,27 +20,27 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the on-disk size of this allocator segment.
+        /// Gets the on-disk size of this allocator segment.
         /// </summary>
         public new const uint SegmentSize = IndexStorageSegmentAllocator.SegmentSize + sizeof(ulong) + sizeof(ulong) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the head address of the free list for term segments.
+        /// Gets or sets the head address of the free list for term segments.
         /// </summary>
         public ulong FreeTermAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the head address of the free list for posting segments.
+        /// Gets or sets the head address of the free list for posting segments.
         /// </summary>
         public ulong FreePostingAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the head address of the free list for position segments.
+        /// Gets or sets the head address of the free list for position segments.
         /// </summary>
         public ulong FreePositionAddr { get; set; }
 
         /// <summary>
-        /// Enumerates all free term segments (snapshot).
+        /// Gets all free term segments (snapshot).
         /// </summary>
         public IEnumerable<IndexStorageSegmentFree> FreeTerms
         {
@@ -51,7 +51,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Enumerates all free posting segments (snapshot).
+        /// Gets all free posting segments (snapshot).
         /// </summary>
         public IEnumerable<IndexStorageSegmentFree> FreePostings
         {
@@ -62,7 +62,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Enumerates all free position segments (snapshot).
+        /// Gets all free position segments (snapshot).
         /// </summary>
         public IEnumerable<IndexStorageSegmentFree> FreePositions
         {

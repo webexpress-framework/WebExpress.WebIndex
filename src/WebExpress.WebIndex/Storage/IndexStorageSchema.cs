@@ -32,17 +32,17 @@ namespace WebExpress.WebIndex.Storage
         };
 
         /// <summary>
-        /// Returns the file name of the schema file.
+        /// Gets the file name of the schema file.
         /// </summary>
         public string FileName { get; private set; }
 
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexContext Context { get; private set; }
 
         /// <summary>
-        /// Returns the index fields discovered for the type parameter.
+        /// Gets the index fields discovered for the type parameter.
         /// </summary>
         public IEnumerable<IndexFieldData> Fields
         {

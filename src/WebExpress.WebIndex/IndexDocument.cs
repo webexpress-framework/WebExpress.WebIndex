@@ -24,37 +24,37 @@ namespace WebExpress.WebIndex
         public event EventHandler<IndexSchemaMigrationEventArgs> SchemaChanged;
 
         /// <summary>
-        /// Returns the document store.
+        /// Gets the document store.
         /// </summary>
         public IIndexDocumentStore<TIndexItem> DocumentStore { get; private set; }
 
         /// <summary>
-        /// Returns the index schema associated with this index document.
+        /// Gets the index schema associated with this index document.
         /// </summary>
         public IIndexSchema<TIndexItem> Schema { get; private set; }
 
         /// <summary>
-        /// Returns the index type.
+        /// Gets the index type.
         /// </summary>
         public IndexType IndexType { get; private set; }
 
         /// <summary>
-        /// Returns the index field data.
+        /// Gets the index field data.
         /// </summary>
         public IEnumerable<IndexFieldData> Fields => Schema.Fields;
 
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexDocumemntContext Context { get; private set; }
 
         /// <summary>
-        /// Returns the culture.
+        /// Gets the culture.
         /// </summary>
         public CultureInfo Culture { get; private set; }
 
         /// <summary>
-        /// Returns all documents from the index.
+        /// Gets all documents from the index.
         /// </summary>
         public IEnumerable<TIndexItem> All => DocumentStore.All;
 

@@ -9,12 +9,12 @@ namespace WebExpress.WebIndex
     public interface IIndexSchema : IDisposable
     {
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         IIndexContext Context { get; }
 
         /// <summary>
-        /// Return the index field data.
+        /// Gets the index field data.
         /// </summary>
         IEnumerable<IndexFieldData> Fields { get; }
 

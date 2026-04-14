@@ -18,12 +18,12 @@ namespace WebExpress.WebIndex.Memory
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// The root term.
+        /// Gets the root term.
         /// </summary>
         public IndexMemorySegmentNumericNode Numeric { get; private set; } = new();
 
         /// <summary>
-        /// Returns all items.
+        /// Gets all items.
         /// </summary>
         public override IEnumerable<Guid> All => Numeric.All.Distinct();
 

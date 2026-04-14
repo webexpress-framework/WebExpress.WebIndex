@@ -9,22 +9,22 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageBufferItem
     {
         /// <summary>
-        /// Returns or sets the lifetime.
+        /// Gets or sets the lifetime.
         /// </summary>
         public static uint Lifetime { get; set; } = 100;
 
         /// <summary>
-        /// The lifetime counter is for deletion from the buffer.
+        /// Gets the lifetime counter is for deletion from the buffer.
         /// </summary>
         private uint _counter;
 
         /// <summary>
-        /// The lifetime counter is for deletion from the buffer.
+        /// Gets the lifetime counter is for deletion from the buffer.
         /// </summary>
         public uint Counter => _counter;
 
         /// <summary>
-        /// Returns the segment to be cached.
+        /// Gets the segment to be cached.
         /// </summary>
         public IIndexStorageSegment Segment { get; private set; }
 

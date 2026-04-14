@@ -6,12 +6,12 @@
     public class IndexTermToken
     {
         /// <summary>
-        /// Returns the position of the token in the input value.
+        /// Gets the position of the token in the input value.
         /// </summary>
         public uint Position { get; internal set; }
 
         /// <summary>
-        /// Returns the token value.
+        /// Gets the token value.
         /// </summary>
         public object Value { get; internal set; }
 

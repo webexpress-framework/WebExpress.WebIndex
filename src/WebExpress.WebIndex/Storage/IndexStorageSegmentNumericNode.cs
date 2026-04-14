@@ -19,37 +19,37 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the amount of space required on the storage device.
         /// </summary>
         public const uint SegmentSize = sizeof(decimal) + sizeof(ulong) + sizeof(ulong) + sizeof(uint) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the value of the node.
+        /// Gets or sets the value of the node.
         /// </summary>
         public decimal Value { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the left child.
+        /// Gets or sets the address of the left child.
         /// </summary>
         public ulong LeftAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the right child.
+        /// Gets or sets the address of the right child.
         /// </summary>
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the number of times the value is used (postings).
+        /// Gets or sets the number of times the value is used (postings).
         /// </summary>
         public uint Fequency { get; set; }
 
         /// <summary>
-        /// Returns the address of the first posting element of a sorted list or 0 if there is no element.
+        /// Gets the address of the first posting element of a sorted list or 0 if there is no element.
         /// </summary>
         public ulong PostingAddr { get; private set; }
 
         /// <summary>
-        /// Returns the left child of the node.
+        /// Gets the left child of the node.
         /// </summary>
         public IndexStorageSegmentNumericNode Left
         {
@@ -66,7 +66,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the right child of the node.
+        /// Gets the right child of the node.
         /// </summary>
         public IndexStorageSegmentNumericNode Right
         {
@@ -83,12 +83,12 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the height of the tree.
+        /// Gets the height of the tree.
         /// </summary>
         public uint Height { get; private set; } = 1;
 
         /// <summary>
-        /// Returns the balance factor of the tree.
+        /// Gets the balance factor of the tree.
         /// </summary>
         private int BalanceFactor
         {

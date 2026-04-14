@@ -8,12 +8,12 @@ namespace WebExpress.WebIndex.Storage
     public interface IIndexStorageSegment
     {
         /// <summary>
-        /// Returns the address of the segment.
+        /// Gets the address of the segment.
         /// </summary>
         ulong Addr { get; }
 
         /// <summary>
-        /// Returns the the context of the index.
+        /// Gets the the context of the index.
         /// </summary>
         IndexStorageContext Context { get; }
 

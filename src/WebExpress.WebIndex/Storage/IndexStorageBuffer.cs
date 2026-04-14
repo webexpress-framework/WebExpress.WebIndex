@@ -15,12 +15,12 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns or sets the maximum upper limit of the cached segments.
+        /// Gets or sets the maximum upper limit of the cached segments.
         /// </summary>
         public static uint MaxCachedSegments { get; set; } = 50000;
 
         /// <summary>
-        /// Returns or sets the maintenance interval in milliseconds for cache aging and flush operations.
+        /// Gets or sets the maintenance interval in milliseconds for cache aging and flush operations.
         /// </summary>
         public static int MaintenanceIntervalMs { get; set; } = 500;
 
@@ -40,22 +40,22 @@ namespace WebExpress.WebIndex.Storage
         private readonly Dictionary<ulong, IIndexStorageSegment> _writeCache;
 
         /// <summary>
-        /// Returns a value indicating whether the object has been disposed.
+        /// Gets a value indicating whether the object has been disposed.
         /// </summary>
         public bool IsDisposed { get; private set; }
 
         /// <summary>
-        /// Returns the reader to read from the underlying stream.
+        /// Gets the reader to read from the underlying stream.
         /// </summary>
         private BinaryReader Reader { get; }
 
         /// <summary>
-        /// Returns the writer to write data to the underlying stream.
+        /// Gets the writer to write data to the underlying stream.
         /// </summary>
         private BinaryWriter Writer { get; }
 
         /// <summary>
-        /// Returns the timer for periodic maintenance of the caches.
+        /// Gets or sets the timer for periodic maintenance of the caches.
         /// </summary>
         private Timer Timer { get; set; }
 

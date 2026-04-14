@@ -15,16 +15,12 @@ namespace WebExpress.WebIndex.Term
     public sealed class IndexTokenAnalyzer : IDisposable
     {
         private bool _disposed;
+        private readonly List<IIndexPipeStage> _textProcessingPipeline = [];
 
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexContext Context { get; private set; }
-
-        /// <summary>
-        /// Returns the pipeline containing processing stages applied in sequence.
-        /// </summary>
-        private readonly List<IIndexPipeStage> TextProcessingPipeline = [];
 
         /// <summary>
         /// Initializes a new instance of the analyzer.
@@ -138,7 +134,7 @@ namespace WebExpress.WebIndex.Term
                 return;
             }
 
-            TextProcessingPipeline.Add(pipeStage);
+            _textProcessingPipeline.Add(pipeStage);
         }
 
         /// <summary>
@@ -152,7 +148,7 @@ namespace WebExpress.WebIndex.Term
                 return;
             }
 
-            TextProcessingPipeline.Remove(pipeStage);
+            _textProcessingPipeline.Remove(pipeStage);
         }
 
         /// <summary>
@@ -170,7 +166,7 @@ namespace WebExpress.WebIndex.Term
             var tokens = IndexTermTokenizer.Tokenize(input ?? string.Empty, effectiveCulture, wildcards);
 
             // pass tokens through all stages
-            foreach (var pipeStage in TextProcessingPipeline)
+            foreach (var pipeStage in _textProcessingPipeline)
             {
                 tokens = pipeStage?.Process(tokens, effectiveCulture) ?? tokens;
             }
@@ -202,7 +198,7 @@ namespace WebExpress.WebIndex.Term
             if (disposing)
             {
                 // dispose registered pipe stages if they are disposable
-                foreach (var stage in TextProcessingPipeline)
+                foreach (var stage in _textProcessingPipeline)
                 {
                     if (stage is IDisposable d)
                     {
@@ -217,7 +213,7 @@ namespace WebExpress.WebIndex.Term
                     }
                 }
 
-                TextProcessingPipeline.Clear();
+                _textProcessingPipeline.Clear();
             }
 
             _disposed = true;

@@ -9,7 +9,7 @@ namespace WebExpress.WebIndex
     public class IndexSchemaMigrationEventArgs : EventArgs
     {
         /// <summary>
-        /// Returns the type of schema that has changed.
+        /// Gets the type of schema that has changed.
         /// </summary>
         public Type SchemaType { get; internal set; }
 

@@ -11,12 +11,12 @@ namespace WebExpress.WebIndex.Memory
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexContext Context { get; private set; }
 
         /// <summary>
-        /// Return the index field data.
+        /// Gets the index field data.
         /// </summary>
         public IEnumerable<IndexFieldData> Fields => GetFieldData(typeof(TIndexItem));
 

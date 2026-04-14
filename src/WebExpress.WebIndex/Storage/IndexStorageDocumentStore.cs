@@ -23,47 +23,47 @@ namespace WebExpress.WebIndex.Storage
         private const int Version = 1;
 
         /// <summary>
-        /// Returns the filename of the storage file.
+        /// Gets the filename of the storage file.
         /// </summary>
         public string FileName { get; private set; }
 
         /// <summary>
-        /// Returns the underlying storage file abstraction.
+        /// Gets the underlying storage file abstraction.
         /// </summary>
         public IndexStorageFile IndexFile { get; private set; }
 
         /// <summary>
-        /// Returns the header segment.
+        /// Gets the header segment.
         /// </summary>
         public IndexStorageSegmentHeader Header { get; private set; }
 
         /// <summary>
-        /// Returns the hash map segment.
+        /// Gets the hash map segment.
         /// </summary>
         public IndexStorageSegmentHashMap HashMap { get; private set; }
 
         /// <summary>
-        /// Returns the allocator (memory manager) segment.
+        /// Gets the allocator (memory manager) segment.
         /// </summary>
         public IndexStorageSegmentAllocator Allocator { get; private set; }
 
         /// <summary>
-        /// Returns the statistics segment.
+        /// Gets the statistics segment.
         /// </summary>
         public IndexStorageSegmentStatistic Statistic { get; private set; }
 
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexContext Context { get; private set; }
 
         /// <summary>
-        /// Returns the storage context wrapper.
+        /// Gets the storage context wrapper.
         /// </summary>
         public IndexStorageContext StorageContext { get; private set; }
 
         /// <summary>
-        /// Enumerates all items by resolving each stored segment to an item instance.
+        /// Gets all items by resolving each stored segment to an item instance.
         /// </summary>
         public IEnumerable<TIndexItem> All
         {

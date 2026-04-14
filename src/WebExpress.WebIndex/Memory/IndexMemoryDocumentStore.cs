@@ -12,17 +12,17 @@ namespace WebExpress.WebIndex.Memory
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns all items.
+        /// Gets all items.
         /// </summary>
         public IEnumerable<TIndexItem> All => Values;
 
         /// <summary>
-        /// Returns the predicted capacity (number of items to store) of the document store.
+        /// Gets the predicted capacity (number of items to store) of the document store.
         /// </summary>
         public new uint Capacity => (uint)base.Count;
 
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexContext Context { get; private set; }
 
