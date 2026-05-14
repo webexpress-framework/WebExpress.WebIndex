@@ -1,4 +1,4 @@
-﻿# Misspelled words in the form false=right, one per line. Left side must be truly misspelled—i.e. not in the dictionary. No slang, variants, or valid alternate spellings.
+﻿# Misspelled words in the form false=right, one per line. Left side must be truly misspelled - i.e. not in the dictionary. No slang, variants, or valid alternate spellings.
 &=and
 |=or
 acommodation=accommodation

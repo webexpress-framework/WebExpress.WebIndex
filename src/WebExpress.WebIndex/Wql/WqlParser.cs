@@ -1405,7 +1405,7 @@ namespace WebExpress.WebIndex.Wql
                     }
                     else
                     {
-                        // unterminated string — enqueue whatever was collected so parsing
+                        // unterminated string - enqueue whatever was collected so parsing
                         // can still produce a meaningful error message
                         if (!currentToken.IsEmpty)
                         {

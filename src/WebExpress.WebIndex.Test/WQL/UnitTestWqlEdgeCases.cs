@@ -76,7 +76,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var wql = parser.Parse("nonexistent ~ 'value'");
 
             // validation - the parser produces an error because nonexistent is not a known attribute
-            // Note: behavior depends on parser validation — some parsers accept and produce empty results
+            // Note: behavior depends on parser validation - some parsers accept and produce empty results
             Assert.NotNull(wql);
         }
 
