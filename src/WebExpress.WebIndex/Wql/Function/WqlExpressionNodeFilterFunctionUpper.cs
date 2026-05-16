@@ -48,10 +48,11 @@ namespace WebExpress.WebIndex.Wql.Function
             return Expression.Call(EvaluateMethod, Expression.Convert(valueExpression, typeof(object)));
         }
 
-        [return: System.Diagnostics.CodeAnalysis.MaybeNull]
-        private static string Evaluate(object value)
+#nullable enable
+        private static string? Evaluate(object value)
         {
             return value?.ToString()?.ToUpperInvariant();
         }
+#nullable restore
     }
 }
