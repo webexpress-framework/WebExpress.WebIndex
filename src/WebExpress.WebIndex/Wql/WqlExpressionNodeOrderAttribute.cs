@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-
 namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
@@ -48,31 +46,26 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The filtered data.</returns>
         public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
         {
-            var path = WqlPropertyPath<TIndexItem>.Parse(Attribute.Name);
-            Func<TIndexItem, object> accessor = x => path.ResolveValue(x);
+            ArgumentNullException.ThrowIfNull(unfiltered);
+            ArgumentNullException.ThrowIfNull(Attribute);
 
-            if (Position > 0 && unfiltered is IOrderedEnumerable<TIndexItem> orderedEnumerable)
+            var parameter = Expression.Parameter(typeof(TIndexItem), "x");
+            var keySelector = Expression.Lambda<Func<TIndexItem, object>>
+            (
+                Expression.Convert(Attribute.ToExpression(parameter), typeof(object)),
+                parameter
+            );
+
+            if (Position > 0 && unfiltered is IOrderedQueryable<TIndexItem> orderedQueryable)
             {
-                if (Descending)
-                {
-                    return orderedEnumerable.ThenByDescending(accessor).AsQueryable();
-                }
-                else
-                {
-                    return orderedEnumerable.ThenBy(accessor).AsQueryable();
-                }
+                return Descending
+                    ? orderedQueryable.ThenByDescending(keySelector)
+                    : orderedQueryable.ThenBy(keySelector);
             }
-            else
-            {
-                if (Descending)
-                {
-                    return unfiltered.OrderByDescending(accessor).AsQueryable();
-                }
-                else
-                {
-                    return unfiltered.OrderBy(accessor).AsQueryable();
-                }
-            }
+
+            return Descending
+                ? unfiltered.OrderByDescending(keySelector)
+                : unfiltered.OrderBy(keySelector);
         }
 
         /// <summary>

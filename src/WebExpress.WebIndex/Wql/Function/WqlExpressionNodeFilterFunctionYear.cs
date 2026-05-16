@@ -40,13 +40,28 @@ namespace WebExpress.WebIndex.Wql.Function
         }
 
         /// <summary>
-        /// Builds a LINQ expression that returns the year as a constant.
+        /// Builds a LINQ expression that returns the current year at query evaluation time.
         /// </summary>
         /// <param name="param">The parameter expression (unused for this function).</param>
-        /// <returns>A constant expression with the year value.</returns>
+        /// <returns>An expression that evaluates the current year, optionally offset by years.</returns>
         public override Expression ToExpression(ParameterExpression param)
         {
-            return Expression.Constant(Execute());
+            var nowProperty = typeof(DateTime).GetProperty(nameof(DateTime.Now))
+                ?? throw new InvalidOperationException("DateTime.Now property not found.");
+            var yearProperty = typeof(DateTime).GetProperty(nameof(DateTime.Year))
+                ?? throw new InvalidOperationException("DateTime.Year property not found.");
+            var addYearsMethod = typeof(DateTime).GetMethod(nameof(DateTime.AddYears), [typeof(int)])
+                ?? throw new InvalidOperationException("DateTime.AddYears method not found.");
+
+            Expression dateExpression = Expression.Property(null, nowProperty);
+            var offset = Parameters?.Select(x => x.GetValue()).FirstOrDefault();
+
+            if (offset is not null)
+            {
+                dateExpression = Expression.Call(dateExpression, addYearsMethod, Expression.Constant(Convert.ToInt32(offset)));
+            }
+
+            return Expression.Convert(Expression.Property(dateExpression, yearProperty), typeof(double));
         }
     }
 }

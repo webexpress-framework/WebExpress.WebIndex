@@ -21,7 +21,7 @@
         public IndexStorageSegmentHeader Header => Index.Header;
 
         /// <summary>
-        /// Gets memory manager.
+        /// Gets the memory manager.
         /// </summary>
         public IndexStorageSegmentAllocator Allocator => Index.Allocator;
 

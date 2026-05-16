@@ -65,8 +65,7 @@ namespace WebExpress.WebIndex.Test.WQL
         }
 
         /// <summary>
-        /// Verifies that a query with an unknown attribute name does not produce a filter 
-        /// (the parser treats the unknown identifier as a non-matching attribute).
+        /// Verifies that a query with an unknown attribute name parses and yields no results.
         /// </summary>
         [Fact]
         public void ParseUnknownAttribute()
@@ -74,10 +73,13 @@ namespace WebExpress.WebIndex.Test.WQL
             // act - use an attribute name that does not exist on the document type
             var parser = new WqlParser<UnitTestIndexTestDocumentA>();
             var wql = parser.Parse("nonexistent ~ 'value'");
+            var res = Fixture.IndexManager.Retrieve(wql);
 
-            // validation - the parser produces an error because nonexistent is not a known attribute
-            // Note: behavior depends on parser validation - some parsers accept and produce empty results
+            // validation
             Assert.NotNull(wql);
+            Assert.False(wql.HasErrors);
+            Assert.NotNull(wql.Filter);
+            Assert.Empty(res);
         }
 
         /// <summary>

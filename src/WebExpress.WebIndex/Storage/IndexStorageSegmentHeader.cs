@@ -15,12 +15,12 @@ namespace WebExpress.WebIndex.Storage
         public const uint SegmentSize = 3 + sizeof(byte);
 
         /// <summary>
-        /// Gets the file identifier (must be exactly 3 ASCII characters).
+        /// Gets or sets the file identifier (must be exactly 3 ASCII characters).
         /// </summary>
         public string Identifier { get; internal set; }
 
         /// <summary>
-        /// Gets the file version.
+        /// Gets or sets the file version.
         /// </summary>
         public byte Version { get; internal set; }
 

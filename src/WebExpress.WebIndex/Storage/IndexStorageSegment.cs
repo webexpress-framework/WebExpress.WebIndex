@@ -13,7 +13,7 @@ namespace WebExpress.WebIndex.Storage
         public virtual ulong Addr { get; private set; }
 
         /// <summary>
-        /// Gets the the context of the index.
+        /// Gets the context of the index.
         /// </summary>
         public IndexStorageContext Context { get; private set; }
 

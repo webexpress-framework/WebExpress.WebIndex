@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Test.Document;
+﻿using System.Linq.Expressions;
+using WebExpress.WebIndex.Test.Document;
 using WebExpress.WebIndex.Test.Fixture;
 using WebExpress.WebIndex.Wql;
 using WebExpress.WebIndex.Wql.Function;
@@ -321,6 +322,25 @@ namespace WebExpress.WebIndex.Test.WQL
         }
 
         /// <summary>
+        /// Verifies that the year() function expression is evaluated dynamically.
+        /// </summary>
+        [Fact]
+        public void YearFunctionToExpressionIsDynamic()
+        {
+            // arrange
+            var func = new WqlExpressionNodeFilterFunctionYear<UnitTestIndexTestDocumentA>();
+            func.Parameters = [];
+            var param = Expression.Parameter(typeof(UnitTestIndexTestDocumentA), "x");
+
+            // act
+            var expr = func.ToExpression(param);
+
+            // validation
+            Assert.NotEqual(ExpressionType.Constant, expr.NodeType);
+            Assert.Equal(typeof(double), expr.Type);
+        }
+
+        /// <summary>
         /// Verifies the month() function parses correctly in a WQL query.
         /// </summary>
         [Fact]
@@ -332,6 +352,25 @@ namespace WebExpress.WebIndex.Test.WQL
             // validation
             Assert.False(wql.HasErrors);
             Assert.NotNull(wql.Filter);
+        }
+
+        /// <summary>
+        /// Verifies that the month() function expression is evaluated dynamically.
+        /// </summary>
+        [Fact]
+        public void MonthFunctionToExpressionIsDynamic()
+        {
+            // arrange
+            var func = new WqlExpressionNodeFilterFunctionMonth<UnitTestIndexTestDocumentA>();
+            func.Parameters = [];
+            var param = Expression.Parameter(typeof(UnitTestIndexTestDocumentA), "x");
+
+            // act
+            var expr = func.ToExpression(param);
+
+            // validation
+            Assert.NotEqual(ExpressionType.Constant, expr.NodeType);
+            Assert.Equal(typeof(double), expr.Type);
         }
 
         /// <summary>

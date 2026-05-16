@@ -14,12 +14,12 @@ namespace WebExpress.WebIndex.Storage
         public static uint Lifetime { get; set; } = 100;
 
         /// <summary>
-        /// Gets the lifetime counter is for deletion from the buffer.
+        /// Gets the lifetime counter used for deletion from the buffer.
         /// </summary>
         private uint _counter;
 
         /// <summary>
-        /// Gets the lifetime counter is for deletion from the buffer.
+        /// Gets the lifetime counter used for deletion from the buffer.
         /// </summary>
         public uint Counter => _counter;
 
