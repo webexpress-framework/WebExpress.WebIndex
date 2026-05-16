@@ -47,11 +47,11 @@ namespace WebExpress.WebIndex.Wql.Function
         public override Expression ToExpression(ParameterExpression param)
         {
             var nowProperty = typeof(DateTime).GetProperty(nameof(DateTime.Now))
-                ?? throw new InvalidOperationException("DateTime.Now property not found.");
+                ?? throw new InvalidOperationException("Failed to resolve DateTime.Now property during year() expression tree construction.");
             var yearProperty = typeof(DateTime).GetProperty(nameof(DateTime.Year))
-                ?? throw new InvalidOperationException("DateTime.Year property not found.");
+                ?? throw new InvalidOperationException("Failed to resolve DateTime.Year property during year() expression tree construction.");
             var addYearsMethod = typeof(DateTime).GetMethod(nameof(DateTime.AddYears), [typeof(int)])
-                ?? throw new InvalidOperationException("DateTime.AddYears method not found.");
+                ?? throw new InvalidOperationException("Failed to resolve DateTime.AddYears method during year() expression tree construction.");
 
             Expression dateExpression = Expression.Property(null, nowProperty);
             var offset = Parameters?.Select(x => x.GetValue()).FirstOrDefault();
