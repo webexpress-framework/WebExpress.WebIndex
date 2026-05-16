@@ -170,7 +170,8 @@ namespace WebExpress.WebIndex.Term.Pipeline
                 }
 
                 var key = NormalizeToken(left);
-                var value = NormalizeToken(right);
+                // keep the replacement in its original (composed) form for downstream consumers
+                var value = right.Trim().ToLowerInvariant();
 
                 // skip if key/value invalid or identical
                 if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value) || key == value)

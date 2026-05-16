@@ -3,8 +3,7 @@ using WebExpress.WebIndex.Test.Fixture;
 using WebExpress.WebIndex.Wql;
 using WebExpress.WebIndex.Wql.Condition;
 using WebExpress.WebIndex.Wql.Function;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.WQL
 {
     /// <summary>

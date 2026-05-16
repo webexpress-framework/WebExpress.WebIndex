@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Linq;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebIndex.Wi
@@ -81,23 +82,29 @@ namespace WebExpress.WebIndex.Wi
         }
 
         /// <summary>
-        /// Executes a wql statement.
+        /// Parses a wql statement for the given data type and binds it to the matching index document.
         /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexItem interface.</typeparam>
         /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
         /// <param name="wql">The wql statement.</param>
-        /// <returns>The WQL statement.</returns>
-        public IWqlStatement Retrieve(Type dataType, string wql)
+        /// <returns>A non-generic wrapper around the parsed statement, or null if the type is missing.</returns>
+        public WiWqlStatement Retrieve(Type dataType, string wql)
         {
             if (dataType == null)
             {
                 return null;
             }
 
-            var genericMethod = typeof(IndexManager).GetMethod("Retrieve", 1, [typeof(string)]);
-            var specificMethod = genericMethod.MakeGenericMethod(dataType);
+            var parserType = typeof(WqlParser<>).MakeGenericType(dataType);
+            var parser = Activator.CreateInstance(parserType);
 
-            return specificMethod.Invoke(this, [wql]) as IWqlStatement;
+            var parseMethod = parserType.GetMethod("Parse", [typeof(string)]);
+            var statement = parseMethod.Invoke(parser, [wql]);
+
+            var getDocMethod = typeof(WebIndex.IndexManager).GetMethod("GetIndexDocument", 1, []);
+            var specificGetDoc = getDocMethod.MakeGenericMethod(dataType);
+            var document = specificGetDoc.Invoke(this, []);
+
+            return new WiWqlStatement(statement, document, dataType);
         }
 
         /// <summary>

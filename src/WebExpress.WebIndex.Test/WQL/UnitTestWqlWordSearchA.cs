@@ -1,8 +1,7 @@
 ﻿using WebExpress.WebIndex.Test.Document;
 using WebExpress.WebIndex.Test.Fixture;
 using WebExpress.WebIndex.Wql;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.WQL
 {
     /// <summary>

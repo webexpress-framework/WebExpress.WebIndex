@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebIndex.WiUI
 {
@@ -78,26 +77,6 @@ namespace WebExpress.WebIndex.WiUI
             var specificMethod = genericMethod?.MakeGenericMethod(dataType);
 
             specificMethod?.Invoke(this, []);
-        }
-
-        /// <summary>
-        /// Executes a wql statement.
-        /// </summary>
-        /// <typeparam name="T">The data type. This must have the IIndexItem interface.</typeparam>
-        /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
-        /// <param name="wql">The wql statement.</param>
-        /// <returns>The WQL statement.</returns>
-        public IWqlStatement Retrieve(Type dataType, string wql)
-        {
-            if (dataType == null)
-            {
-                return null;
-            }
-
-            var genericMethod = typeof(IndexManager).GetMethod("Retrieve", 1, [typeof(string)]);
-            var specificMethod = genericMethod?.MakeGenericMethod(dataType);
-
-            return specificMethod?.Invoke(this, [wql]) as IWqlStatement;
         }
 
         /// <summary>
