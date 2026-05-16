@@ -12,6 +12,10 @@ namespace WebExpress.WebIndex.Wql.Function
     public class WqlExpressionNodeFilterFunctionLen<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        private static readonly System.Reflection.MethodInfo EvaluateMethod = typeof(WqlExpressionNodeFilterFunctionLen<TIndexItem>)
+            .GetMethod(nameof(Evaluate), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("Failed to resolve len() runtime evaluator.");
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
@@ -33,13 +37,19 @@ namespace WebExpress.WebIndex.Wql.Function
         }
 
         /// <summary>
-        /// Builds a LINQ expression that returns the length as a constant.
+        /// Builds a LINQ expression that returns the length of the first parameter value.
         /// </summary>
-        /// <param name="param">The parameter expression (unused for this function).</param>
-        /// <returns>A constant expression with the string length.</returns>
+        /// <param name="param">The parameter expression representing the current index item.</param>
+        /// <returns>An expression that evaluates the string length at query evaluation time.</returns>
         public override Expression ToExpression(ParameterExpression param)
         {
-            return Expression.Constant(Execute());
+            var valueExpression = Parameters?.FirstOrDefault()?.ToExpression(param) ?? Expression.Constant(null);
+            return Expression.Call(EvaluateMethod, Expression.Convert(valueExpression, typeof(object)));
+        }
+
+        private static double Evaluate(object value)
+        {
+            return (double)(value?.ToString()?.Length ?? 0);
         }
     }
 }

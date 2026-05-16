@@ -6,17 +6,17 @@
     public struct IndexRetrieveOptions
     {
         /// <summary>
-        /// Gets the maximum results.
+        /// Gets or sets the maximum results.
         /// </summary>
         public uint MaxResults { get; internal set; } = 10000u;
 
         /// <summary>
-        /// Gets the methods for data retrieval.
+        /// Gets or sets the methods for data retrieval.
         /// </summary>
         public IndexRetrieveMethod Method { get; internal set; }
 
         /// <summary>
-        /// Gets the distance for proximity searches.
+        /// Gets or sets the distance for proximity searches.
         /// </summary>
         public uint Distance { get; internal set; } = 0;
 

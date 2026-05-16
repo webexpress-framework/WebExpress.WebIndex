@@ -12,6 +12,10 @@ namespace WebExpress.WebIndex.Wql.Function
     public class WqlExpressionNodeFilterFunctionLower<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        private static readonly System.Reflection.MethodInfo EvaluateMethod = typeof(WqlExpressionNodeFilterFunctionLower<TIndexItem>)
+            .GetMethod(nameof(Evaluate), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("Failed to resolve lower() runtime evaluator.");
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
@@ -35,11 +39,17 @@ namespace WebExpress.WebIndex.Wql.Function
         /// <summary>
         /// Builds a LINQ expression that returns the lowered string.
         /// </summary>
-        /// <param name="param">The parameter expression (unused for this function).</param>
-        /// <returns>A constant expression with the lowercased string value.</returns>
+        /// <param name="param">The parameter expression representing the current index item.</param>
+        /// <returns>An expression that lowercases the first parameter value at query evaluation time.</returns>
         public override Expression ToExpression(ParameterExpression param)
         {
-            return Expression.Constant(Execute());
+            var valueExpression = Parameters?.FirstOrDefault()?.ToExpression(param) ?? Expression.Constant(null);
+            return Expression.Call(EvaluateMethod, Expression.Convert(valueExpression, typeof(object)));
+        }
+
+        private static string Evaluate(object value)
+        {
+            return value?.ToString()?.ToLowerInvariant();
         }
     }
 }

@@ -374,6 +374,78 @@ namespace WebExpress.WebIndex.Test.WQL
         }
 
         /// <summary>
+        /// Verifies that upper() evaluates its parameter expression at runtime.
+        /// </summary>
+        [Fact]
+        public void UpperFunctionToExpressionUsesRuntimeValue()
+        {
+            // arrange
+            var func = new WqlExpressionNodeFilterFunctionUpper<UnitTestIndexTestDocumentA>();
+            func.Parameters = [CreateRuntimeTextParameter()];
+
+            // act
+            var compiled = CompileRuntimeFunction<string>(func);
+            var result = compiled(new UnitTestIndexTestDocumentA() { Text = "hello runtime" });
+
+            // validation
+            Assert.Equal("HELLO RUNTIME", result);
+        }
+
+        /// <summary>
+        /// Verifies that lower() evaluates its parameter expression at runtime.
+        /// </summary>
+        [Fact]
+        public void LowerFunctionToExpressionUsesRuntimeValue()
+        {
+            // arrange
+            var func = new WqlExpressionNodeFilterFunctionLower<UnitTestIndexTestDocumentA>();
+            func.Parameters = [CreateRuntimeTextParameter()];
+
+            // act
+            var compiled = CompileRuntimeFunction<string>(func);
+            var result = compiled(new UnitTestIndexTestDocumentA() { Text = "HELLO RUNTIME" });
+
+            // validation
+            Assert.Equal("hello runtime", result);
+        }
+
+        /// <summary>
+        /// Verifies that len() evaluates its parameter expression at runtime.
+        /// </summary>
+        [Fact]
+        public void LenFunctionToExpressionUsesRuntimeValue()
+        {
+            // arrange
+            var func = new WqlExpressionNodeFilterFunctionLen<UnitTestIndexTestDocumentA>();
+            func.Parameters = [CreateRuntimeTextParameter()];
+
+            // act
+            var compiled = CompileRuntimeFunction<double>(func);
+            var result = compiled(new UnitTestIndexTestDocumentA() { Text = "hello" });
+
+            // validation
+            Assert.Equal(5.0, result);
+        }
+
+        /// <summary>
+        /// Verifies that trim() evaluates its parameter expression at runtime.
+        /// </summary>
+        [Fact]
+        public void TrimFunctionToExpressionUsesRuntimeValue()
+        {
+            // arrange
+            var func = new WqlExpressionNodeFilterFunctionTrim<UnitTestIndexTestDocumentA>();
+            func.Parameters = [CreateRuntimeTextParameter()];
+
+            // act
+            var compiled = CompileRuntimeFunction<string>(func);
+            var result = compiled(new UnitTestIndexTestDocumentA() { Text = "  hello runtime  " });
+
+            // validation
+            Assert.Equal("hello runtime", result);
+        }
+
+        /// <summary>
         /// Verifies the upper() function string representation.
         /// </summary>
         [Fact]
@@ -479,6 +551,38 @@ namespace WebExpress.WebIndex.Test.WQL
 
             // validation
             Assert.Null(result);
+        }
+
+        private static Func<UnitTestIndexTestDocumentA, TResult> CompileRuntimeFunction<TResult>(WqlExpressionNodeFilterFunction<UnitTestIndexTestDocumentA> func)
+        {
+            var param = Expression.Parameter(typeof(UnitTestIndexTestDocumentA), "x");
+            return Expression.Lambda<Func<UnitTestIndexTestDocumentA, TResult>>(func.ToExpression(param), param).Compile();
+        }
+
+        private static WqlExpressionNodeParameter<UnitTestIndexTestDocumentA> CreateRuntimeTextParameter()
+        {
+            return new WqlExpressionNodeParameter<UnitTestIndexTestDocumentA>()
+            {
+                Function = new RuntimeTextFunction()
+            };
+        }
+
+        private sealed class RuntimeTextFunction : WqlExpressionNodeFilterFunction<UnitTestIndexTestDocumentA>
+        {
+            public RuntimeTextFunction()
+                : base("runtimeText")
+            {
+            }
+
+            public override object Execute()
+            {
+                return "constant placeholder";
+            }
+
+            public override Expression ToExpression(ParameterExpression param)
+            {
+                return Expression.Property(param, nameof(UnitTestIndexTestDocumentA.Text));
+            }
         }
     }
 }

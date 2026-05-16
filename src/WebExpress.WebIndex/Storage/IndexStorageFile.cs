@@ -29,7 +29,7 @@ namespace WebExpress.WebIndex.Storage
         private IndexStorageBuffer Buffer { get; set; }
 
         /// <summary>
-        /// Gets the next free address.
+        /// Gets or sets the next free address.
         /// Note: This value is intentionally not inferred from file length on reopen,
         /// because allocator/header segments rely on stable, predefined addresses.
         /// </summary>

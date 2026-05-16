@@ -7,6 +7,9 @@ namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
     /// Represents a binary not-equal condition in a WQL expression node.
+    /// Indexed evaluation uses set-difference semantics, so documents with null or
+    /// missing attribute values remain in the result unless they explicitly match the
+    /// requested value.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public class WqlExpressionNodeFilterConditionBinaryNotEqual<TIndexItem> : WqlExpressionNodeFilterConditionBinary<TIndexItem>
@@ -23,6 +26,9 @@ namespace WebExpress.WebIndex.Wql.Condition
         /// <summary>
         /// Applies the filter condition to the index using the specified attribute
         /// and returns the matching data identifiers.
+        /// Indexed evaluation excludes the exact matching identifiers from the full
+        /// document set and therefore keeps documents whose attribute value is null
+        /// or missing.
         /// </summary>
         /// <param name="indexDocument">The index document.</param>
         /// <returns>
