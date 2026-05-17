@@ -2,8 +2,7 @@
 using WebExpress.WebIndex.Term;
 using WebExpress.WebIndex.Term.Pipeline;
 using WebExpress.WebIndex.Test.Fixture;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.Token
 {
     public class UnitTestIndexPipeStageSingular : IClassFixture<UnitTestIndexFixtureToken>

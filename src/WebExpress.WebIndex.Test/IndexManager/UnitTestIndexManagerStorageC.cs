@@ -2,8 +2,7 @@
 using WebExpress.WebIndex.Storage;
 using WebExpress.WebIndex.Test.Document;
 using WebExpress.WebIndex.Test.Fixture;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.IndexManager
 {
     /// <summary>
@@ -88,7 +87,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo(culture), IndexType.Storage);
 
             // act
-            await IndexManager.ReIndexAsync(data);
+            await IndexManager.ReIndexAsync(data, token: TestContext.Current.CancellationToken);
 
             // validation
             randomItem ??= IndexManager.All<UnitTestIndexTestDocumentC>().Skip(new Random().Next() % data.Count()).FirstOrDefault();
@@ -189,7 +188,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             Preconditions();
             var randomItem = Fixture.RandomItem;
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Storage);
-            await IndexManager.ReIndexAsync(Fixture.TestData);
+            await IndexManager.ReIndexAsync(Fixture.TestData, token: TestContext.Current.CancellationToken);
 
             // act
             await IndexManager.UpdateAsync(new UnitTestIndexTestDocumentC()
@@ -362,6 +361,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.ReIndex(data);
             randomItem ??= IndexManager.All<UnitTestIndexTestDocumentC>().Skip(new Random().Next() % data.Count()).FirstOrDefault();
 
+            var cancellationToken = TestContext.Current.CancellationToken;
             for (int t = 0; t < 25; t++)
             {
                 tasks.Add(Task.Run(() =>
@@ -374,7 +374,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
                     Assert.NotEmpty(items);
 
                     return Task.CompletedTask;
-                }));
+                }, cancellationToken));
             }
 
             await Task.WhenAll(tasks);
@@ -410,7 +410,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
 
             Preconditions();
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo(culture), IndexType.Storage);
-            await IndexManager.ReIndexAsync(data);
+            await IndexManager.ReIndexAsync(data, token: TestContext.Current.CancellationToken);
             randomItem ??= IndexManager.All<UnitTestIndexTestDocumentC>().Skip(new Random().Next() % data.Count()).FirstOrDefault();
 
             for (int t = 0; t < 25; t++)

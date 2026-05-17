@@ -1,8 +1,7 @@
 ﻿using WebExpress.WebIndex.Storage;
 using WebExpress.WebIndex.Test.Document;
 using WebExpress.WebIndex.Test.Fixture;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.DocumentStore
 {
     /// <summary>

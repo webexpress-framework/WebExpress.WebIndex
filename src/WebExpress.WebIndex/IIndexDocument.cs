@@ -22,17 +22,17 @@ namespace WebExpress.WebIndex
     public interface IIndexDocument<TIndexItem> : IIndexDocument where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the document store.
+        /// Gets the document store.
         /// </summary>
         IIndexDocumentStore<TIndexItem> DocumentStore { get; }
 
         /// <summary>
-        /// Return the index field names.
+        /// Gets the index field names.
         /// </summary>
         IEnumerable<IndexFieldData> Fields { get; }
 
         /// <summary>
-        /// Returns all documents from the index.
+        /// Gets all documents from the index.
         /// </summary>
         IEnumerable<TIndexItem> All { get; }
 

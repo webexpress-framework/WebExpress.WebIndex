@@ -8,12 +8,12 @@ namespace WebExpress.WebIndex.Memory
     public class IndexMemorySegmentPosting
     {
         /// <summary>
-        /// Returns or sets the document id.
+        /// Gets the document id.
         /// </summary>
         public Guid DocumentId { get; private set; }
 
         /// <summary>
-        /// Returns the a list of the positions.
+        /// Gets the a list of the positions.
         /// </summary>
         public IndexMemorySegmentPosition Positions { get; private set; } = [];
 

@@ -9,34 +9,34 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageFile : IDisposable
     {
         /// <summary>
-        /// Returns or sets the maximum upper limit of the cached segments.
+        /// Gets or sets the maximum upper limit of the cached segments.
         /// </summary>
         public static uint BufferSize { get; set; } = 4 * 1024; // 4096 byte
 
         /// <summary>
-        /// Returns the file name.
+        /// Gets the file name.
         /// </summary>
         public string FileName { get; private set; }
 
         /// <summary>
-        /// Returns the stream for the index file.
+        /// Gets the stream for the index file.
         /// </summary>
         internal FileStream FileStream { get; private set; }
 
         /// <summary>
-        /// Returns the buffer for caching segments.
+        /// Gets or sets the buffer for caching segments.
         /// </summary>
         private IndexStorageBuffer Buffer { get; set; }
 
         /// <summary>
-        /// Returns or sets the next free address.
+        /// Gets or sets the next free address.
         /// Note: This value is intentionally not inferred from file length on reopen,
         /// because allocator/header segments rely on stable, predefined addresses.
         /// </summary>
         public ulong NextFreeAddr { get; internal set; } = 0ul;
 
         /// <summary>
-        /// Returns a value indicating whether the object has been disposed.
+        /// Gets a value indicating whether the object has been disposed.
         /// </summary>
         public bool IsDisposed { get; private set; }
 

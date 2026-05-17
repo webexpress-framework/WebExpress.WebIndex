@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-
 namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
@@ -42,36 +40,32 @@ namespace WebExpress.WebIndex.Wql
 
         /// <summary>
         /// Applies the filter to the unfiltered data object.
+        /// Supports dot-separated nested property paths.
         /// </summary>
         /// <param name="unfiltered">The unfiltered data.</param>
         /// <returns>The filtered data.</returns>
         public IQueryable<TIndexItem> Apply(IQueryable<TIndexItem> unfiltered)
         {
-            var attribute = typeof(TIndexItem).GetProperty(Attribute.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
-                ?? throw new InvalidOperationException($"No public instance property matching '{Attribute.Name}' was found on type '{typeof(TIndexItem).Name}'.");
+            ArgumentNullException.ThrowIfNull(unfiltered);
+            ArgumentNullException.ThrowIfNull(Attribute);
+
+            var parameter = Expression.Parameter(typeof(TIndexItem), "x");
+            var keySelector = Expression.Lambda<Func<TIndexItem, object>>
+            (
+                Expression.Convert(Attribute.ToExpression(parameter), typeof(object)),
+                parameter
+            );
 
             if (Position > 0 && unfiltered is IOrderedQueryable<TIndexItem> orderedQueryable)
             {
-                if (Descending)
-                {
-                    return orderedQueryable.ThenByDescending(x => attribute.GetValue(x));
-                }
-                else
-                {
-                    return orderedQueryable.ThenBy(x => attribute.GetValue(x));
-                }
+                return Descending
+                    ? orderedQueryable.ThenByDescending(keySelector)
+                    : orderedQueryable.ThenBy(keySelector);
             }
-            else
-            {
-                if (Descending)
-                {
-                    return unfiltered.OrderByDescending(x => attribute.GetValue(x));
-                }
-                else
-                {
-                    return unfiltered.OrderBy(x => attribute.GetValue(x));
-                }
-            }
+
+            return Descending
+                ? unfiltered.OrderByDescending(keySelector)
+                : unfiltered.OrderBy(keySelector);
         }
 
         /// <summary>

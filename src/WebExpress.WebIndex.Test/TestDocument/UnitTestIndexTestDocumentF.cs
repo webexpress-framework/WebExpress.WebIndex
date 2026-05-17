@@ -6,7 +6,7 @@
     public class UnitTestIndexTestDocumentF : UnitTestIndexTestDocument
     {
         /// <summary>
-        /// Returns or sets the name.
+        /// Gets or sets the name.
         /// </summary>
         public string Name { get; set; }
 

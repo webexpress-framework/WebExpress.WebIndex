@@ -10,12 +10,12 @@ namespace WebExpress.WebIndex
     public interface IIndexDocumentStore<TIndexItem> : IDisposable where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns all document items.
+        /// Gets all document items.
         /// </summary>
         IEnumerable<TIndexItem> All { get; }
 
         /// <summary>
-        /// Returns the predicted capacity (number of items to store).
+        /// Gets the predicted capacity (number of items to store).
         /// </summary>
         uint Capacity { get; }
 

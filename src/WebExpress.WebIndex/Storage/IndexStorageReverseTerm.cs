@@ -18,12 +18,12 @@ namespace WebExpress.WebIndex.Storage
         private readonly int _version = 1;
 
         /// <summary>
-        /// Returns the term tree root segment.
+        /// Gets the term tree root segment.
         /// </summary>
         public IndexStorageSegmentTerm Term { get; private set; }
 
         /// <summary>
-        /// Returns all document ids contained in the reverse index.
+        /// Gets all document ids contained in the reverse index.
         /// </summary>
         public override IEnumerable<Guid> All => Term.All.Distinct();
 

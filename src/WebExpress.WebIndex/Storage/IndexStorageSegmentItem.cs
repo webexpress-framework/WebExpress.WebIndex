@@ -12,37 +12,37 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageSegmentItem : IndexStorageSegment, IIndexStorageSegmentListItem, IIndexStorageSegmentChunk
     {
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the amount of space required on the storage device.
         /// </summary>
         public const uint SegmentSize = 16 + sizeof(uint) + IndexStorageSegmentChunk.ChunkSize + sizeof(ulong) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the id of the item.
+        /// Gets or sets the id of the item.
         /// </summary>
         public Guid Id { get; set; }
 
         /// <summary>
-        /// Returns the number of characters in the term.
+        /// Gets the number of characters in the term.
         /// </summary>
         public uint Length => (uint)DataChunk.Length;
 
         /// <summary>
-        /// Returns or sets the item data. 
+        /// Gets or sets the item data. 
         /// </summary>
         public byte[] DataChunk { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the next chunk element of a list or 0 if there is no element.
+        /// Gets or sets the address of the next chunk element of a list or 0 if there is no element.
         /// </summary>
         public ulong NextChunkAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the next bucket element of a sorted list or 0 if there is no element.
+        /// Gets or sets the address of the next bucket element of a sorted list or 0 if there is no element.
         /// </summary>
         public ulong SuccessorAddr { get; set; }
 
         /// <summary>
-        /// Returns the a sorted list of the chunk segments.
+        /// Gets the a sorted list of the chunk segments.
         /// </summary>
         public IEnumerable<IndexStorageSegmentChunk> ChunkSegments
         {

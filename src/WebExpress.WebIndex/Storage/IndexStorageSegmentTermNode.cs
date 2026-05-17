@@ -22,37 +22,37 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the on-disk size of the node segment.
+        /// Gets the on-disk size of the node segment.
         /// </summary>
         public const uint SegmentSize = sizeof(uint) + sizeof(ulong) + sizeof(ulong) + sizeof(uint) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the character of the node (0 indicates the root node).
+        /// Gets or sets the character of the node (0 indicates the root node).
         /// </summary>
         public char Character { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the sibling node.
+        /// Gets or sets the address of the sibling node.
         /// </summary>
         public ulong SiblingAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the first child node.
+        /// Gets or sets the address of the first child node.
         /// </summary>
         public ulong ChildAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the number of postings (documents) for the term ending at this node.
+        /// Gets or sets the number of postings (documents) for the term ending at this node.
         /// </summary>
         public uint Fequency { get; set; }
 
         /// <summary>
-        /// Returns the address of the root of the posting tree or 0 if none.
+        /// Gets the address of the root of the posting tree or 0 if none.
         /// </summary>
         public ulong PostingAddr { get; private set; }
 
         /// <summary>
-        /// Returns the list of child nodes.
+        /// Gets the list of child nodes.
         /// </summary>
         public IEnumerable<IndexStorageSegmentTermNode> Children
         {
@@ -76,7 +76,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns a value indicating whether this node is the root.
+        /// Gets a value indicating whether this node is the root.
         /// </summary>
         public bool IsRoot => Character == 0;
 
@@ -100,7 +100,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all terms and their leaf nodes reachable from this node.
+        /// Gets all terms and their leaf nodes reachable from this node.
         /// </summary>
         public IEnumerable<(string, IndexStorageSegmentTermNode)> Terms
         {
@@ -141,12 +141,12 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all document ids from all postings reachable from this node.
+        /// Gets all document ids from all postings reachable from this node.
         /// </summary>
         public IEnumerable<Guid> All => Terms.SelectMany(x => x.Item2.Posting?.All ?? []);
 
         /// <summary>
-        /// Returns the root of the posting tree or null.
+        /// Gets the root of the posting tree or null.
         /// </summary>
         public IndexStorageSegmentPostingNode Posting
         {
@@ -163,7 +163,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the leaf node corresponding to the given subterm, or null if not found.
+        /// Gets the leaf node corresponding to the given subterm, or null if not found.
         /// </summary>
         /// <param name="subterm">The remaining subterm to traverse; decreases one character per level.</param>
         public IndexStorageSegmentTermNode this[string subterm]

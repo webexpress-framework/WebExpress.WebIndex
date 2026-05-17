@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.IndexManager
 {
     /// <summary>

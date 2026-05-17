@@ -19,32 +19,32 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the on-disk size of the segment.
+        /// Gets the on-disk size of the segment.
         /// </summary>
         public const uint SegmentSize = 16 + sizeof(ulong) + sizeof(ulong) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the document id.
+        /// Gets or sets the document id.
         /// </summary>
         public Guid DocumentID { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the left child.
+        /// Gets or sets the address of the left child.
         /// </summary>
         public ulong LeftAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the right child.
+        /// Gets or sets the address of the right child.
         /// </summary>
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Returns the address of the first position element of a sorted list or 0 if there is no element.
+        /// Gets the address of the first position element of a sorted list or 0 if there is no element.
         /// </summary>
         public ulong PositionAddr { get; private set; }
 
         /// <summary>
-        /// Returns the left child of the node or null.
+        /// Gets the left child of the node or null.
         /// </summary>
         public IndexStorageSegmentPostingNode Left
         {
@@ -61,7 +61,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the right child of the node or null.
+        /// Gets the right child of the node or null.
         /// </summary>
         public IndexStorageSegmentPostingNode Right
         {
@@ -78,7 +78,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the height of the tree (derived recursively; may be expensive on-disk).
+        /// Gets the height of the tree (derived recursively; may be expensive on-disk).
         /// </summary>
         public uint Height
         {
@@ -92,7 +92,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the absolute balance factor of the node.
+        /// Gets the absolute balance factor of the node.
         /// </summary>
         public uint Balance
         {
@@ -106,7 +106,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the leftmost child in the subtree and its parent.
+        /// Gets the leftmost child in the subtree and its parent.
         /// </summary>
         public dynamic LeftmostChild
         {
@@ -149,12 +149,12 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all document ids in pre-order.
+        /// Gets all document ids in pre-order.
         /// </summary>
         public IEnumerable<Guid> All => PreOrder.Select(x => x.DocumentID);
 
         /// <summary>
-        /// Returns the sorted list of positions or no element.
+        /// Gets the sorted list of positions or no element.
         /// </summary>
         public IEnumerable<IndexStorageSegmentPosition> Positions
         {

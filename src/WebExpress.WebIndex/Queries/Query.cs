@@ -17,23 +17,23 @@ namespace WebExpress.WebIndex.Queries
         private readonly List<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> _orderBys = [];
 
         /// <summary>
-        /// Returns the collection of filters applied to index items as boolean 
+        /// Gets the collection of filters applied to index items as boolean 
         /// expressions.
         /// </summary>
         public IEnumerable<Expression<Func<TIndexItem, bool>>> Filters => _filters;
 
         /// <summary>
-        /// Returns the collection of sorting criteria applied to the query.
+        /// Gets the collection of sorting criteria applied to the query.
         /// </summary>
         public IReadOnlyList<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> OrderBys => _orderBys.AsReadOnly();
 
         /// <summary>
-        /// Returns the number of items to skip before starting to return results.
+        /// Gets the number of items to skip before starting to return results.
         /// </summary>
         public int? Skip { get; private set; }
 
         /// <summary>
-        /// Returns the maximum number of items to return in a query result.
+        /// Gets the maximum number of items to return in a query result.
         /// </summary>
         public int? Take { get; private set; }
 
@@ -623,11 +623,11 @@ namespace WebExpress.WebIndex.Queries
         {
             ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            var orderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys) 
-            { 
-                (key, false) 
+            var orderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys)
+            {
+                (key, false)
             };
-            
+
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
 
             return new Query<TIndexItem>(newFilters, orderBys, Skip, Take);
@@ -646,13 +646,13 @@ namespace WebExpress.WebIndex.Queries
         {
             ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-            var orderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys) 
-            { 
-                (key, true) 
+            var orderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys)
+            {
+                (key, true)
             };
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
-            
+
             return new Query<TIndexItem>(newFilters, orderBys, Skip, Take);
         }
 
@@ -710,7 +710,7 @@ namespace WebExpress.WebIndex.Queries
 
             var newFilters = new List<Expression<Func<TIndexItem, bool>>>(_filters);
             var neworderBys = new List<(Expression<Func<TIndexItem, object>>, bool)>(_orderBys);
-            
+
             return new Query<TIndexItem>(newFilters, neworderBys, skip, take);
         }
 

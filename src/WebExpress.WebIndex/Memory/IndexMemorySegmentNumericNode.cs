@@ -10,32 +10,32 @@ namespace WebExpress.WebIndex.Memory
     public class IndexMemorySegmentNumericNode
     {
         /// <summary>
-        /// Returns or sets the numeric value of the node.
+        /// Gets or sets the numeric value of the node.
         /// </summary>
         public decimal Value { get; set; }
 
         /// <summary>
-        /// Returns or sets the left child node in the tree.
+        /// Gets or sets the left child node in the tree.
         /// </summary>
         public IndexMemorySegmentNumericNode Left { get; set; }
 
         /// <summary>
-        /// Returns or sets the right child node in the tree.
+        /// Gets or sets the right child node in the tree.
         /// </summary>
         public IndexMemorySegmentNumericNode Right { get; set; }
 
         /// <summary>
-        /// Returns the height of the node in the tree.
+        /// Gets the height of the node in the tree.
         /// </summary>
         public uint Height { get; private set; }
 
         /// <summary>
-        /// Returns the postings associated with the node.
+        /// Gets the postings associated with the node.
         /// </summary>
         public IEnumerable<IndexMemorySegmentPosting> Postings { get; private set; } = [];
 
         /// <summary>
-        /// Returns the nodes in a post-order traversal.
+        /// Gets the nodes in a post-order traversal.
         /// </summary>
         public IEnumerable<IndexMemorySegmentNumericNode> PostOrder
         {
@@ -58,7 +58,7 @@ namespace WebExpress.WebIndex.Memory
         }
 
         /// <summary>
-        /// Returns all document IDs from the postings in the tree.
+        /// Gets all document IDs from the postings in the tree.
         /// </summary>
         public IEnumerable<Guid> All => PostOrder.SelectMany(x => x.Postings?.Select(x => x.DocumentId));
 

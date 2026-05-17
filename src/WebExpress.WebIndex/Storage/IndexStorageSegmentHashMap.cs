@@ -15,17 +15,17 @@ namespace WebExpress.WebIndex.Storage
         private const int _bufferSize = 4096;
 
         /// <summary>
-        /// Returns the on-disk size of the hash map header.
+        /// Gets the on-disk size of the hash map header.
         /// </summary>
         public const uint SegmentSize = sizeof(uint);
 
         /// <summary>
-        /// Returns the number of buckets. should be prime to reduce collisions.
+        /// Gets the number of buckets. should be prime to reduce collisions.
         /// </summary>
         public uint BucketCount { get; private set; }
 
         /// <summary>
-        /// Returns all items across all buckets (enumerates on-disk linked lists).
+        /// Gets all items across all buckets (enumerates on-disk linked lists).
         /// </summary>
         public IEnumerable<IndexStorageSegmentItem> All
         {

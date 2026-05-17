@@ -20,27 +20,27 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the amount of space required on the storage device.
         /// </summary>
         public const uint SegmentSize = 16 + sizeof(ulong) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the document id.
+        /// Gets or sets the document id.
         /// </summary>
         public Guid DocumentID { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the left child.
+        /// Gets or sets the address of the left child.
         /// </summary>
         public ulong LeftAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the address of the right child.
+        /// Gets or sets the address of the right child.
         /// </summary>
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Returns the left child of the node.
+        /// Gets the left child of the node.
         /// </summary>
         public IndexStorageSegmentNumericPostingNode Left
         {
@@ -57,7 +57,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the right child of the node.
+        /// Gets the right child of the node.
         /// </summary>
         public IndexStorageSegmentNumericPostingNode Right
         {
@@ -74,7 +74,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the height of the tree.
+        /// Gets the height of the tree.
         /// </summary>
         public uint Height
         {
@@ -88,7 +88,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the balance factor of the tree.
+        /// Gets the balance factor of the tree.
         /// </summary>
         public uint Balance
         {
@@ -102,7 +102,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns the leftmost child and his parent.
+        /// Gets the leftmost child and his parent.
         /// </summary>
         public dynamic LeftmostChild
         {
@@ -146,7 +146,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns all document ids.
+        /// Gets all document ids.
         /// </summary>
         public IEnumerable<Guid> All => PreOrder
             .Select(x => x.DocumentID);

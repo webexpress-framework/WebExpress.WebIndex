@@ -8,12 +8,12 @@ namespace WebExpress.WebIndex.Test.Document
     public class UnitTestIndexTestDocumentC : UnitTestIndexTestDocument
     {
         /// <summary>
-        /// Returns or sets the text.
+        /// Gets or sets the text.
         /// </summary>
         public string Text { get; set; }
 
         /// <summary>
-        /// Returns or sets the numer of the item.
+        /// Gets or sets the numer of the item.
         /// </summary>
         [IndexIgnore]
         public int Number { get; set; }

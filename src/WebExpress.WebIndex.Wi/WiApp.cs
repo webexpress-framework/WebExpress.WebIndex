@@ -670,7 +670,7 @@ internal class WiApp
                 {
                     var runtimeClass = ViewModel.CurrentObjectType.BuildRuntimeClass();
                     var headers = runtimeClass.GetProperties().Select(x => x.Name);
-                    var wql = command.Parameter1 as IWqlStatement;
+                    var wql = command.Parameter1 as WiWqlStatement;
                     var data = wql.Apply(runtimeClass);
                     var list = new List<IEnumerable<string>>();
                     var i = 0;

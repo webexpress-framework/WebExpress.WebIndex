@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using WebExpress.WebIndex.Test.Fixture;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.Token
 {
     /// <summary>

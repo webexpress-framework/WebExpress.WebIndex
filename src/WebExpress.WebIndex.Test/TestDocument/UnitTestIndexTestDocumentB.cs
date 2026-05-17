@@ -30,59 +30,59 @@ namespace WebExpress.WebIndex.Test.Document
         public class AddressClass
         {
             /// <summary>
-            /// Returns or sets the country.
+            /// Gets or sets the country.
             /// </summary>
             public Country Country { get; set; }
 
             /// <summary>
-            /// Returns or sets the street.
+            /// Gets or sets the street.
             /// </summary>
             public string Street { get; set; }
 
             /// <summary>
-            /// Returns or sets the city.
+            /// Gets or sets the city.
             /// </summary>
             public string City { get; set; }
 
             /// <summary>
-            /// Returns or sets the zip code.
+            /// Gets or sets the zip code.
             /// </summary>
             [IndexIgnore]
             public int Zip { get; set; }
         }
 
         /// <summary>
-        /// Returns or sets the name.
+        /// Gets or sets the name.
         /// </summary>
         public string Name { get; set; }
 
         /// <summary>
-        /// Returns or sets the summary.
+        /// Gets or sets the summary.
         /// </summary>
         public string Summary { get; set; }
 
         /// <summary>
-        /// Returns or sets the description.
+        /// Gets or sets the description.
         /// </summary>
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets the date.
+        /// Gets or sets the date.
         /// </summary>
         public DateTime Date { get; set; }
 
         /// <summary>
-        /// Returns or sets the price.
+        /// Gets or sets the price.
         /// </summary>
         public double Price { get; set; }
 
         /// <summary>
-        /// Returns or sets the new attribute.
+        /// Gets or sets the new attribute.
         /// </summary>
         public bool New { get; set; }
 
         /// <summary>
-        /// Returns or sets the address attribute.
+        /// Gets or sets the address attribute.
         /// </summary>
         public AddressClass Address { get; set; }
 

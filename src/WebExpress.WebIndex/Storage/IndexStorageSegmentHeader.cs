@@ -10,17 +10,17 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageSegmentHeader : IndexStorageSegment
     {
         /// <summary>
-        /// Returns the required on-disk size of the header segment.
+        /// Gets the required on-disk size of the header segment.
         /// </summary>
         public const uint SegmentSize = 3 + sizeof(byte);
 
         /// <summary>
-        /// Returns or sets the file identifier (must be exactly 3 ASCII characters).
+        /// Gets or sets the file identifier (must be exactly 3 ASCII characters).
         /// </summary>
         public string Identifier { get; internal set; }
 
         /// <summary>
-        /// Returns or sets the file version.
+        /// Gets or sets the file version.
         /// </summary>
         public byte Version { get; internal set; }
 

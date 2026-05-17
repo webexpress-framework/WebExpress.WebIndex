@@ -18,22 +18,22 @@ namespace WebExpress.WebIndex.Storage
         private readonly Lock _guard = new();
 
         /// <summary>
-        /// Returns the size of the allocator segment on disk.
+        /// Gets the size of the allocator segment on disk.
         /// </summary>
         public new const uint SegmentSize = IndexStorageSegmentAllocator.SegmentSize + sizeof(ulong) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the head address of the free item list.
+        /// Gets or sets the head address of the free item list.
         /// </summary>
         public ulong FreeItemAddr { get; set; }
 
         /// <summary>
-        /// Returns or sets the head address of the free chunk list.
+        /// Gets or sets the head address of the free chunk list.
         /// </summary>
         public ulong FreeChunkAddr { get; set; }
 
         /// <summary>
-        /// Returns a snapshot enumeration of the free item segments.
+        /// Gets a snapshot enumeration of the free item segments.
         /// </summary>
         public IEnumerable<IndexStorageSegmentFree> FreeItemSegments
         {
@@ -70,7 +70,7 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Returns a snapshot enumeration of the free chunk segments.
+        /// Gets a snapshot enumeration of the free chunk segments.
         /// </summary>
         public IEnumerable<IndexStorageSegmentFree> FreeChunkSegments
         {

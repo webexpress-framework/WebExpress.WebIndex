@@ -1,5 +1,4 @@
-﻿using Xunit.Abstractions;
-
+﻿using Xunit;
 namespace WebExpress.WebIndex.Test.ReverseIndex
 {
     /// <summary>

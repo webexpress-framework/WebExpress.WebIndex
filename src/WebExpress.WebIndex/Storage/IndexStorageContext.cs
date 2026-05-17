@@ -6,27 +6,27 @@
     public class IndexStorageContext
     {
         /// <summary>
-        /// The index storage instance.
+        /// Gets or sets the index storage instance.
         /// </summary>
         private IIndexStorage Index { get; set; }
 
         /// <summary>
-        /// Returns or sets the reverse index file.
+        /// Gets the reverse index file.
         /// </summary>
         public IndexStorageFile IndexFile => Index.IndexFile;
 
         /// <summary>
-        /// Returns or sets the header.
+        /// Gets the header.
         /// </summary>
         public IndexStorageSegmentHeader Header => Index.Header;
 
         /// <summary>
-        /// Returns or sets the memory manager.
+        /// Gets the memory manager.
         /// </summary>
         public IndexStorageSegmentAllocator Allocator => Index.Allocator;
 
         /// <summary>
-        /// Returns the statistical values that can be help to optimize the index.
+        /// Gets the statistical values that can be help to optimize the index.
         /// </summary>
         public IndexStorageSegmentStatistic Statistic => Index.Statistic;
 

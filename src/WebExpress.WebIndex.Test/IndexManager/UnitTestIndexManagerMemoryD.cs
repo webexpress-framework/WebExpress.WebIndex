@@ -1,8 +1,7 @@
 ﻿using System.Globalization;
 using WebExpress.WebIndex.Test.Document;
 using WebExpress.WebIndex.Test.Fixture;
-using Xunit.Abstractions;
-
+using Xunit;
 namespace WebExpress.WebIndex.Test.IndexManager
 {
     /// <summary>
@@ -81,7 +80,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentD>(CultureInfo.GetCultureInfo(culture), IndexType.Memory);
 
             // act
-            await IndexManager.ReIndexAsync(Fixture.TestData);
+            await IndexManager.ReIndexAsync(Fixture.TestData, token: TestContext.Current.CancellationToken);
 
             // validation
             var items = IndexManager.Retrieve<UnitTestIndexTestDocumentD>($"firstname = '{randomItem.FirstName}'");
@@ -181,7 +180,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             Preconditions();
             var randomItem = Fixture.RandomItem;
             IndexManager.Create<UnitTestIndexTestDocumentD>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
-            await IndexManager.ReIndexAsync(Fixture.TestData);
+            await IndexManager.ReIndexAsync(Fixture.TestData, token: TestContext.Current.CancellationToken);
 
             // act
             await IndexManager.UpdateAsync(new UnitTestIndexTestDocumentD()

@@ -8,12 +8,12 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageSegmentBucket : IndexStorageSegment
     {
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the amount of space required on the storage device.
         /// </summary>
         public const uint SegmentSize = sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the address to the first element in the bucket.
+        /// Gets or sets the address to the first element in the bucket.
         /// </summary>
         public ulong ItemAddr { get; set; }
 

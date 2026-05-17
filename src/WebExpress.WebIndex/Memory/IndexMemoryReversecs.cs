@@ -17,22 +17,22 @@ namespace WebExpress.WebIndex.Memory
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// The field that makes up the index.
+        /// Gets the field that makes up the index.
         /// </summary>
         protected IndexFieldData Field { get; } = field;
 
         /// <summary>
-        /// Returns the index context.
+        /// Gets the index context.
         /// </summary>
         public IIndexDocumemntContext Context { get; private set; } = context;
 
         /// <summary>
-        /// Returns the culture.
+        /// Gets the culture.
         /// </summary>
         public CultureInfo Culture { get; private set; } = culture;
 
         /// <summary>
-        /// Returns all items.
+        /// Gets all items.
         /// </summary>
         public virtual IEnumerable<Guid> All { get; }
 

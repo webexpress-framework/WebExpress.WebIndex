@@ -13,12 +13,12 @@ namespace WebExpress.WebIndex.Storage
     public class IndexStorageSegmentFree : IndexStorageSegment, IIndexStorageSegmentListItem
     {
         /// <summary>
-        /// Returns the amount of space required on the storage device.
+        /// Gets the amount of space required on the storage device.
         /// </summary>
         public const uint SegmentSize = sizeof(uint) + sizeof(ulong);
 
         /// <summary>
-        /// Returns or sets the address of the following free segment or 0 if the last.
+        /// Gets or sets the address of the following free segment or 0 if the last.
         /// </summary>
         public ulong SuccessorAddr { get; set; }
 

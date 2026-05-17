@@ -21,12 +21,12 @@ namespace WebExpress.WebIndex.Storage
         private const int _version = 1;
 
         /// <summary>
-        /// Returns the on-disk numeric tree.
+        /// Gets the on-disk numeric tree.
         /// </summary>
         public IndexStorageSegmentNumeric Numeric { get; private set; }
 
         /// <summary>
-        /// Returns all unique item ids present in the numeric index.
+        /// Gets all unique item ids present in the numeric index.
         /// </summary>
         public override IEnumerable<Guid> All
         {

@@ -13,7 +13,7 @@ namespace WebExpress.WebIndex.Term
     public static class IndexTermTokenizer
     {
         /// <summary>
-        /// Returns the default wildcard characters used to keep wildcard punctuation as part of tokens.
+        /// Gets the default wildcard characters used to keep wildcard punctuation as part of tokens.
         /// </summary>
         public static char[] Wildcards { get; } = ['?', '*'];
 

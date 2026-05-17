@@ -19,47 +19,47 @@ namespace WebExpress.WebIndex.Storage
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the field definition that builds the index.
+        /// Gets the field definition that builds the index.
         /// </summary>
         protected IndexFieldData Field { get; private set; } = field;
 
         /// <summary>
-        /// Returns the file name for the reverse index.
+        /// Gets the file name for the reverse index.
         /// </summary>
         public string FileName { get; protected set; }
 
         /// <summary>
-        /// Returns the underlying file for the reverse index.
+        /// Gets the underlying file for the reverse index.
         /// </summary>
         public IndexStorageFile IndexFile { get; protected set; }
 
         /// <summary>
-        /// Returns the header segment.
+        /// Gets the header segment.
         /// </summary>
         public IndexStorageSegmentHeader Header { get; protected set; }
 
         /// <summary>
-        /// Returns the allocator segment.
+        /// Gets the allocator segment.
         /// </summary>
         public IndexStorageSegmentAllocator Allocator { get; protected set; }
 
         /// <summary>
-        /// Returns the statistic segment containing optimization counters.
+        /// Gets the statistic segment containing optimization counters.
         /// </summary>
         public IndexStorageSegmentStatistic Statistic { get; protected set; }
 
         /// <summary>
-        /// Returns the index document context.
+        /// Gets the index document context.
         /// </summary>
         public IIndexDocumemntContext Context { get; private set; } = context;
 
         /// <summary>
-        /// Returns the culture info used by the index.
+        /// Gets the culture info used by the index.
         /// </summary>
         public CultureInfo Culture { get; private set; } = culture;
 
         /// <summary>
-        /// Returns all document ids contained in the reverse index.
+        /// Gets all document ids contained in the reverse index.
         /// </summary>
         public abstract IEnumerable<Guid> All { get; }
 

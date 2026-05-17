@@ -24,22 +24,22 @@ namespace WebExpress.WebIndex.Queries
        where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the collection of filter expressions applied to the index items.
+        /// Gets the collection of filter expressions applied to the index items.
         /// </summary>
         IEnumerable<Expression<Func<TIndexItem, bool>>> Filters { get; }
 
         /// <summary>
-        /// Returns the collection of sorting criteria applied to the query.
+        /// Gets the collection of sorting criteria applied to the query.
         /// </summary>
         public IReadOnlyList<(Expression<Func<TIndexItem, object>> KeySelector, bool Descending)> OrderBys { get; }
 
         /// <summary>
-        /// Returns the number of items to skip before starting to return results.
+        /// Gets the number of items to skip before starting to return results.
         /// </summary>
         int? Skip { get; }
 
         /// <summary>
-        /// Returns the maximum number of items to return in a query result.
+        /// Gets the maximum number of items to return in a query result.
         /// </summary>
         int? Take { get; }
 

@@ -17,23 +17,23 @@ namespace WebExpress.WebIndex
         private readonly Lock _sync = new();
 
         /// <summary>
-        /// Returns the field name (supports dotted nested paths like "Address.Street").
+        /// Gets the field name (supports dotted nested paths like "Address.Street").
         /// </summary>
         public string Name { get; internal set; }
 
         /// <summary>
-        /// Returns the .NET type of the field.
+        /// Gets the .NET type of the field.
         /// </summary>
         public Type Type { get; internal set; }
 
         /// <summary>
-        /// Returns the PropertyInfo of the (leaf) property for this field when available.
+        /// Gets the PropertyInfo of the (leaf) property for this field when available.
         /// For dotted paths this corresponds to the last property in the path.
         /// </summary>
         public PropertyInfo PropertyInfo { get; internal set; }
 
         /// <summary>
-        /// Returns a value indicating whether the field is enabled (no IndexIgnoreAttribute is present).
+        /// Gets a value indicating whether the field is enabled (no IndexIgnoreAttribute is present).
         /// </summary>
         public bool Enabled
         {

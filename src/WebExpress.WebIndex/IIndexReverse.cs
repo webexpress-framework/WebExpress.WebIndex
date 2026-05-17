@@ -11,7 +11,7 @@ namespace WebExpress.WebIndex
     public interface IIndexReverse<TIndexItem> : IDisposable where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns all items.
+        /// Gets all items.
         /// </summary>
         IEnumerable<Guid> All { get; }
 
