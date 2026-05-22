@@ -41,7 +41,7 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Gets or sets the number of times the value is used (postings).
         /// </summary>
-        public uint Fequency { get; set; }
+        public uint Frequency { get; set; }
 
         /// <summary>
         /// Gets the address of the first posting element of a sorted list or 0 if there is no element.
@@ -217,7 +217,7 @@ namespace WebExpress.WebIndex.Storage
                         DocumentID = id
                     };
 
-                    Fequency++;
+                    Frequency++;
 
                     Context.IndexFile.Write(this);
                     Context.IndexFile.Write(item);
@@ -226,7 +226,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     if (Posting.Insert(id, out IndexStorageSegmentNumericPostingNode node))
                     {
-                        Fequency++;
+                        Frequency++;
 
                         Context.IndexFile.Write(this);
                     }
@@ -263,7 +263,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
                     {
-                        Fequency--;
+                        Frequency--;
                         Context.IndexFile.Write(this);
                         return true;
                     }
@@ -274,7 +274,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
                     {
-                        Fequency--;
+                        Frequency--;
                         Context.IndexFile.Write(this);
                         return true;
                     }
@@ -289,7 +289,7 @@ namespace WebExpress.WebIndex.Storage
 
                     Context.Allocator.Free(root);
 
-                    Fequency--;
+                    Frequency--;
 
                     Context.IndexFile.Write(this);
 
@@ -327,7 +327,7 @@ namespace WebExpress.WebIndex.Storage
 
                 Context.Allocator.Free(root);
 
-                Fequency--;
+                Frequency--;
 
                 Context.IndexFile.Write(this);
 
@@ -529,7 +529,7 @@ namespace WebExpress.WebIndex.Storage
             Value = reader.ReadDecimal();
             LeftAddr = reader.ReadUInt64();
             RightAddr = reader.ReadUInt64();
-            Fequency = reader.ReadUInt32();
+            Frequency = reader.ReadUInt32();
             PostingAddr = reader.ReadUInt64();
         }
 
@@ -542,7 +542,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write(Value);
             writer.Write(LeftAddr);
             writer.Write(RightAddr);
-            writer.Write(Fequency);
+            writer.Write(Frequency);
             writer.Write(PostingAddr);
         }
 

@@ -451,7 +451,7 @@ internal class WiApp
     /// <param name="command">The command to be executed.</param>
     private void OnShowIndexTermCommand(Command command)
     {
-        var headers = new List<string>(["Term", "Fequency", "Posting tree height", "Posting balance factor", "DocumentIDs"]);
+        var headers = new List<string>(["Term", "Frequency", "Posting tree height", "Posting balance factor", "DocumentIDs"]);
         var rows = ViewModel.GetIndexTerms();
         var i = 0;
 

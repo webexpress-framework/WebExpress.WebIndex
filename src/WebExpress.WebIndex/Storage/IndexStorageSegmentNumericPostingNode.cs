@@ -159,52 +159,61 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>Ture if a new node has been inserted, otherwise false.</returns>
         public bool Insert(Guid id, out IndexStorageSegmentNumericPostingNode insert)
         {
-            if (id.CompareTo(DocumentID) < 0)
+            lock (_guard)
             {
-                if (LeftAddr == 0)
+                if (id.CompareTo(DocumentID) < 0)
                 {
-                    LeftAddr = Context.Allocator.Alloc(SegmentSize);
-                    var item = new IndexStorageSegmentNumericPostingNode(Context, LeftAddr)
+                    if (LeftAddr == 0)
                     {
-                        DocumentID = id
-                    };
+                        LeftAddr = Context.Allocator.Alloc(SegmentSize);
+                        var item = new IndexStorageSegmentNumericPostingNode(Context, LeftAddr)
+                        {
+                            DocumentID = id
+                        };
 
-                    Context.IndexFile.Write(this);
+                        // persist new node first to avoid dangling pointers on crash,
+                        // then persist the parent's updated pointer
+                        Context.IndexFile.Write(item);
+                        Context.IndexFile.Write(this);
 
-                    insert = item;
+                        insert = item;
 
-                    return true;
-                }
-                else
-                {
-                    return Left.Insert(id, out insert);
-                }
-            }
-            else if (id.CompareTo(DocumentID) > 0)
-            {
-                if (RightAddr == 0)
-                {
-                    RightAddr = Context.Allocator.Alloc(SegmentSize);
-                    var item = new IndexStorageSegmentNumericPostingNode(Context, RightAddr)
+                        return true;
+                    }
+                    else
                     {
-                        DocumentID = id
-                    };
-
-                    Context.IndexFile.Write(this);
-
-                    insert = item;
-
-                    return true;
+                        return Left.Insert(id, out insert);
+                    }
                 }
-                else
+                else if (id.CompareTo(DocumentID) > 0)
                 {
-                    return Right.Insert(id, out insert);
+                    if (RightAddr == 0)
+                    {
+                        RightAddr = Context.Allocator.Alloc(SegmentSize);
+                        var item = new IndexStorageSegmentNumericPostingNode(Context, RightAddr)
+                        {
+                            DocumentID = id
+                        };
+
+                        // persist new node first to avoid dangling pointers on crash,
+                        // then persist the parent's updated pointer
+                        Context.IndexFile.Write(item);
+                        Context.IndexFile.Write(this);
+
+                        insert = item;
+
+                        return true;
+                    }
+                    else
+                    {
+                        return Right.Insert(id, out insert);
+                    }
                 }
+
+                insert = this;
+
+                return false;
             }
-
-            insert = this;
-
-            return false;
         }
 
         /// <summary>
@@ -216,25 +225,59 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>Ture if a node has been removed, otherwise false.</returns>
         public bool Remove(Guid id, IndexStorageSegmentNumericPostingNode parent, IndexStorageBinaryTreeDirection direction)
         {
-            if (id.CompareTo(DocumentID) < 0)
+            lock (_guard)
             {
-                return Left?.Remove(id, this, IndexStorageBinaryTreeDirection.Left) ?? false;
-            }
-            else if (id.CompareTo(DocumentID) > 0)
-            {
-                return Right?.Remove(id, this, IndexStorageBinaryTreeDirection.Right) ?? false;
-            }
+                if (id.CompareTo(DocumentID) < 0)
+                {
+                    return Left?.Remove(id, this, IndexStorageBinaryTreeDirection.Left) ?? false;
+                }
+                else if (id.CompareTo(DocumentID) > 0)
+                {
+                    return Right?.Remove(id, this, IndexStorageBinaryTreeDirection.Right) ?? false;
+                }
 
-            // node with only one child or no child
-            if (LeftAddr == 0 || RightAddr == 0)
-            {
+                // node with only one child or no child
+                if (LeftAddr == 0 || RightAddr == 0)
+                {
+                    switch (direction)
+                    {
+                        case IndexStorageBinaryTreeDirection.Left:
+                            parent.LeftAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
+                            break;
+                        case IndexStorageBinaryTreeDirection.Right:
+                            parent.RightAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
+                            break;
+                    }
+
+                    Context.Allocator.Free(this);
+
+                    Context.IndexFile.Write(parent);
+
+                    return true;
+                }
+
+                // node with two children: get the inorder successor (most left child in the right subtree)
+                var leftmostChild = Right.LeftmostChild;
+                var inorderSuccessor = leftmostChild?.Leftmost;
+                var inorderSuccessorParent = leftmostChild?.Parent;
+
+                inorderSuccessor.LeftAddr = LeftAddr;
+                inorderSuccessor.RightAddr = inorderSuccessorParent?.Addr ?? 0ul;
+                Context.IndexFile.Write(inorderSuccessor);
+
+                if (inorderSuccessorParent is not null)
+                {
+                    inorderSuccessorParent.LeftAddr = 0ul;
+                    Context.IndexFile.Write(inorderSuccessorParent);
+                }
+
                 switch (direction)
                 {
                     case IndexStorageBinaryTreeDirection.Left:
-                        parent.LeftAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
+                        parent.LeftAddr = inorderSuccessor?.Addr ?? 0ul;
                         break;
                     case IndexStorageBinaryTreeDirection.Right:
-                        parent.RightAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
+                        parent.RightAddr = inorderSuccessor?.Addr ?? 0ul;
                         break;
                 }
 
@@ -244,37 +287,6 @@ namespace WebExpress.WebIndex.Storage
 
                 return true;
             }
-
-            // node with two children: get the inorder successor (most left child in the right subtree)
-            var leftmostChild = Right.LeftmostChild;
-            var inorderSuccessor = leftmostChild?.Leftmost;
-            var inorderSuccessorParent = leftmostChild?.Parent;
-
-            inorderSuccessor.LeftAddr = LeftAddr;
-            inorderSuccessor.RightAddr = inorderSuccessorParent?.Addr ?? 0ul;
-            Context.IndexFile.Write(inorderSuccessor);
-
-            if (inorderSuccessorParent is not null)
-            {
-                inorderSuccessorParent.LeftAddr = 0ul;
-                Context.IndexFile.Write(inorderSuccessorParent);
-            }
-
-            switch (direction)
-            {
-                case IndexStorageBinaryTreeDirection.Left:
-                    parent.LeftAddr = inorderSuccessor?.Addr ?? 0ul;
-                    break;
-                case IndexStorageBinaryTreeDirection.Right:
-                    parent.RightAddr = inorderSuccessor?.Addr ?? 0ul;
-                    break;
-            }
-
-            Context.Allocator.Free(this);
-
-            Context.IndexFile.Write(parent);
-
-            return true;
         }
 
         /// <summary>

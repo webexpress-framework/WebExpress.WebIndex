@@ -281,7 +281,7 @@ namespace WebExpress.WebIndex.WiUI.Model
                 new Term()
                 {
                     Value = x.Item1,
-                    Fequency = x.Item2.Fequency,
+                    Frequency = x.Item2.Frequency,
                     Height = x.Item2.Posting.Height,
                     Balance = x.Item2.Posting.Balance,
                     DocumentIDs = x.Item2.Posting.PreOrder.Select(y => y.DocumentID)

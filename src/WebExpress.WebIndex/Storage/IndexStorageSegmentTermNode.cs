@@ -44,7 +44,7 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Gets or sets the number of postings (documents) for the term ending at this node.
         /// </summary>
-        public uint Fequency { get; set; }
+        public uint Frequency { get; set; }
 
         /// <summary>
         /// Gets the address of the root of the posting tree or 0 if none.
@@ -108,7 +108,7 @@ namespace WebExpress.WebIndex.Storage
             {
                 foreach (var child in Children)
                 {
-                    if (child.PostingAddr != 0 && child.ChildAddr != 0)
+                    if (child.PostingAddr != 0)
                     {
                         yield return (Character + child.Character.ToString(), child);
                     }
@@ -250,7 +250,7 @@ namespace WebExpress.WebIndex.Storage
                         DocumentID = id
                     };
 
-                    Fequency++;
+                    Frequency++;
 
                     Context.IndexFile.Write(this);
                     Context.IndexFile.Write(item);
@@ -259,7 +259,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     if (Posting.Insert(id, out IndexStorageSegmentPostingNode node))
                     {
-                        Fequency++;
+                        Frequency++;
 
                         Context.IndexFile.Write(this);
                     }
@@ -297,7 +297,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
                     {
-                        Fequency--;
+                        Frequency--;
                         Context.IndexFile.Write(this);
                         return true;
                     }
@@ -308,7 +308,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
                     {
-                        Fequency--;
+                        Frequency--;
                         Context.IndexFile.Write(this);
                         return true;
                     }
@@ -324,7 +324,7 @@ namespace WebExpress.WebIndex.Storage
                     root.RemovePositions();
                     Context.Allocator.Free(root);
 
-                    Fequency--;
+                    Frequency--;
                     Context.IndexFile.Write(this);
 
                     return true;
@@ -363,7 +363,7 @@ namespace WebExpress.WebIndex.Storage
                 root.RemovePositions();
                 Context.Allocator.Free(root);
 
-                Fequency--;
+                Frequency--;
                 Context.IndexFile.Write(this);
 
                 return true;
@@ -541,7 +541,7 @@ namespace WebExpress.WebIndex.Storage
             Character = (char)reader.ReadUInt32();
             SiblingAddr = reader.ReadUInt64();
             ChildAddr = reader.ReadUInt64();
-            Fequency = reader.ReadUInt32();
+            Frequency = reader.ReadUInt32();
             PostingAddr = reader.ReadUInt64();
         }
 
@@ -554,7 +554,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write((uint)Character);
             writer.Write(SiblingAddr);
             writer.Write(ChildAddr);
-            writer.Write(Fequency);
+            writer.Write(Frequency);
             writer.Write(PostingAddr);
         }
 

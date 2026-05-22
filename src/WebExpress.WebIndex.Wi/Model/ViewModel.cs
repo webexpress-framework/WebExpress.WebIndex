@@ -157,7 +157,7 @@ namespace WebExpress.WebIndex.Wi.Model
             return term.Terms.Select(x =>
             (
                 x.Item1,
-                x.Item2.Fequency,
+                x.Item2.Frequency,
                 x.Item2.Posting.Height,
                 x.Item2.Posting.Balance,
                 x.Item2.Posting.PreOrder.Select(y => y.DocumentID)
