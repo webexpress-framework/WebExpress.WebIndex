@@ -103,7 +103,11 @@ namespace WebExpress.WebIndex.Storage
                             }
                             break;
                         }
+                    // a file holds posting nodes of one kind only - the term index the one with
+                    // positions, the numeric index the one without - so both kinds share the
+                    // free list and their sizes select it
                     case IndexStorageSegmentPostingNode.SegmentSize:
+                    case IndexStorageSegmentNumericPostingNode.SegmentSize:
                         {
                             if (FreePostingAddr != 0)
                             {

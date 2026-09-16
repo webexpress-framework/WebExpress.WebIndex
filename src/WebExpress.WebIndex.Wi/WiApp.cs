@@ -1,4 +1,5 @@
-﻿using WebExpress.WebIndex.Wi;
+﻿using System.Text.Json;
+using WebExpress.WebIndex.Wi;
 using WebExpress.WebIndex.Wi.Model;
 using WebExpress.WebIndex.Wql;
 
@@ -362,7 +363,10 @@ internal class WiApp
         }
 
         Console.Write($"{prefix}/>");
-        var command = Console.ReadLine()?.ToLower().Trim();
+
+        // the command word is matched case-insensitively by the parser; the rest of the
+        // line may be data on its way into the index and is handed on as typed
+        var command = Console.ReadLine()?.Trim();
 
         return command;
     }
@@ -431,7 +435,7 @@ internal class WiApp
 
             foreach (var row in fileds.Select(x => new { Id = i++, x.Name, x.Type }))
             {
-                PrintTableRow(headers, [row.Id.ToString(), row.Name, row.Type.ToString()]);
+                PrintTableRow(headers, [row.Id.ToString(), row.Name, FieldTypeExtention.ToString(row.Type)]);
             }
 
             PrintTableFooter(headers, i);
@@ -605,48 +609,174 @@ internal class WiApp
     }
 
     /// <summary>
-    /// Execute the export command.
+    /// Execute the export command: writes the open index with its schema into a file.
     /// </summary>
     /// <param name="command">The command to be executed.</param>
     private void OnExportCommand(Command command)
     {
-        PrintError("Sorry! Not implemented at the moment.");
+        var file = ResolveFile(command.Parameter1?.ToString(), $"{ViewModel.CurrentObjectType?.Name}.json");
+
+        if (File.Exists(file) && !Confirm($"The file '{file}' already exists. Overwrite it?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var count = ViewModel.Export(file);
+
+            Console.WriteLine($"{count} item(s) exported to '{file}'.");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            PrintError($"The export file could not be written. {ex.Message}");
+        }
     }
 
     /// <summary>
-    /// Execute the import command.
+    /// Execute the import command: creates an index from an export file and opens it.
     /// </summary>
     /// <param name="command">The command to be executed.</param>
     private void OnImportCommand(Command command)
     {
-        PrintError("Sorry! Not implemented at the moment.");
+        var file = ResolveFile(command.Parameter1?.ToString(), null);
+
+        if (file is null)
+        {
+            PrintError("Missing parameter file.");
+
+            return;
+        }
+
+        if (!File.Exists(file))
+        {
+            PrintError($"File '{file}' not found.");
+
+            return;
+        }
+
+        try
+        {
+            var count = ViewModel.Import(file);
+
+            Console.WriteLine($"{count} item(s) imported into '{ViewModel.CurrentObjectType.Name}'.");
+            State = ProgrammState.OpenIndexFile;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or NotSupportedException)
+        {
+            PrintError($"The export file could not be imported. {ex.Message}");
+        }
     }
 
     /// <summary>
-    /// Execute the insert command.
+    /// Execute the insert command: adds an item built from the typed field values.
     /// </summary>
     /// <param name="command">The command to be executed.</param>
     private void OnInsertCommand(Command command)
     {
-        PrintError("Sorry! Not implemented at the moment.");
+        var values = command.Parameter1?.ToString();
+
+        if (string.IsNullOrWhiteSpace(values))
+        {
+            PrintError("Missing parameter values.");
+
+            return;
+        }
+
+        try
+        {
+            var id = ViewModel.Insert(values);
+
+            Console.WriteLine($"Item '{id}' inserted.");
+        }
+        catch (FormatException ex)
+        {
+            PrintError(ex.Message);
+        }
     }
 
     /// <summary>
-    /// Execute the update command.
+    /// Execute the update command: changes the typed fields of the item with the given id.
     /// </summary>
     /// <param name="command">The command to be executed.</param>
     private void OnUpdateCommand(Command command)
     {
-        PrintError("Sorry! Not implemented at the moment.");
+        var values = command.Parameter2?.ToString();
+
+        if (!Guid.TryParse(command.Parameter1?.ToString(), out var id))
+        {
+            PrintError("Missing or invalid parameter id.");
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(values))
+        {
+            PrintError("Missing parameter values.");
+
+            return;
+        }
+
+        try
+        {
+            if (!ViewModel.Update(id, values))
+            {
+                PrintError($"Item '{id}' not found.");
+
+                return;
+            }
+
+            Console.WriteLine($"Item '{id}' updated.");
+        }
+        catch (FormatException ex)
+        {
+            PrintError(ex.Message);
+        }
     }
 
     /// <summary>
-    /// Execute the delete command.
+    /// Execute the delete command: removes the item with the given id.
     /// </summary>
     /// <param name="command">The command to be executed.</param>
     private void OnDeleteCommand(Command command)
     {
-        PrintError("Sorry! Not implemented at the moment.");
+        if (!Guid.TryParse(command.Parameter1?.ToString(), out var id))
+        {
+            PrintError("Missing or invalid parameter id.");
+
+            return;
+        }
+
+        if (!ViewModel.Delete(id))
+        {
+            PrintError($"Item '{id}' not found.");
+
+            return;
+        }
+
+        Console.WriteLine($"Item '{id}' deleted.");
+    }
+
+    /// <summary>
+    /// Resolves a file parameter against the current directory.
+    /// </summary>
+    /// <remarks>
+    /// A path typed on the command line is meant relative to the index directory the tool
+    /// is looking at, not to wherever the process was started; a quoted path loses its quotes.
+    /// </remarks>
+    /// <param name="parameter">The file parameter as typed.</param>
+    /// <param name="fallback">The file name to use when none was typed, or null.</param>
+    /// <returns>The full path, or null when nothing was typed and there is no fallback.</returns>
+    private static string ResolveFile(string parameter, string fallback)
+    {
+        var file = parameter?.Trim().Trim('"', '\'');
+
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            file = fallback;
+        }
+
+        return file is null ? null : Path.GetFullPath(file, ViewModel.CurrentDirectory);
     }
 
     /// <summary>

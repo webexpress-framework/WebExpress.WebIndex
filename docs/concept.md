@@ -756,9 +756,13 @@ a reference to a linked list. This list contains the documents in which the term
          ╚═══════════════════╝
 ```
 
-The posting node segment is designed as a binary tree and contains the ids of the documents that belong to a term. For 
-each document, the posting node segment refers to the position information that indicates where the term is located in 
-the document. The posting segment is stored in the variable memory area of the inverted index.
+The posting node segment is designed as a self-balancing binary tree (AVL tree) and contains the ids of the documents 
+that belong to a term. Document ids arrive in insertion order, which for sequential ids would degrade a plain binary 
+tree to a list; every insert and removal therefore restores the AVL invariant, so the search path for a document is 
+bounded by about 1.44 log2(n). The height of the subtree is stored in the node, because deriving it would mean walking 
+the subtree on every insert. For each document, the posting node segment refers to the position information that 
+indicates where the term is located in the document. The posting segment is stored in the variable memory area of the 
+inverted index.
 
 ```
          ╔TermPostingNode════╗
@@ -766,6 +770,7 @@ the document. The posting segment is stored in the variable memory area of the i
   8 Byte ║ LeftAddr          ║ pointer to the address of the left child or 0 if there is no element exists
   8 Byte ║ RightAddr         ║ pointer to the address of the right child or 0 if there is no element exists
   8 Byte ║ PositionAddr      ║ adress of the first position element of a sorted list or 0 if there is no element exists
+  1 Byte ║ Height            ║ the height of the subtree rooted at this node (1 for a leaf)
          ╚═══════════════════╝
 ```
 
@@ -937,15 +942,17 @@ values. Each node has a pointer to a posting tree where the document ids of the 
          ╚═══════════════════╝
 ```
 
-The posting node segment is designed as a binary tree and contains the ids of the documents that belong to a term. For 
-each document, the posting node segment refers to the position information that indicates where the term is located in 
-the document. The posting segment is stored in the variable memory area of the inverted index.
+The posting node segment is designed as a self-balancing binary tree (AVL tree), like the posting tree of a term, and 
+contains the ids of the documents that carry the value; a number occurs once in a field, so the node carries no 
+positions. For each document, the posting node segment refers to the position information that indicates where the 
+term is located in the document. The posting segment is stored in the variable memory area of the inverted index.
 
 ```
          ╔NumericPostingNode═╗
  16 Byte ║ Id                ║ guid of the document item
   8 Byte ║ LeftAddr          ║ pointer to the address of the left child or 0 if there is no element
   8 Byte ║ RightAddr         ║ pointer to the address of the right child or 0 if there is no element
+  1 Byte ║ Height            ║ the height of the subtree rooted at this node (1 for a leaf)
          ╚═══════════════════╝
 ```
 

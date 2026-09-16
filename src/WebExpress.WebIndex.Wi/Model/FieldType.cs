@@ -87,18 +87,25 @@
         /// <summary>
         /// Converts a string to a corresponding FieldType value.
         /// </summary>
+        /// <remarks>
+        /// Two vocabularies are read: the CLR type names the index library writes into its
+        /// schema file (<c>String</c>, <c>Int32</c>, ...) and the names this tool shows and
+        /// writes into an export (<c>Text</c>, <c>Integer</c>, ...). A name of either kind
+        /// has to come back as the same field type, or a schema read from disk would turn
+        /// its numbers into untyped objects.
+        /// </remarks>
         /// <param name="str">The string to convert.</param>
         /// <returns>The FieldType value that corresponds to the given string.</returns>
         public static FieldType FromStringValue(string str)
         {
-            return str switch
+            return str?.Trim().ToLowerInvariant() switch
             {
-                "String" => FieldType.Text,
-                "Boolean" => FieldType.Bool,
-                "Integer" => FieldType.Int,
-                "Double" => FieldType.Double,
-                "DateTime" => FieldType.DateTime,
-                "Guid" => FieldType.Guid,
+                "string" or "text" => FieldType.Text,
+                "boolean" or "bool" => FieldType.Bool,
+                "integer" or "int" or "int32" or "int64" or "int16" => FieldType.Int,
+                "double" or "single" or "decimal" => FieldType.Double,
+                "datetime" => FieldType.DateTime,
+                "guid" => FieldType.Guid,
                 _ => FieldType.Object
             };
         }

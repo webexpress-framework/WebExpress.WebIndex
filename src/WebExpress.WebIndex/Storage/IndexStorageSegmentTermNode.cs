@@ -261,14 +261,20 @@ namespace WebExpress.WebIndex.Storage
                 }
                 else
                 {
-                    if (Posting.Insert(id, out IndexStorageSegmentPostingNode node))
+                    // the tree balances itself on the way up and may come back with another
+                    // root, which is then the one this term has to point at
+                    var root = Posting.Insert(id, out item, out var inserted);
+
+                    if (inserted)
                     {
                         Frequency++;
-
-                        Context.IndexFile.Write(this);
                     }
 
-                    item = node;
+                    if (inserted || root.Addr != PostingAddr)
+                    {
+                        PostingAddr = root.Addr;
+                        Context.IndexFile.Write(this);
+                    }
                 }
             }
 
@@ -277,7 +283,6 @@ namespace WebExpress.WebIndex.Storage
 
         /// <summary>
         /// Removes a posting (document id) from this term's posting tree.
-        /// Handles all cases including root replacement with inorder successor.
         /// </summary>
         /// <param name="id">The document id to remove.</param>
         /// <returns>True if removed; otherwise false.</returns>
@@ -295,78 +300,16 @@ namespace WebExpress.WebIndex.Storage
                     return false;
                 }
 
-                var root = Posting;
+                // the tree rebalances after the removal; the root it reports is the one to
+                // point at, and none at all once the last posting is gone
+                var root = Posting.Remove(id, out var removed);
 
-                if (id.CompareTo(root.DocumentID) < 0)
+                if (!removed)
                 {
-                    if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
-                    {
-                        Frequency--;
-                        Context.IndexFile.Write(this);
-                        return true;
-                    }
-
-                    return false;
-                }
-                else if (id.CompareTo(root.DocumentID) > 0)
-                {
-                    if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
-                    {
-                        Frequency--;
-                        Context.IndexFile.Write(this);
-                        return true;
-                    }
-
                     return false;
                 }
 
-                // node with only one child or no child
-                if (root.LeftAddr == 0 || root.RightAddr == 0)
-                {
-                    PostingAddr = root.LeftAddr != 0 ? root.LeftAddr : root.RightAddr;
-
-                    root.RemovePositions();
-                    Context.Allocator.Free(root);
-
-                    Frequency--;
-                    Context.IndexFile.Write(this);
-
-                    return true;
-                }
-
-                // node with two children: replace root with inorder successor (leftmost of right subtree)
-                var rightRoot = root.Right;
-                var leftmostPack = rightRoot.LeftmostChild;
-                var successor = leftmostPack.Leftmost as IndexStorageSegmentPostingNode;
-
-                var oldLeft = root.LeftAddr;
-                var oldRight = root.RightAddr;
-
-                // detach successor from its parent: parent.left becomes successor.right
-                if (leftmostPack.Parent is IndexStorageSegmentPostingNode successorParent)
-                {
-                    successorParent.LeftAddr = successor.RightAddr;
-                    Context.IndexFile.Write(successorParent);
-                }
-
-                // transplant successor in place of root
-                successor.LeftAddr = oldLeft;
-
-                // if successor is not the immediate right child, hook up old right subtree
-                if (successor.Addr != oldRight)
-                {
-                    successor.RightAddr = oldRight;
-                }
-
-                Context.IndexFile.Write(successor);
-
-                // update head to new root of posting tree
-                PostingAddr = successor.Addr;
-
-                // free old root
-                root.RemovePositions();
-                Context.Allocator.Free(root);
-
+                PostingAddr = root?.Addr ?? 0;
                 Frequency--;
                 Context.IndexFile.Write(this);
 
