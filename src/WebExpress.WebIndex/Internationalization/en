@@ -16,3 +16,5 @@ wql.expected_skip_or_take=A skip or take condition is expected.
 wql.expected_token=A token is expected.
 wql.expected_token_matching=The token does not match the expected pattern or format.
 wql.expected_close_parenthesis=A closing parenthesis is expected.
+wql.expected_value=A value is expected.
+wql.parse.exception=The value is not a valid number.

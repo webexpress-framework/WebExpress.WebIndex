@@ -257,7 +257,7 @@ namespace WebExpress.WebIndex.Wql
                 var closeToken = ReadToken(tokenQueue, ")")
                     ?? throw new WqlParseException
                     (
-                        "webexpress.webindex:wql.wql.expected_close_parenthesis",
+                        "webexpress.webindex:wql.expected_close_parenthesis",
                         []
                     );
 
