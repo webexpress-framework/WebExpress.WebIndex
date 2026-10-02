@@ -233,6 +233,10 @@ namespace WebExpress.WebIndex.Wql
         /// <param name="ilaQueue">
         /// The incremental lookahead analysis stack to record the attribute token.
         /// </param>
+        /// <param name="deep">
+        /// The number of enclosing parentheses, which decides whether a completed condition
+        /// may be followed by a closing parenthesis or by the order and partitioning clauses.
+        /// </param>
         /// <returns>The filter node or null.</returns>
         private WqlExpressionNodeFilter<TIndexItem> ParseFilter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, int deep = 0)
         {
@@ -252,7 +256,7 @@ namespace WebExpress.WebIndex.Wql
                     ExpectedNextTokens = [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis]
                 });
 
-                var filter = ParseFilter(tokenQueue, ilaQueue, deep++);
+                var filter = ParseFilter(tokenQueue, ilaQueue, deep + 1);
 
                 var closeToken = ReadToken(tokenQueue, ")")
                     ?? throw new WqlParseException
@@ -263,7 +267,7 @@ namespace WebExpress.WebIndex.Wql
 
                 ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
+                    ExpectedNextTokens = FilterFollowers(deep)
                 });
 
                 if (PeekToken(tokenQueue, "and") ||
@@ -283,14 +287,14 @@ namespace WebExpress.WebIndex.Wql
                     {
                         LeftFilter = filter,
                         LogicalOperator = logicalOperator,
-                        RightFilter = ParseFilter(tokenQueue, ilaQueue)
+                        RightFilter = ParseFilter(tokenQueue, ilaQueue, deep)
                     };
                 }
 
                 return filter;
             }
 
-            var condition = ParseCondition(tokenQueue, ilaQueue);
+            var condition = ParseCondition(tokenQueue, ilaQueue, FilterFollowers(deep));
 
             if (condition is not null)
             {
@@ -311,7 +315,7 @@ namespace WebExpress.WebIndex.Wql
                     {
                         LeftFilter = new WqlExpressionNodeFilter<TIndexItem> { Condition = condition },
                         LogicalOperator = logicalOperator,
-                        RightFilter = ParseFilter(tokenQueue, ilaQueue)
+                        RightFilter = ParseFilter(tokenQueue, ilaQueue, deep)
                     };
                 }
 
@@ -321,11 +325,11 @@ namespace WebExpress.WebIndex.Wql
                 };
             }
 
-            var leftFilter = ParseFilter(tokenQueue, ilaQueue);
+            var leftFilter = ParseFilter(tokenQueue, ilaQueue, deep);
             if (leftFilter is not null)
             {
                 var logicalOperator = ParseLogicalOperator(tokenQueue, ilaQueue);
-                var rightFilter = ParseFilter(tokenQueue, ilaQueue);
+                var rightFilter = ParseFilter(tokenQueue, ilaQueue, deep);
 
                 return new WqlExpressionNodeFilterBinary<TIndexItem>
                 {
@@ -339,14 +343,35 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
+        /// The token types that may follow a value inside a parenthesized list - the values
+        /// of a set condition or the arguments of a function.
+        /// </summary>
+        private static readonly WqlExpressionType[] ListFollowers = [WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis];
+
+        /// <summary>
+        /// Returns the token types that may follow a completed condition. Inside a group only
+        /// another condition or the end of the group may follow, since the order and
+        /// partitioning clauses belong to the whole statement.
+        /// </summary>
+        /// <param name="deep">The number of enclosing parentheses.</param>
+        /// <returns>The permissible followers.</returns>
+        private static WqlExpressionType[] FilterFollowers(int deep)
+        {
+            return deep > 0
+                ? [WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis]
+                : [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator];
+        }
+
+        /// <summary>
         /// Parses a single condition expression.
         /// </summary>
         /// <param name="tokenQueue">The token queue.</param>
         /// <param name="ilaQueue">
         /// The incremental lookahead analysis stack to record the attribute token.
         /// </param>
+        /// <param name="followers">The token types that may follow the completed condition.</param>
         /// <returns>The condition node.</returns>
-        private WqlExpressionNodeFilterCondition<TIndexItem> ParseCondition(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
+        private WqlExpressionNodeFilterCondition<TIndexItem> ParseCondition(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers)
         {
             var attribute = ParseAttribute(tokenQueue, ilaQueue);
 
@@ -391,7 +416,7 @@ namespace WebExpress.WebIndex.Wql
                     binary.Culture = Culture;
                     binary.Attribute = attribute;
 
-                    binary.Parameter = ParseParameter(tokenQueue, ilaQueue, true);
+                    binary.Parameter = ParseParameter(tokenQueue, ilaQueue, true, followers);
                     binary.Options = ParseParameterOptions(tokenQueue, ilaQueue);
 
                     return binary;
@@ -411,7 +436,7 @@ namespace WebExpress.WebIndex.Wql
                         ExpectedNextTokens = [WqlExpressionType.Parameter]
                     });
 
-                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
 
                     while (PeekToken(tokenQueue, ","))
                     {
@@ -419,17 +444,17 @@ namespace WebExpress.WebIndex.Wql
 
                         ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
                         {
-                            ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Separator]
+                            ExpectedNextTokens = [WqlExpressionType.Parameter]
                         });
 
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false));
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false, ListFollowers));
                     }
 
                     var closeToken = ReadToken(tokenQueue, ")");
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                        ExpectedNextTokens = followers
                     });
 
                     set.Culture = Culture;
@@ -574,8 +599,9 @@ namespace WebExpress.WebIndex.Wql
         /// Indicates whether the parameter is expected to be a scalar value. 
         /// If false, the parser may accept or construct a list of values. 
         /// </param>
+        /// <param name="followers">The token types that may follow the completed parameter.</param>
         /// <returns>The parameter node.</returns>
-        private WqlExpressionNodeParameter<TIndexItem> ParseParameter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, bool isScalar)
+        private WqlExpressionNodeParameter<TIndexItem> ParseParameter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, bool isScalar, WqlExpressionType[] followers)
         {
             var functionOrValueToken = PeekToken(tokenQueue);
             var function = Functions
@@ -589,12 +615,12 @@ namespace WebExpress.WebIndex.Wql
             {
                 return new WqlExpressionNodeParameter<TIndexItem>
                 {
-                    Function = ParseFunction(tokenQueue, ilaQueue)
+                    Function = ParseFunction(tokenQueue, ilaQueue, followers)
                 };
             }
             else if (PeekToken(tokenQueue, DoubleRegex()))
             {
-                return new WqlExpressionNodeParameter<TIndexItem>
+                var parameter = new WqlExpressionNodeParameter<TIndexItem>
                 {
                     Value = new WqlExpressionNodeValue<TIndexItem>()
                     {
@@ -602,6 +628,15 @@ namespace WebExpress.WebIndex.Wql
                         NumberValue = ParseDoubleValue(tokenQueue)
                     }
                 };
+
+                // without its own lookahead entry a number would leave the prompt at the
+                // token before it and offer another value instead of what may follow
+                ilaQueue.Enqueue(new WqlLookaheadToken(functionOrValueToken, WqlExpressionType.Parameter)
+                {
+                    ExpectedNextTokens = followers
+                });
+
+                return parameter;
             }
             else if (functionOrValueToken?.Value == "\"")
             {
@@ -656,7 +691,7 @@ namespace WebExpress.WebIndex.Wql
                 var closeToken = ReadToken(tokenQueue);
                 ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.Quotation)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                    ExpectedNextTokens = followers
                 });
 
                 return parameter;
@@ -714,7 +749,7 @@ namespace WebExpress.WebIndex.Wql
                 var closeToken = ReadToken(tokenQueue);
                 ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.Quotation)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                    ExpectedNextTokens = followers
                 });
 
                 return parameter;
@@ -774,7 +809,7 @@ namespace WebExpress.WebIndex.Wql
 
                 ilaQueue.Enqueue(new WqlLookaheadToken(stringToken, WqlExpressionType.Parameter)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator]
+                    ExpectedNextTokens = followers
                 });
 
                 return new WqlExpressionNodeParameter<TIndexItem>
@@ -856,8 +891,9 @@ namespace WebExpress.WebIndex.Wql
         /// <param name="ilaQueue">
         /// The incremental lookahead analysis stack to record the attribute token.
         /// </param>
+        /// <param name="followers">The token types that may follow the completed invocation.</param>
         /// <returns>The function node.</returns>
-        private WqlExpressionNodeFilterFunction<TIndexItem> ParseFunction(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
+        private WqlExpressionNodeFilterFunction<TIndexItem> ParseFunction(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers)
         {
             var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
             var function = Functions
@@ -908,12 +944,12 @@ namespace WebExpress.WebIndex.Wql
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                        ExpectedNextTokens = followers
                     });
                 }
                 else
                 {
-                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
 
                     while (PeekToken(tokenQueue, ","))
                     {
@@ -925,7 +961,7 @@ namespace WebExpress.WebIndex.Wql
                             ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Function]
                         });
 
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
                     }
 
                     var closeToken = ReadToken(tokenQueue, ")");
@@ -933,7 +969,7 @@ namespace WebExpress.WebIndex.Wql
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
+                        ExpectedNextTokens = followers
                     });
                 }
 
