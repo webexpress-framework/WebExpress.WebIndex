@@ -51,7 +51,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// Creates an index file for an object type without fields.
         /// </summary>
         /// <param name="indexFile">The name of the index file.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool CreateIndexFile(string indexFile)
         {
             return CreateIndexFile(new ObjectType() { Name = indexFile });
@@ -61,7 +61,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// Creates an index file for the given object type in the current directory.
         /// </summary>
         /// <param name="objectType">The object type the index holds.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool CreateIndexFile(ObjectType objectType)
         {
             CurrentObjectType = objectType;
@@ -84,7 +84,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// Opens the specified index file.
         /// </summary>
         /// <param name="indexFile">The full path to the index file.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool OpenIndexFile(string indexFile)
         {
             CurrentDirectory = Path.GetDirectoryName(indexFile);
@@ -112,7 +112,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// Opens the specified index field.
         /// </summary>
         /// <param name="indexField">The the index field.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool OpenIndexField(Field indexField)
         {
             CurrentIndexField = indexField;
@@ -123,7 +123,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <summary>
         /// Close the current index file.
         /// </summary>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool CloseIndexFile()
         {
             var runtimeClass = CurrentObjectType.BuildRuntimeClass();
@@ -138,7 +138,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <summary>
         /// Drop the current index file.
         /// </summary>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool DropIndexFile()
         {
             var runtimeClass = CurrentObjectType.BuildRuntimeClass();
@@ -238,15 +238,33 @@ namespace WebExpress.WebIndex.Wi.Model
         /// Creates an index from an export file in the current directory and fills it with the
         /// exported items; the index is the open one afterwards.
         /// </summary>
+        /// <remarks>
+        /// An import always yields exactly the exported items. Opening an index that already
+        /// exists would merge the import into the items it holds - and, with a differing
+        /// schema, rebuild it - so an existing index is either refused or, when asked for,
+        /// deleted completely before the import creates it anew.
+        /// </remarks>
         /// <param name="file">The path of the export file.</param>
+        /// <param name="replace">True to delete an existing index of the same object type first; false to refuse the import then.</param>
         /// <returns>The number of imported items.</returns>
-        public int Import(string file)
+        /// <exception cref="InvalidOperationException">The index exists and <paramref name="replace"/> is false.</exception>
+        public int Import(string file, bool replace = false)
         {
             var dump = JsonSerializer.Deserialize<IndexDump>(File.ReadAllText(file), DumpOptions);
 
             if (string.IsNullOrWhiteSpace(dump?.Name))
             {
                 throw new FormatException("The export file names no object type.");
+            }
+
+            if (IndexExists(dump.Name))
+            {
+                if (!replace)
+                {
+                    throw new InvalidOperationException($"The index '{dump.Name}' already exists in '{CurrentDirectory}'.");
+                }
+
+                DeleteIndexFiles(dump.Name);
             }
 
             CreateIndexFile(new ObjectType() { Name = dump.Name, Fields = [.. dump.Fields] });
@@ -277,6 +295,43 @@ namespace WebExpress.WebIndex.Wi.Model
             }
 
             return dump.Items.Count;
+        }
+
+        /// <summary>
+        /// Determines whether an index of the given object type exists in the current directory.
+        /// Its schema or its document store is enough: either one makes opening the index pick
+        /// up what is stored.
+        /// </summary>
+        /// <param name="name">The name of the object type.</param>
+        /// <returns>True if the index exists, otherwise false.</returns>
+        public bool IndexExists(string name)
+        {
+            return File.Exists(Path.Combine(CurrentDirectory, $"{name}.ws"))
+                || File.Exists(Path.Combine(CurrentDirectory, $"{name}.wds"));
+        }
+
+        /// <summary>
+        /// Deletes every file of the index of the given object type - schema, document store and
+        /// the reverse indexes of all fields - so nothing of it survives into a new index of the
+        /// same name. An open index of that type is closed first to release its files.
+        /// </summary>
+        /// <param name="name">The name of the object type.</param>
+        private void DeleteIndexFiles(string name)
+        {
+            if (string.Equals(CurrentObjectType?.Name, name, StringComparison.Ordinal))
+            {
+                CloseIndexFile();
+            }
+
+            var files = new[] { $"{name}.ws", $"{name}.wds" }
+                .Select(x => Path.Combine(CurrentDirectory, x))
+                .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrt"))
+                .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrn"));
+
+            foreach (var path in files.Where(File.Exists))
+            {
+                File.Delete(path);
+            }
         }
 
         /// <summary>

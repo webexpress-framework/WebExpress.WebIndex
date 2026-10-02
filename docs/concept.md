@@ -417,8 +417,8 @@ Object Notation) format is used for the index schema file and the have the exten
 
 ## IndexStore
 In a filesystem where the `WebIndex` is stored, a process is carried out where an inverted index 
-is created for each field. These indexes are stored as files with the `<document name><field name>.wri` 
-extension. In parallel, a special storage area known as the document store `<document name>.wds` is set 
+is created for each field. These indexes are stored as files named `<document name>.<field name>.wrt` for text 
+fields and `<document name>.<field name>.wrn` for numeric fields. In parallel, a special storage area known as the document store `<document name>.wds` is set 
 up for each document. In this storage area, the document’s data is redundantly stored to enable quick 
 access. The structure of these files follows a uniform format that is divided into various segments. Each 
 of these segments is identifiable by a unique address and has a specific length. There is the option to 
@@ -439,6 +439,22 @@ the system performance.
          ║                   ║ a variable memory area in which the data is stored
          ╚~~~~~~~~~~~~~~~~~~~╝
 ```
+
+The version in the header names the layout of the segments that follow. It is raised whenever the size or the
+structure of a segment on disk changes, because a file of another layout cannot be read with the current one:
+every address after the first changed segment would point into the middle of another record.
+
+| File  | Version | Layout
+|-------|---------|------------------------------------------------------------------------------------
+| `wds` | 1       | document store
+| `wrt` | 2       | term index; since version 2 each posting node stores the height of its subtree
+| `wrn` | 2       | numeric index; since version 2 each posting node stores the height of its subtree
+
+A reverse index holds derived data only - every value it contains is in the document store as well. When a
+reverse index file of another version is opened, it is therefore not converted but discarded, created anew
+and filled again from the document store, so an index written by an earlier release keeps working after an
+update without a manual reindex. A file that carries another identifier is not touched; opening it fails, as
+it is no index of the expected kind. The schema file `*.ws` is JSON and carries no version.
 
 Unused memory areas in the file are represented by the `Free` segment, which is located in the body area 
 variable and forms a linked list. The `Allocator` points to the first element of this list.
@@ -744,7 +760,7 @@ The tree structure enables efficient search and retrieval of terms. Each node in
 of the term, and the sequence of characters along the path from the root node to a specific node forms the corresponding 
 term. The `TermNode` segments in the data area of the reverse index is organized in such a way that they enable a fast 
 and accurate search. A term segment contains important metadata. This includes the frequency of the term’s occurrence and 
-a reference to a linked list. This list contains the documents in which the term appears.
+a reference to the root of a posting tree, which contains the documents in which the term appears.
 
 ```
          ╔TermNode═══════════╗
@@ -752,7 +768,7 @@ a reference to a linked list. This list contains the documents in which the term
   8 Byte ║ SiblingAddr       ║ address of the first sibling node or 0 if no sibling node exists
   8 Byte ║ ChildAddr         ║ address of the first child node or 0 if not present
   4 Byte ║ Fequency          ║ the number of times the term is used 
-  8 Byte ║ PostingAddr       ║ adress of the first posting node of a binary tree or 0 if there is no element exists
+  8 Byte ║ PostingAddr       ║ address of the root of the posting tree or 0 if no document holds the term
          ╚═══════════════════╝
 ```
 
@@ -937,15 +953,18 @@ values. Each node has a pointer to a posting tree where the document ids of the 
  16 Byte ║ Value             ║ the numeric value of the node
   8 Byte ║ LeftAddr          ║ address of the left child node or 0 if no left child node exists
   8 Byte ║ RightdAddr        ║ address of the right child node or 0 if not right child node exists
-  4 Byte ║ Fequency          ║ the number of times the numeric value is used
-  8 Byte ║ NumPostingNode    ║ Address of the first posting node of a binary tree or 0 if no element exists
+  4 Byte ║ Frequency         ║ the number of documents that hold the value
+  8 Byte ║ PostingAddr       ║ address of the root of the posting tree or 0 if no document holds the value
          ╚═══════════════════╝
 ```
 
+The height used to balance the value tree is not part of the record; a value node read back from the file starts with
+the height 1.
+
 The posting node segment is designed as a self-balancing binary tree (AVL tree), like the posting tree of a term, and 
-contains the ids of the documents that carry the value; a number occurs once in a field, so the node carries no 
-positions. For each document, the posting node segment refers to the position information that indicates where the 
-term is located in the document. The posting segment is stored in the variable memory area of the inverted index.
+contains the ids of the documents that carry the value. A field holds a single number, so a numeric index stores no 
+positions at all - neither the value node nor its posting nodes record where in a document the value occurs, and there 
+are no position segments in a `wrn` file. The posting segment is stored in the variable memory area of the inverted index.
 
 ```
          ╔NumericPostingNode═╗
@@ -1074,10 +1093,12 @@ search and improves user-friendliness.
 Phrase search allows users to retrieve content from documents that contain a specific order 
 and combination of words defined by the user. With phrase search, only records that contain 
 the expression in exactly the searched order are returned. For this, the position information 
-of the reverse index is used.
+of the reverse index is used. A distance loosens the phrase: each word may then stand up to that 
+many positions further behind the previous one than in the query.
 
 ```wql
 Description = 'lorem ipsum'
+Description = 'lorem ipsum' :1
 ```
 
 **Proximity search**
@@ -1085,7 +1106,9 @@ Description = 'lorem ipsum'
 A proximity search looks for documents where two or more separately matching terms occur within a 
 certain distance of each other. The distance is determined by the number of intervening words. Proximity 
 search goes beyond simple word matching by adding the constraint of proximity. By limiting proximity, 
-search results can be avoided where the words are scattered and do not cohere. The basic linguistic 
+search results can be avoided where the words are scattered and do not cohere. Each word has to 
+occur within the distance of the previous one; every occurrence of a word is considered, so a 
+document matches as soon as one arrangement of its words fits. The basic linguistic 
 assumption of proximity search is that the proximity of words in a document implies a relationship 
 between the words.
 
@@ -1109,10 +1132,14 @@ Description ~ 'ips*'
 ```
 
 **Fuzzy search**
-Fuzzy search is used to find matches in texts that are not exact, but only approximate.
+Fuzzy search is used to find matches in texts that are not exact, but only approximate. The number 
+is the minimum similarity in percent: from 1 to 99 every indexed word at least that similar to a 
+search word counts as a match, 0 and 100 match exactly. A value above 100 is rejected as a syntax 
+error. The similarity applies to every word of the query, also when it is combined with a distance.
 
 ```wql
 Description ~ 'house' ~80
+Description ~ 'lorem ipsum' ~80 :2
 ```
 
 **Word search**

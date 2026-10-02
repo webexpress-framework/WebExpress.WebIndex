@@ -162,7 +162,7 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// Opens the specified index file.
         /// </summary>
         /// <param name="indexFile">The full path to the index file.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool CreateIndexFile(string indexFile)
         {
             _selectedObjectType = new ObjectType() { Name = indexFile };
@@ -187,7 +187,7 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// Opens the specified index file.
         /// </summary>
         /// <param name="indexFile">The full path to the index file.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool OpenIndexFile(string? indexFile)
         {
             if (indexFile == null)
@@ -221,7 +221,7 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// Opens the specified index field.
         /// </summary>
         /// <param name="indexField">The the index field.</param>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool OpenIndexField(Field? indexField)
         {
             SelectedField = indexField;
@@ -232,7 +232,7 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// <summary>
         /// Close the current index file.
         /// </summary>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool CloseIndexFile()
         {
             var runtimeClass = _selectedObjectType?.BuildRuntimeClass();
@@ -248,7 +248,7 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// <summary>
         /// Drop the current index file.
         /// </summary>
-        /// <returns>True if successful, otherwise fasle.</returns>
+        /// <returns>True if successful, otherwise false.</returns>
         public bool DropIndexFile()
         {
             var runtimeClass = _selectedObjectType?.BuildRuntimeClass();

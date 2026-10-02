@@ -16,14 +16,34 @@
         Bool,
 
         /// <summary>
-        /// Field type for integer values.
+        /// Field type for 16-bit integer values.
+        /// </summary>
+        Short,
+
+        /// <summary>
+        /// Field type for 32-bit integer values.
         /// </summary>
         Int,
+
+        /// <summary>
+        /// Field type for 64-bit integer values.
+        /// </summary>
+        Long,
+
+        /// <summary>
+        /// Field type for single precision floating point numbers.
+        /// </summary>
+        Float,
 
         /// <summary>
         /// Field type for double precision floating point numbers.
         /// </summary>
         Double,
+
+        /// <summary>
+        /// Field type for decimal numbers, which keep their exact digits.
+        /// </summary>
+        Decimal,
 
         /// <summary>
         /// Field type for date time values.
@@ -57,8 +77,12 @@
             {
                 FieldType.Text => typeof(string),
                 FieldType.Bool => typeof(bool),
+                FieldType.Short => typeof(short),
                 FieldType.Int => typeof(int),
+                FieldType.Long => typeof(long),
+                FieldType.Float => typeof(float),
                 FieldType.Double => typeof(double),
+                FieldType.Decimal => typeof(decimal),
                 FieldType.DateTime => typeof(DateTime),
                 FieldType.Guid => typeof(Guid),
                 _ => typeof(object)
@@ -76,8 +100,12 @@
             {
                 FieldType.Text => "Text",
                 FieldType.Bool => "Boolean",
+                FieldType.Short => "Short",
                 FieldType.Int => "Integer",
+                FieldType.Long => "Long",
+                FieldType.Float => "Float",
                 FieldType.Double => "Double",
+                FieldType.Decimal => "Decimal",
                 FieldType.DateTime => "DateTime",
                 FieldType.Guid => "Guid",
                 _ => "Object"
@@ -92,7 +120,10 @@
         /// schema file (<c>String</c>, <c>Int32</c>, ...) and the names this tool shows and
         /// writes into an export (<c>Text</c>, <c>Integer</c>, ...). A name of either kind
         /// has to come back as the same field type, or a schema read from disk would turn
-        /// its numbers into untyped objects.
+        /// its numbers into untyped objects. Every numeric name maps to its own width: folding
+        /// <c>Int64</c> into <c>Int32</c> or <c>Decimal</c> into <c>Double</c> would cut values
+        /// on import and export, and the narrowed runtime type would no longer match the stored
+        /// schema, so opening the index would rebuild it with the narrowed type.
         /// </remarks>
         /// <param name="str">The string to convert.</param>
         /// <returns>The FieldType value that corresponds to the given string.</returns>
@@ -102,8 +133,12 @@
             {
                 "string" or "text" => FieldType.Text,
                 "boolean" or "bool" => FieldType.Bool,
-                "integer" or "int" or "int32" or "int64" or "int16" => FieldType.Int,
-                "double" or "single" or "decimal" => FieldType.Double,
+                "short" or "int16" => FieldType.Short,
+                "integer" or "int" or "int32" => FieldType.Int,
+                "long" or "int64" => FieldType.Long,
+                "float" or "single" => FieldType.Float,
+                "double" => FieldType.Double,
+                "decimal" => FieldType.Decimal,
                 "datetime" => FieldType.DateTime,
                 "guid" => FieldType.Guid,
                 _ => FieldType.Object

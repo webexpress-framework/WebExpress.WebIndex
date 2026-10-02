@@ -70,7 +70,17 @@ namespace WebExpress.WebIndex
             IndexType = indexType;
             Culture = culture;
 
-            ReBuild(ushort.MaxValue);
+            // the files opened so far are released when a later one fails to open, since a
+            // failed constructor leaves no instance the caller could dispose
+            try
+            {
+                ReBuild(ushort.MaxValue);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         /// <summary>
@@ -139,12 +149,13 @@ namespace WebExpress.WebIndex
                 {
                     case IndexType.Memory:
                         {
+                            Schema = new IndexMemorySchema<TIndexItem>(Context);
                             DocumentStore = new IndexMemoryDocumentStore<TIndexItem>(Context, capacity);
                             break;
                         }
                     default:
                         {
-                            var indexSchema = new IndexStorageSchema<TIndexItem>(Context);
+                            Schema = new IndexStorageSchema<TIndexItem>(Context);
                             DocumentStore = new IndexStorageDocumentStore<TIndexItem>(Context, capacity);
                             break;
                         }
@@ -203,14 +214,22 @@ namespace WebExpress.WebIndex
                     }
                 default:
                     {
-                        if (IsNumericType(property.PropertyInfo))
+                        IndexStorageReverse<TIndexItem> reverseIndex = IsNumericType(property.PropertyInfo)
+                            ? new IndexStorageReverseNumeric<TIndexItem>(Context, property, Culture)
+                            : new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture);
+
+                        // a file of an outdated format was discarded; the document store still
+                        // holds every item, so the field index is restored from it right away
+                        // instead of answering queries from an empty index
+                        if (reverseIndex.RequiresRebuild)
                         {
-                            _dict.Add(property.PropertyInfo, new IndexStorageReverseNumeric<TIndexItem>(Context, property, Culture));
+                            foreach (var item in DocumentStore?.All ?? [])
+                            {
+                                reverseIndex.Add(item);
+                            }
                         }
-                        else
-                        {
-                            _dict.Add(property.PropertyInfo, new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture));
-                        }
+
+                        _dict.Add(property.PropertyInfo, reverseIndex);
                         break;
                     }
             }
@@ -515,14 +534,11 @@ namespace WebExpress.WebIndex
         /// </summary>
         public virtual void Dispose()
         {
-            DocumentStore.Dispose();
+            DocumentStore?.Dispose();
 
-            foreach (var field in Fields)
+            foreach (var reverseIndex in _dict.Values)
             {
-                if (GetReverseIndex(field) is IIndexReverse<TIndexItem> reverseIndex)
-                {
-                    reverseIndex.Dispose();
-                }
+                reverseIndex.Dispose();
             }
 
             GC.SuppressFinalize(this);

@@ -838,7 +838,8 @@ namespace WebExpress.WebIndex.Wql
             // fuzzy can be written as "~" <number> or as a single token "~<number>"
             if (PeekToken(tokenQueue, FuzzyRegex()))
             {
-                options.Similarity = (uint)ParseFuzzyValue(tokenQueue);
+                var token = ReadToken(tokenQueue, FuzzyRegex());
+                options.Similarity = ParseSimilarity(token, token.Value[1..]);
             }
             else if (PeekToken(tokenQueue, "~"))
             {
@@ -846,7 +847,8 @@ namespace WebExpress.WebIndex.Wql
 
                 if (PeekToken(tokenQueue, NumberRegex()))
                 {
-                    options.Similarity = (uint)ParseNumberValue(tokenQueue);
+                    var number = ReadToken(tokenQueue, NumberRegex());
+                    options.Similarity = ParseSimilarity(number, number.Value);
                 }
                 else
                 {
@@ -1319,14 +1321,23 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
-        /// Parses a fuzzy similarity token "~<number>".
+        /// Parses the value of a fuzzy similarity option. The similarity is a percentage: 1 to 99
+        /// searches fuzzily, 0 and 100 match exactly. A value outside of that range has no
+        /// meaning, and interpreting it - as an exact search, say - would hand the caller results
+        /// for a query other than the one written, so it is refused.
         /// </summary>
-        /// <param name="tokenQueue">The token queue.</param>
-        /// <returns>The similarity value.</returns>
-        private static int ParseFuzzyValue(Queue<WqlToken> tokenQueue)
+        /// <param name="token">The token that carries the value, reported on failure.</param>
+        /// <param name="digits">The digits of the value.</param>
+        /// <returns>The similarity in percent.</returns>
+        /// <exception cref="WqlParseException">The value lies outside of 0 to 100.</exception>
+        private static uint ParseSimilarity(WqlToken token, string digits)
         {
-            var token = ReadToken(tokenQueue, FuzzyRegex());
-            return int.Parse(token?.Value[1..]);
+            if (!uint.TryParse(digits, out var similarity) || similarity > 100)
+            {
+                throw new WqlParseException("webexpress.webindex:wql.invalid_similarity", token);
+            }
+
+            return similarity;
         }
 
         /// <summary>

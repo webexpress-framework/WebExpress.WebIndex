@@ -34,7 +34,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // act
             var res = wql?.Apply(document);
 
-            // valdation 
+            // validation 
             Assert.NotNull(res);
             foreach (var item in res)
             {
@@ -61,7 +61,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // act
             var res = wql?.Apply(document);
 
-            // valdation
+            // validation
             Assert.NotNull(res);
             foreach (var item in res)
             {

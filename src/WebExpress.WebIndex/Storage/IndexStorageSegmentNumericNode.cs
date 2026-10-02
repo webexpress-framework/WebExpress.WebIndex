@@ -8,9 +8,17 @@ using WebExpress.WebIndex.WebAttribute;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Represents a numeric value stored in a binary search tree. Each node also references a posting tree
-    /// which contains frequency and positional information per document.
+    /// Represents a distinct numeric value of a field as a node of a binary search tree ordered by
+    /// value. The node counts the documents that hold the value and references the root of a posting
+    /// tree of their ids (<see cref="IndexStorageSegmentNumericPostingNode"/>).
     /// </summary>
+    /// <remarks>
+    /// Numeric postings carry no positions: a field holds a single number, so neither the value node
+    /// nor its postings record where in a document it occurs. The record on disk is the value
+    /// (16 bytes), the addresses of the left and the right child (8 bytes each), the frequency
+    /// (4 bytes) and the address of the posting root (8 bytes). The height used to balance the value
+    /// tree is not part of the record; a node read back from disk starts with the height 1.
+    /// </remarks>
     /// <param name="context">The reference to the context of the index.</param>
     /// <param name="addr">The address of the segment.</param>
     [SegmentCached]
@@ -39,12 +47,12 @@ namespace WebExpress.WebIndex.Storage
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of times the value is used (postings).
+        /// Gets or sets the number of documents that hold the value, which is the number of postings.
         /// </summary>
         public uint Frequency { get; set; }
 
         /// <summary>
-        /// Gets the address of the first posting element of a sorted list or 0 if there is no element.
+        /// Gets the address of the root of the posting tree or 0 if no document holds the value.
         /// </summary>
         public ulong PostingAddr { get; private set; }
 

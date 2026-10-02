@@ -107,98 +107,189 @@ namespace WebExpress.WebIndex.Memory
         }
 
         /// <summary>
-        /// Return all items for a given input.
+        /// Retrieves documents for a given input and retrieval options.
         /// </summary>
-        /// <param name="input">The input.</param>
-        /// <param name="options">The retrieve options.</param>
-        /// <returns>An enumeration of the data ids.</returns>
+        /// <remarks>
+        /// Without a distance and outside of a phrase search every term has to occur somewhere in a
+        /// document. A phrase search requires the terms in query order, each within the distance of
+        /// the place the previous one leads to expect it; a proximity search - a distance without a
+        /// phrase - requires each term within the distance of the previous one. A similarity applies
+        /// to every term in all three, so a fuzzy query does not turn exact once a distance is added.
+        /// The result is cut to the maximum number only when it is complete: cutting earlier would
+        /// drop documents that a later term would have confirmed.
+        /// </remarks>
+        /// <param name="input">The input text.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>A distinct set of matching document ids.</returns>
         public override IEnumerable<Guid> Retrieve(object input, IndexRetrieveOptions options)
         {
-            var tokens = Context.TokenAnalyzer.Analyze(input?.ToString(), Culture, true);
-            var distinct = new HashSet<Guid>((int)Math.Min(options.MaxResults, int.MaxValue / 2));
-            var count = 0u;
+            var tokens = Context.TokenAnalyzer.Analyze(input?.ToString(), Culture, true)
+                .Where(x => !string.IsNullOrEmpty(x.Value?.ToString()))
+                .ToList();
 
-            if (!tokens.Any())
+            if (tokens.Count == 0)
             {
-                return distinct;
+                return [];
             }
 
-            switch (options.Method)
+            var documents = options.Method == IndexRetrieveMethod.Phrase || options.Distance > 0
+                ? RetrievePositional(tokens, options)
+                : RetrieveAll(tokens, options);
+
+            return documents.Take((int)Math.Min(options.MaxResults, int.MaxValue));
+        }
+
+        /// <summary>
+        /// Returns the documents that contain every token, wherever it occurs.
+        /// </summary>
+        /// <param name="tokens">The tokens of the query.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>The matching document ids.</returns>
+        private HashSet<Guid> RetrieveAll(IReadOnlyList<IndexTermToken> tokens, IndexRetrieveOptions options)
+        {
+            HashSet<Guid> documents = null;
+
+            foreach (var token in tokens)
             {
-                case IndexRetrieveMethod.Phrase:
-                    {
-                        var firstTerm = tokens.Take(1).FirstOrDefault();
-                        var nextTerms = tokens.Skip(1);
+                var matches = new HashSet<Guid>(RetrieveTerm(token.Value.ToString(), options));
 
-                        foreach (var posting in Root.GetPostings(firstTerm.Value.ToString()))
-                        {
-                            foreach (var position in posting.Positions)
-                            {
-                                if (CheckForPhraseMatch(posting.DocumentId, position, firstTerm.Position, options.Distance, nextTerms))
-                                {
-                                    distinct.Add(posting.DocumentId);
-                                }
-                            }
-                        }
+                if (documents is null)
+                {
+                    documents = matches;
+                }
+                else
+                {
+                    documents.IntersectWith(matches);
+                }
 
-                        break;
-                    }
-                default:
-                    {
-                        if (options.Distance == 0)
-                        {
-                            foreach (var document in tokens.Take(1).SelectMany(x => RetrieveTerm(x.Value.ToString(), options)))
-                            {
-                                if (distinct.Add(document) && count++ >= options.MaxResults)
-                                {
-                                    break;
-                                }
-                            }
-
-                            foreach (var normalized in tokens.Skip(1))
-                            {
-                                var temp = new HashSet<Guid>(distinct.Count);
-
-                                foreach (var document in RetrieveTerm(normalized.Value.ToString(), options))
-                                {
-                                    if (distinct.Contains(document) && temp.Add(document))
-                                    {
-                                    }
-                                }
-
-                                distinct = temp;
-                            }
-                        }
-                        else
-                        {
-                            // proximity search: all terms must occur within the given
-                            // distance of each other (mirrors the storage variant)
-                            var firstTerm = tokens.Take(1).FirstOrDefault();
-                            var nextTerms = tokens.Skip(1);
-
-                            foreach (var posting in Root.GetPostings(firstTerm.Value.ToString()))
-                            {
-                                foreach (var position in posting.Positions)
-                                {
-                                    if (CheckForProximityMatch(posting.DocumentId, position, options.Distance, nextTerms))
-                                    {
-                                        distinct.Add(posting.DocumentId);
-                                    }
-                                }
-                            }
-                        }
-
-                        break;
-                    }
+                if (documents.Count == 0)
+                {
+                    break;
+                }
             }
 
-            return distinct;
+            return documents ?? [];
+        }
+
+        /// <summary>
+        /// Returns the documents in which the tokens occur in the arrangement a phrase or a
+        /// proximity search asks for. Every occurrence of the first token is a possible start and
+        /// every occurrence of a following token within reach a possible continuation; all of them
+        /// are tried, because the first one that fits the window may lead nowhere while a later
+        /// one completes the match.
+        /// </summary>
+        /// <param name="tokens">The tokens of the query.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>The matching document ids.</returns>
+        private HashSet<Guid> RetrievePositional(IReadOnlyList<IndexTermToken> tokens, IndexRetrieveOptions options)
+        {
+            var phrase = options.Method == IndexRetrieveMethod.Phrase;
+            var terms = tokens.Select(x => ResolveTerms(x.Value.ToString(), options)).ToList();
+            var documents = new HashSet<Guid>();
+
+            foreach (var term in terms[0])
+            {
+                foreach (var posting in Root.GetPostings(term))
+                {
+                    if (posting is null || documents.Contains(posting.DocumentId))
+                    {
+                        continue;
+                    }
+
+                    foreach (var position in Positions(posting))
+                    {
+                        if (IsArranged(posting.DocumentId, position, 1, phrase, options.Distance, tokens, terms))
+                        {
+                            documents.Add(posting.DocumentId);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return documents;
+        }
+
+        /// <summary>
+        /// Determines whether the tokens from the given index on follow the occurrence at the given
+        /// position in the arrangement of a phrase or a proximity search.
+        /// </summary>
+        /// <param name="document">The document id.</param>
+        /// <param name="position">The position at which the previous token occurs.</param>
+        /// <param name="index">The index of the token to place next.</param>
+        /// <param name="phrase">True for a phrase search, false for a proximity search.</param>
+        /// <param name="distance">The allowed distance.</param>
+        /// <param name="tokens">The tokens of the query.</param>
+        /// <param name="terms">The index terms each token stands for.</param>
+        /// <returns>True if the remaining tokens can be placed, otherwise false.</returns>
+        private bool IsArranged(Guid document, uint position, int index, bool phrase, uint distance, IReadOnlyList<IndexTermToken> tokens, IReadOnlyList<IReadOnlyList<string>> terms)
+        {
+            if (index >= tokens.Count)
+            {
+                return true;
+            }
+
+            uint lower;
+            uint upper;
+
+            if (phrase)
+            {
+                // the next token is expected as far behind the previous one as in the query
+                var gap = tokens[index].Position >= tokens[index - 1].Position
+                    ? tokens[index].Position - tokens[index - 1].Position
+                    : 0u;
+
+                lower = Clamp(position + (ulong)gap);
+                upper = Clamp(position + (ulong)gap + distance);
+            }
+            else
+            {
+                lower = position >= distance ? position - distance : 0u;
+                upper = Clamp(position + (ulong)distance);
+            }
+
+            foreach (var term in terms[index])
+            {
+                foreach (var posting in Root.GetPostings(term).Where(x => x?.DocumentId == document))
+                {
+                    foreach (var next in Positions(posting).Where(x => x >= lower && x <= upper))
+                    {
+                        if (IsArranged(document, next, index + 1, phrase, distance, tokens, terms))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the index terms a query term stands for: the term itself - wildcards are resolved
+        /// by the term tree - or, with a similarity, every term of the vocabulary similar enough.
+        /// </summary>
+        /// <param name="term">The (normalized) query term.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>The index terms.</returns>
+        private IReadOnlyList<string> ResolveTerms(string term, IndexRetrieveOptions options)
+        {
+            if (options.Similarity is > 0 and < 100)
+            {
+                var threshold = options.Similarity / 100.0;
+
+                return [.. Root.Terms
+                    .Select(x => x.Item1)
+                    .Where(x => IndexFuzzy.CalculateLevenshteinSimilarity(term, x) >= threshold)];
+            }
+
+            return [term];
         }
 
         /// <summary>
         /// Returns the document ids for a single term. When a similarity threshold
-        /// is set, the term vocabulary is scanned and every term whose Levenshtein
-        /// similarity reaches the threshold contributes its documents (fuzzy search).
+        /// is set, every term of the vocabulary whose Levenshtein similarity reaches
+        /// the threshold contributes its documents (fuzzy search).
         /// </summary>
         /// <param name="term">The (normalized) search term.</param>
         /// <param name="options">The retrieval options.</param>
@@ -207,98 +298,30 @@ namespace WebExpress.WebIndex.Memory
         {
             if (options.Similarity is > 0 and < 100)
             {
-                var threshold = options.Similarity / 100.0;
-
-                foreach (var (candidate, node) in Root.Terms)
-                {
-                    if (IndexFuzzy.CalculateLevenshteinSimilarity(term, candidate) >= threshold)
-                    {
-                        foreach (var posting in node.Postings ?? [])
-                        {
-                            yield return posting.DocumentId;
-                        }
-                    }
-                }
-
-                yield break;
+                return ResolveTerms(term, options).SelectMany(x => Root.GetPostings(x)).Select(x => x.DocumentId);
             }
 
-            foreach (var id in Root.Retrieve(term, options))
-            {
-                yield return id;
-            }
+            return Root.Retrieve(term, options);
         }
 
         /// <summary>
-        /// Checks whether the subsequent terms match in phrase order, allowing the
-        /// given distance tolerance between the expected and actual positions.
+        /// Returns the positions of a posting.
         /// </summary>
-        /// <param name="document">The document id to check.</param>
-        /// <param name="position">The position of the term within the document.</param>
-        /// <param name="offset">The position within the search term.</param>
-        /// <param name="distance">The allowed distance tolerance.</param>
-        /// <param name="terms">Further following search terms.</param>
-        /// <returns>True if there is a match, otherwise false.</returns>
-        private bool CheckForPhraseMatch(Guid document, uint position, uint offset, uint distance, IEnumerable<IndexTermToken> terms)
+        /// <param name="posting">The posting.</param>
+        /// <returns>The positions at which the term occurs in the document.</returns>
+        private static IEnumerable<uint> Positions(IndexMemorySegmentPosting posting)
         {
-            if (!terms.Any())
-            {
-                return true;
-            }
-
-            var firstTerm = terms.Take(1).FirstOrDefault();
-            var nextTerms = terms.Skip(1);
-
-            // compute uint-safe bounds (mirrors the storage variant)
-            var baseOffset = firstTerm.Position >= offset ? firstTerm.Position - offset : 0u;
-            var minU = position + (ulong)baseOffset;
-            var maxU = minU + distance;
-            var min = minU > uint.MaxValue ? uint.MaxValue : (uint)minU;
-            var max = maxU > uint.MaxValue ? uint.MaxValue : (uint)maxU;
-
-            foreach (var posting in Root.GetPostings(firstTerm.Value.ToString()).Where(x => x?.DocumentId == document))
-            {
-                foreach (var pos in posting.Positions.Where(x => x >= min && x <= max))
-                {
-                    return CheckForPhraseMatch(posting.DocumentId, pos, firstTerm.Position, distance, nextTerms);
-                }
-            }
-
-            return false;
+            return posting.Positions ?? [];
         }
 
         /// <summary>
-        /// Checks whether there is a proximity match within a given distance window.
+        /// Limits a position to the range of a position.
         /// </summary>
-        /// <param name="document">The document id to check.</param>
-        /// <param name="position">The absolute position of the previously matched term.</param>
-        /// <param name="distance">The allowed distance tolerance.</param>
-        /// <param name="terms">The remaining terms to check.</param>
-        /// <returns>True if a proximity match is found, otherwise false.</returns>
-        private bool CheckForProximityMatch(Guid document, uint position, uint distance, IEnumerable<IndexTermToken> terms)
+        /// <param name="value">The computed position.</param>
+        /// <returns>The position, capped at the largest one.</returns>
+        private static uint Clamp(ulong value)
         {
-            if (!terms.Any())
-            {
-                return true;
-            }
-
-            var firstTerm = terms.Take(1).FirstOrDefault();
-            var nextTerms = terms.Skip(1);
-
-            // compute uint-safe bounds around the current position
-            var lower = position >= distance ? position - distance : 0u;
-            var upperU = position + (ulong)distance;
-            var upper = upperU > uint.MaxValue ? uint.MaxValue : (uint)upperU;
-
-            foreach (var posting in Root.GetPostings(firstTerm.Value.ToString()).Where(x => x?.DocumentId == document))
-            {
-                foreach (var pos in posting.Positions.Where(x => x >= lower && x <= upper))
-                {
-                    return CheckForProximityMatch(posting.DocumentId, pos, distance, nextTerms);
-                }
-            }
-
-            return false;
+            return value > uint.MaxValue ? uint.MaxValue : (uint)value;
         }
     }
 }

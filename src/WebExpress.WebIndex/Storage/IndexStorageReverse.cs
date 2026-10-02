@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using WebExpress.WebIndex.Term;
 
 namespace WebExpress.WebIndex.Storage
@@ -59,9 +60,41 @@ namespace WebExpress.WebIndex.Storage
         public CultureInfo Culture { get; private set; } = culture;
 
         /// <summary>
+        /// Determines whether the index file was written in an outdated format and has been
+        /// discarded. The index is empty then and has to be filled again from the document
+        /// store, which holds every item - a reverse index is derived data and can always be
+        /// rebuilt, so a format change needs no conversion of the old file.
+        /// </summary>
+        public bool RequiresRebuild { get; private set; }
+
+        /// <summary>
         /// Gets all document ids contained in the reverse index.
         /// </summary>
         public abstract IEnumerable<Guid> All { get; }
+
+        /// <summary>
+        /// Deletes the index file when it carries the expected identifier but another format
+        /// version. Reading it with the current layout would misplace every segment once the
+        /// size of a node changed, so it is never opened. A file with a foreign identifier is
+        /// left alone; opening it reports the mismatch.
+        /// </summary>
+        /// <param name="identifier">The identifier of the index file.</param>
+        /// <param name="version">The current format version.</param>
+        protected void DiscardOutdatedFile(string identifier, byte version)
+        {
+            if (!File.Exists(FileName))
+            {
+                return;
+            }
+
+            var stored = IndexStorageSegmentHeader.ReadVersion(FileName, identifier);
+
+            if (stored is not null && stored != version)
+            {
+                File.Delete(FileName);
+                RequiresRebuild = true;
+            }
+        }
 
         /// <summary>
         /// Adds a single item to the index.

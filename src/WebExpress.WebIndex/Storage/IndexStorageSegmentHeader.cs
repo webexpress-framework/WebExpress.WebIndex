@@ -141,6 +141,34 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
+        /// Reads the format version of an existing index file without opening it as an index.
+        /// The header is the first segment of every index file, so its bytes start the file.
+        /// </summary>
+        /// <param name="fileName">The path of the index file.</param>
+        /// <param name="identifier">The identifier the file is expected to carry.</param>
+        /// <returns>
+        /// The stored version, or null when the file is too short or carries another identifier -
+        /// such a file is no index of the expected kind, and only opening it reports why.
+        /// </returns>
+        public static byte? ReadVersion(string fileName, string identifier)
+        {
+            using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var buffer = new byte[SegmentSize];
+
+            if (stream.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false) < buffer.Length)
+            {
+                return null;
+            }
+
+            if (!string.Equals(Encoding.ASCII.GetString(buffer, 0, 3), identifier, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return buffer[3];
+        }
+
+        /// <summary>
         /// Validates that identifier is exactly 3 ASCII characters.
         /// </summary>
         /// <param name="identifier">The identifier to validate.</param>

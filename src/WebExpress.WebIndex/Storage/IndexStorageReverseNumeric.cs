@@ -17,8 +17,9 @@ namespace WebExpress.WebIndex.Storage
     {
         // file format constants
         private const string _extension = "wrn";
-        // increment this when the on-disk format changes
-        private const int _version = 1;
+        // increment this when the on-disk format changes; version 2: posting nodes carry the
+        // height of their AVL subtree (one byte more per node)
+        private const byte _version = 2;
 
         /// <summary>
         /// Gets the on-disk numeric tree.
@@ -53,27 +54,39 @@ namespace WebExpress.WebIndex.Storage
             var safeField = SanitizeFileName(Field?.Name ?? "field");
             FileName = Path.Combine(Context.IndexDirectory, $"{typeof(TIndexItem).Name}.{safeField}.{_extension}");
 
+            DiscardOutdatedFile(_extension, _version);
+
             var exists = File.Exists(FileName);
 
             // reuse a single storage context for all segments
             IndexFile = new IndexStorageFile(FileName);
             var storageContext = new IndexStorageContext(this);
 
-            Header = new IndexStorageSegmentHeader(storageContext)
+            // the file is opened exclusively; a header that does not match would otherwise keep
+            // it locked until the finalizer runs, as the failed constructor hands out no instance
+            try
             {
-                Identifier = _extension,
-                Version = _version
-            };
-            Allocator = new IndexStorageSegmentAllocatorReverseIndex(storageContext);
-            Statistic = new IndexStorageSegmentStatistic(storageContext);
-            Numeric = new IndexStorageSegmentNumeric(storageContext);
+                Header = new IndexStorageSegmentHeader(storageContext)
+                {
+                    Identifier = _extension,
+                    Version = _version
+                };
+                Allocator = new IndexStorageSegmentAllocatorReverseIndex(storageContext);
+                Statistic = new IndexStorageSegmentStatistic(storageContext);
+                Numeric = new IndexStorageSegmentNumeric(storageContext);
 
-            Header.Initialization(exists);
-            Statistic.Initialization(exists);
-            Numeric.Initialization(exists);
-            Allocator.Initialization(exists);
+                Header.Initialization(exists);
+                Statistic.Initialization(exists);
+                Numeric.Initialization(exists);
+                Allocator.Initialization(exists);
 
-            IndexFile.Flush();
+                IndexFile.Flush();
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         /// <summary>

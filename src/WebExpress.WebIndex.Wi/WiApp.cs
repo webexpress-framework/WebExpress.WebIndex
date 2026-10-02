@@ -634,12 +634,23 @@ internal class WiApp
     }
 
     /// <summary>
-    /// Execute the import command: creates an index from an export file and opens it.
+    /// Execute the import command: creates an index from an export file and opens it. An
+    /// index of the same object type is never merged with the import: it is refused, or with
+    /// the <c>--replace</c> flag and a confirmation deleted first.
     /// </summary>
     /// <param name="command">The command to be executed.</param>
     private void OnImportCommand(Command command)
     {
-        var file = ResolveFile(command.Parameter1?.ToString(), null);
+        var parameter = command.Parameter1?.ToString()?.Trim();
+        var replace = false;
+
+        if (parameter is not null && parameter.EndsWith(ReplaceFlag, StringComparison.OrdinalIgnoreCase))
+        {
+            replace = true;
+            parameter = parameter[..^ReplaceFlag.Length].TrimEnd();
+        }
+
+        var file = ResolveFile(parameter, null);
 
         if (file is null)
         {
@@ -657,16 +668,30 @@ internal class WiApp
 
         try
         {
-            var count = ViewModel.Import(file);
+            if (replace && !Confirm("An existing index of the exported object type is deleted before the import. The action cannot be rolled back. Continue?"))
+            {
+                return;
+            }
+
+            var count = ViewModel.Import(file, replace);
 
             Console.WriteLine($"{count} item(s) imported into '{ViewModel.CurrentObjectType.Name}'.");
             State = ProgrammState.OpenIndexFile;
+        }
+        catch (InvalidOperationException ex)
+        {
+            PrintError($"{ex.Message} Use 'import {command.Parameter1} {ReplaceFlag}' to replace it.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or NotSupportedException)
         {
             PrintError($"The export file could not be imported. {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// The flag of the import command that allows an existing index to be replaced.
+    /// </summary>
+    private const string ReplaceFlag = "--replace";
 
     /// <summary>
     /// Execute the insert command: adds an item built from the typed field values.
