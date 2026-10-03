@@ -1,4 +1,6 @@
-﻿using WebExpress.WebIndex.Wi;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
+using WebExpress.WebIndex.Wi;
 using WebExpress.WebIndex.Wi.Model;
 
 namespace WebExpress.WebIndex.Test.Wi
@@ -102,7 +104,7 @@ namespace WebExpress.WebIndex.Test.Wi
             WiApp.ViewModel.Export(file);
 
             // act + validation
-            Assert.Throws<InvalidOperationException>(() => WiApp.ViewModel.Import(file));
+            Assert.Throws<IndexExistsException>(() => WiApp.ViewModel.Import(file));
             Assert.Equal(2u, WiApp.ViewModel.CurrentObjectType.Count);
         }
 
@@ -127,6 +129,33 @@ namespace WebExpress.WebIndex.Test.Wi
             // validation
             var item = WiApp.ViewModel.CurrentObjectType.All.Single();
             Assert.Equal(1L, item.GetType().GetProperty("Big").GetValue(item));
+        }
+
+        /// <summary>
+        /// An export whose values do not fit its own schema fails before anything is deleted, so
+        /// a replace that cannot complete leaves the existing index as it was.
+        /// </summary>
+        [Fact]
+        public void FailedImportKeepsExistingIndex()
+        {
+            // arrange
+            var file = Path.Combine(_directory, "numbers.json");
+
+            CreateIndex("WiNumbers", (1, 1m));
+            WiApp.ViewModel.Export(file);
+            DeleteIndex();
+
+            var dump = JsonNode.Parse(File.ReadAllText(file));
+            var item = dump["Items"].AsArray()[0].AsObject();
+            var big = item.Single(x => x.Key.Equals("Big", StringComparison.OrdinalIgnoreCase)).Key;
+            item[big] = "not a number";
+            File.WriteAllText(file, dump.ToJsonString());
+
+            CreateIndex("WiNumbers", (2, 2m), (3, 3m), (4, 4m));
+
+            // act + validation
+            Assert.ThrowsAny<JsonException>(() => WiApp.ViewModel.Import(file, replace: true));
+            Assert.Equal(3u, WiApp.ViewModel.CurrentObjectType.Count);
         }
 
         /// <summary>

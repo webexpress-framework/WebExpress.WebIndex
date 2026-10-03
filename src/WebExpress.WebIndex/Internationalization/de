@@ -11,6 +11,7 @@ wql.expected_terminated_string_token=Es wird ein String-Token mit einem abschlie
 wql.expected_similarity=Es wird eine Ähnlichkeitsbedingung erwartet.
 wql.invalid_similarity=Die Ähnlichkeit muss zwischen 0 und 100 Prozent liegen.
 wql.expected_distance=Es wird eine Distanzbedingung erwartet.
+wql.invalid_distance=Die Distanz überschreitet den größten zulässigen Wert.
 wql.function_unknown=Unbekannte Funktion.
 wql.expected_function=Es wird eine Funktion erwartet.
 wql.expected_skip_or_take=Es wird eine Skip- oder Take-Bedingung erwartet.

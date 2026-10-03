@@ -678,11 +678,11 @@ internal class WiApp
             Console.WriteLine($"{count} item(s) imported into '{ViewModel.CurrentObjectType.Name}'.");
             State = ProgrammState.OpenIndexFile;
         }
-        catch (InvalidOperationException ex)
+        catch (IndexExistsException ex)
         {
-            PrintError($"{ex.Message} Use 'import {command.Parameter1} {ReplaceFlag}' to replace it.");
+            PrintError($"{ex.Message} Use 'import {parameter} {ReplaceFlag}' to replace it.");
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or NotSupportedException or InvalidOperationException)
         {
             PrintError($"The export file could not be imported. {ex.Message}");
         }

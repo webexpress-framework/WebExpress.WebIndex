@@ -70,6 +70,76 @@ namespace WebExpress.WebIndex.Test.Storage
             // validation
             Assert.Equal(alpha.Id, Assert.Single(items).Id);
             Assert.Equal((byte)2, IndexStorageSegmentHeader.ReadVersion(ReverseFile(extension), extension));
+            Assert.False(File.Exists(RebuildMarker(extension)));
+        }
+
+        /// <summary>
+        /// A rebuild that was interrupted leaves a file of the current version that holds only
+        /// part of the items. Its marker survives the interruption, so the next start discards
+        /// the partial file and rebuilds it again instead of answering from it for good.
+        /// </summary>
+        [Theory]
+        [InlineData("wrt", "Text = 'alpha'")]
+        [InlineData("wrn", "Count = 5")]
+        public void InterruptedRebuildIsResumed(string extension, string wql)
+        {
+            // arrange
+            var alpha = new FormatDocument() { Id = Guid.NewGuid(), Text = "alpha", Count = 5 };
+
+            using (var manager = CreateManager())
+            {
+                manager.Insert(alpha);
+                manager.Insert(new FormatDocument() { Id = Guid.NewGuid(), Text = "beta", Count = 7 });
+
+                // the state an interruption leaves: a current file without the items
+                manager.GetIndexDocument<FormatDocument>().GetReverseIndex(Field(extension)).Clear();
+            }
+
+            File.WriteAllBytes(RebuildMarker(extension), []);
+
+            // act
+            List<FormatDocument> items;
+
+            using (var reopened = CreateManager())
+            {
+                items = [.. reopened.Retrieve<FormatDocument>(wql)];
+            }
+
+            // validation
+            Assert.Equal(alpha.Id, Assert.Single(items).Id);
+            Assert.False(File.Exists(RebuildMarker(extension)));
+        }
+
+        /// <summary>
+        /// A reverse index file that is missing while the document store holds items is restored
+        /// from the store rather than created empty.
+        /// </summary>
+        [Theory]
+        [InlineData("wrt", "Text = 'alpha'")]
+        [InlineData("wrn", "Count = 5")]
+        public void MissingReverseIndexIsRestored(string extension, string wql)
+        {
+            // arrange
+            var alpha = new FormatDocument() { Id = Guid.NewGuid(), Text = "alpha", Count = 5 };
+
+            using (var manager = CreateManager())
+            {
+                manager.Insert(alpha);
+                manager.Insert(new FormatDocument() { Id = Guid.NewGuid(), Text = "beta", Count = 7 });
+            }
+
+            File.Delete(ReverseFile(extension));
+
+            // act
+            List<FormatDocument> items;
+
+            using (var reopened = CreateManager())
+            {
+                items = [.. reopened.Retrieve<FormatDocument>(wql)];
+            }
+
+            // validation
+            Assert.Equal(alpha.Id, Assert.Single(items).Id);
         }
 
         /// <summary>
@@ -88,6 +158,28 @@ namespace WebExpress.WebIndex.Test.Storage
             var exception = Assert.ThrowsAny<Exception>(() => CreateManager());
             Assert.IsAssignableFrom<IOException>(exception is TargetInvocationException tie ? tie.InnerException : exception);
             Assert.True(File.Exists(file));
+        }
+
+        /// <summary>
+        /// A file of the index that fails to open is released again: it is opened exclusively,
+        /// and a lock left behind would make every later attempt to open it fail as well.
+        /// </summary>
+        [Theory]
+        [InlineData("FormatDocument.wds")]
+        [InlineData("FormatDocument.Text.wrt")]
+        public void FileThatFailsToOpenIsReleased(string name)
+        {
+            // arrange
+            Directory.CreateDirectory(_context.IndexDirectory);
+            var file = Path.Combine(_context.IndexDirectory, name);
+            File.WriteAllBytes(file, [(byte)'x', (byte)'y', (byte)'z', 1, 0, 0, 0, 0]);
+
+            // act
+            Assert.ThrowsAny<Exception>(() => CreateManager());
+
+            // validation
+            using var stream = new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Assert.True(stream.CanWrite);
         }
 
         /// <summary>
@@ -124,6 +216,28 @@ namespace WebExpress.WebIndex.Test.Storage
             var field = extension == "wrn" ? nameof(FormatDocument.Count) : nameof(FormatDocument.Text);
 
             return Path.Combine(_context.IndexDirectory, $"{nameof(FormatDocument)}.{field}.{extension}");
+        }
+
+        /// <summary>
+        /// Returns the path of the file that marks a rebuild of the reverse index in progress.
+        /// </summary>
+        /// <param name="extension">The extension: wrt for the text field, wrn for the numeric one.</param>
+        /// <returns>The file path.</returns>
+        private string RebuildMarker(string extension)
+        {
+            return $"{ReverseFile(extension)}.rebuild";
+        }
+
+        /// <summary>
+        /// Returns the field whose reverse index has the given extension.
+        /// </summary>
+        /// <param name="extension">The extension: wrt for the text field, wrn for the numeric one.</param>
+        /// <returns>The field.</returns>
+        private static IndexFieldData Field(string extension)
+        {
+            var name = extension == "wrn" ? nameof(FormatDocument.Count) : nameof(FormatDocument.Text);
+
+            return new IndexFieldData(typeof(FormatDocument).GetProperty(name));
         }
 
         /// <summary>

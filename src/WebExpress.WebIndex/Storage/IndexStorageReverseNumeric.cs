@@ -62,9 +62,7 @@ namespace WebExpress.WebIndex.Storage
             IndexFile = new IndexStorageFile(FileName);
             var storageContext = new IndexStorageContext(this);
 
-            // the file is opened exclusively; a header that does not match would otherwise keep
-            // it locked until the finalizer runs, as the failed constructor hands out no instance
-            try
+            IndexFile.Initialize(() =>
             {
                 Header = new IndexStorageSegmentHeader(storageContext)
                 {
@@ -79,14 +77,7 @@ namespace WebExpress.WebIndex.Storage
                 Statistic.Initialization(exists);
                 Numeric.Initialization(exists);
                 Allocator.Initialization(exists);
-
-                IndexFile.Flush();
-            }
-            catch
-            {
-                Dispose();
-                throw;
-            }
+            });
         }
 
         /// <summary>

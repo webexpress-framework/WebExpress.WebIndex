@@ -56,12 +56,14 @@ namespace WebExpress.WebIndex.Wql.Condition
                 .Distinct()
                 .ToList();
 
-            // get all ids for every value to be excluded
+            // get all ids for every value to be excluded; the matches are not capped, since
+            // every match left out would turn up in the complement
             var excludedGuids = new HashSet<Guid>();
             foreach (var val in excludeValues)
             {
                 var ids = reverseIndex.Retrieve(val, new IndexRetrieveOptions
                 {
+                    MaxResults = uint.MaxValue,
                     Method = IndexRetrieveMethod.Phrase,
                     Distance = 0
                 });

@@ -453,8 +453,13 @@ every address after the first changed segment would point into the middle of ano
 A reverse index holds derived data only - every value it contains is in the document store as well. When a
 reverse index file of another version is opened, it is therefore not converted but discarded, created anew
 and filled again from the document store, so an index written by an earlier release keeps working after an
-update without a manual reindex. A file that carries another identifier is not touched; opening it fails, as
-it is no index of the expected kind. The schema file `*.ws` is JSON and carries no version.
+update without a manual reindex. A reverse index file that is missing while the document store holds items is
+filled the same way. The rebuilt file carries the current version from its first byte on, so the version cannot
+tell a complete rebuild from an interrupted one; a marker file `*.rebuild` next to it exists for as long as the
+rebuild runs, and a marker found on the next start discards the partial file and rebuilds it again. All reverse
+indexes of a type that need a rebuild are filled from a single pass over the document store. A file that
+carries another identifier is not touched; opening it fails, as it is no index of the expected kind, and the
+file is released again rather than staying locked. The schema file `*.ws` is JSON and carries no version.
 
 Unused memory areas in the file are represented by the `Free` segment, which is located in the body area 
 variable and forms a linked list. The `Allocator` points to the first element of this list.

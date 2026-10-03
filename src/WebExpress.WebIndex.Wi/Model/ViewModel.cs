@@ -247,7 +247,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <param name="file">The path of the export file.</param>
         /// <param name="replace">True to delete an existing index of the same object type first; false to refuse the import then.</param>
         /// <returns>The number of imported items.</returns>
-        /// <exception cref="InvalidOperationException">The index exists and <paramref name="replace"/> is false.</exception>
+        /// <exception cref="IndexExistsException">The index exists and <paramref name="replace"/> is false.</exception>
         public int Import(string file, bool replace = false)
         {
             var dump = JsonSerializer.Deserialize<IndexDump>(File.ReadAllText(file), DumpOptions);
@@ -257,22 +257,47 @@ namespace WebExpress.WebIndex.Wi.Model
                 throw new FormatException("The export file names no object type.");
             }
 
-            if (IndexExists(dump.Name))
-            {
-                if (!replace)
-                {
-                    throw new InvalidOperationException($"The index '{dump.Name}' already exists in '{CurrentDirectory}'.");
-                }
+            var exists = IndexExists(dump.Name);
 
+            if (exists && !replace)
+            {
+                throw new IndexExistsException(dump.Name, CurrentDirectory);
+            }
+
+            var objectType = new ObjectType() { Name = dump.Name, Fields = [.. dump.Fields] };
+            var runtimeClass = objectType.BuildRuntimeClass();
+
+            // every item is converted before anything is deleted, so a dump whose values do not
+            // fit its own schema fails while the index it would replace is still intact
+            var items = CreateItems(runtimeClass, dump.Items);
+
+            if (exists)
+            {
                 DeleteIndexFiles(dump.Name);
             }
 
-            CreateIndexFile(new ObjectType() { Name = dump.Name, Fields = [.. dump.Fields] });
+            CreateIndexFile(objectType);
 
-            var runtimeClass = CurrentObjectType.BuildRuntimeClass();
+            foreach (var item in items)
+            {
+                IndexManager.Insert(runtimeClass, item);
+            }
+
+            return items.Count;
+        }
+
+        /// <summary>
+        /// Creates the items of an export file as instances of the runtime class.
+        /// </summary>
+        /// <param name="runtimeClass">The runtime class of the object type.</param>
+        /// <param name="dumpItems">The exported property values of every item.</param>
+        /// <returns>The created items.</returns>
+        private static List<object> CreateItems(Type runtimeClass, IEnumerable<Dictionary<string, JsonElement>> dumpItems)
+        {
             var properties = runtimeClass.GetProperties().ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+            var items = new List<object>();
 
-            foreach (var values in dump.Items)
+            foreach (var values in dumpItems)
             {
                 var item = Activator.CreateInstance(runtimeClass);
 
@@ -291,10 +316,10 @@ namespace WebExpress.WebIndex.Wi.Model
                     properties["Id"].SetValue(item, Guid.NewGuid());
                 }
 
-                IndexManager.Insert(runtimeClass, item);
+                items.Add(item);
             }
 
-            return dump.Items.Count;
+            return items;
         }
 
         /// <summary>
@@ -326,7 +351,9 @@ namespace WebExpress.WebIndex.Wi.Model
             var files = new[] { $"{name}.ws", $"{name}.wds" }
                 .Select(x => Path.Combine(CurrentDirectory, x))
                 .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrt"))
-                .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrn"));
+                .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrn"))
+                .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.rebuild"))
+                .Distinct();
 
             foreach (var path in files.Where(File.Exists))
             {

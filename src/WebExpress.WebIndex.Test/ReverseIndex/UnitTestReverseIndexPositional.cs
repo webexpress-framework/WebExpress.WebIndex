@@ -144,6 +144,45 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         }
 
         /// <summary>
+        /// A distance is a word count; a value beyond its range is refused as a syntax error
+        /// rather than surfacing as an overflow. The same holds for the count of take and skip.
+        /// </summary>
+        [Theory]
+        [InlineData("text ~ 'Helena' :3", false)]
+        [InlineData("text ~ 'Helena' :99999999999", true)]
+        [InlineData("text ~ 'Helena' : 99999999999", true)]
+        [InlineData("text ~ 'Helena' take 99999999999", true)]
+        public void DistanceBeyondRangeIsRefused(string wql, bool error)
+        {
+            // act
+            var statement = Fixture.ExecuteWql(wql);
+
+            // validation
+            Assert.Equal(error, statement.HasErrors);
+        }
+
+        /// <summary>
+        /// A negation subtracts the matches from all documents. The matches must not be cut to
+        /// the result limit first, or every match beyond it would turn up as a non-match.
+        /// </summary>
+        [Theory]
+        [InlineData("Text != 'lorem'")]
+        [InlineData("Text not in ('lorem')")]
+        public void NegationExcludesMatchesBeyondTheLimit(string wql)
+        {
+            // arrange
+            var limit = (int)new IndexRetrieveOptions().MaxResults;
+            var texts = Enumerable.Repeat("lorem", limit + 5).Append("ipsum").Append("dolor").ToArray();
+            var manager = CreateManager(IndexType.Memory, texts);
+
+            // act
+            var items = manager.Retrieve<PositionalDocument>(wql).ToList();
+
+            // validation
+            Assert.Equal(["dolor", "ipsum"], items.Select(x => x.Text).Order());
+        }
+
+        /// <summary>
         /// Creates an index manager of the given type holding a document per text.
         /// </summary>
         /// <param name="indexType">The index type.</param>

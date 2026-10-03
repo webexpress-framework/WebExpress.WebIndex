@@ -47,9 +47,11 @@ namespace WebExpress.WebIndex.Wql.Condition
             var reverseIndex = indexDocument?.GetReverseIndex(attribute);
             var value = Parameter.GetValue()?.ToString();
 
-            // get matching ids for the value and then exclude them from all ids
+            // get matching ids for the value and then exclude them from all ids; the matches
+            // are not capped, since every match left out would turn up in the complement
             var matchingIds = reverseIndex?.Retrieve(value, new IndexRetrieveOptions()
             {
+                MaxResults = uint.MaxValue,
                 Method = IndexRetrieveMethod.Phrase,
                 Distance = Options.Distance.HasValue ? Options.Distance.Value : 0
             }) ?? [];

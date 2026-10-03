@@ -11,6 +11,7 @@ wql.expected_terminated_string_token=A string token with a terminating quotation
 wql.expected_similarity=A similarity condition is expected.
 wql.invalid_similarity=The similarity must lie between 0 and 100 percent.
 wql.expected_distance=A distance condition is expected.
+wql.invalid_distance=The distance exceeds the largest permitted value.
 wql.function_unknown=Unknown function.
 wql.expected_function=A function is expected.
 wql.expected_skip_or_take=A skip or take condition is expected.
