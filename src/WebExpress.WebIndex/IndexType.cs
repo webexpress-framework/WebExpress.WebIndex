@@ -1,7 +1,8 @@
 ﻿namespace WebExpress.WebIndex
 {
     /// <summary>
-    /// Specifies the type of index.
+    /// Where an index keeps its data: entirely in memory (fast, not persistent) or in a file on
+    /// disk (persistent, larger than memory). Chosen when an index is created.
     /// </summary>
     public enum IndexType
     {

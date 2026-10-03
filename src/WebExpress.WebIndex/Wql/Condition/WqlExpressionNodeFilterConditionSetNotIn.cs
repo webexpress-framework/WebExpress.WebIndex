@@ -6,7 +6,8 @@ using System.Linq.Expressions;
 namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
-    /// Represents a WQL expression node filter condition for the "not in" set operation.
+    /// The WQL condition for a "not in" set test (<c>NOT IN</c>): matches items whose attribute is
+    /// none of the values in the given set.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public class WqlExpressionNodeFilterConditionSetNotIn<TIndexItem> : WqlExpressionNodeFilterConditionSet<TIndexItem>
@@ -55,12 +56,14 @@ namespace WebExpress.WebIndex.Wql.Condition
                 .Distinct()
                 .ToList();
 
-            // get all ids for every value to be excluded
+            // get all ids for every value to be excluded; the matches are not capped, since
+            // every match left out would turn up in the complement
             var excludedGuids = new HashSet<Guid>();
             foreach (var val in excludeValues)
             {
                 var ids = reverseIndex.Retrieve(val, new IndexRetrieveOptions
                 {
+                    MaxResults = uint.MaxValue,
                     Method = IndexRetrieveMethod.Phrase,
                     Distance = 0
                 });

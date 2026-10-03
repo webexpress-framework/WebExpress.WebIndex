@@ -110,21 +110,22 @@ namespace WebExpress.WebIndex.Storage
             var exists = File.Exists(FileName);
 
             IndexFile = new IndexStorageFile(FileName);
-            Header = new IndexStorageSegmentHeader(StorageContext)
+            IndexFile.Initialize(() =>
             {
-                Identifier = Extension,
-                Version = Version
-            };
-            Allocator = new IndexStorageSegmentAllocatorDocumentStore(StorageContext);
-            Statistic = new IndexStorageSegmentStatistic(StorageContext);
-            HashMap = new IndexStorageSegmentHashMap(StorageContext, Capacity);
+                Header = new IndexStorageSegmentHeader(StorageContext)
+                {
+                    Identifier = Extension,
+                    Version = Version
+                };
+                Allocator = new IndexStorageSegmentAllocatorDocumentStore(StorageContext);
+                Statistic = new IndexStorageSegmentStatistic(StorageContext);
+                HashMap = new IndexStorageSegmentHashMap(StorageContext, Capacity);
 
-            Header.Initialization(exists);
-            Statistic.Initialization(exists);
-            HashMap.Initialization(exists);
-            Allocator.Initialization(exists);
-
-            IndexFile.Flush();
+                Header.Initialization(exists);
+                Statistic.Initialization(exists);
+                HashMap.Initialization(exists);
+                Allocator.Initialization(exists);
+            });
         }
 
         /// <summary>

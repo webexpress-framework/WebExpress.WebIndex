@@ -6,7 +6,8 @@ using System.Linq.Expressions;
 namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
-    /// Represents a binary less-than condition in a WQL expression.
+    /// The WQL condition for a less-than test (<c>&lt;</c>): matches items whose attribute is smaller
+    /// than the given value.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public class WqlExpressionNodeFilterConditionBinaryLessThan<TIndexItem> : WqlExpressionNodeFilterConditionBinary<TIndexItem>

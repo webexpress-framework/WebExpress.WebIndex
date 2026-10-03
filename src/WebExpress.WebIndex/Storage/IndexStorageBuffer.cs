@@ -27,7 +27,7 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Provides a buffer for random access of segments (evictable).
         /// </summary>
-        private Dictionary<ulong, IndexStorageBufferItem> _readCache;
+        private readonly Dictionary<ulong, IndexStorageBufferItem> _readCache;
 
         /// <summary>
         /// Provides a buffer for random access of imperishable segments (non-evictable).
@@ -38,6 +38,13 @@ namespace WebExpress.WebIndex.Storage
         /// Provides a buffer for pending write segments (write-back).
         /// </summary>
         private readonly Dictionary<ulong, IIndexStorageSegment> _writeCache;
+
+        /// <summary>
+        /// Provides a reusable buffer holding the addresses scheduled for eviction during
+        /// maintenance. Kept as a field so the periodic maintenance path does not allocate
+        /// a new collection on every tick.
+        /// </summary>
+        private readonly List<ulong> _evictionBuffer = [];
 
         /// <summary>
         /// Gets a value indicating whether the object has been disposed.
@@ -101,7 +108,7 @@ namespace WebExpress.WebIndex.Storage
                     }
                 }
 
-                var segment = (TIndexStorageSegment)Activator.CreateInstance(typeof(TIndexStorageSegment), context, addr);
+                var segment = IndexSegmentFactory<TIndexStorageSegment>.Create(context, addr);
 
                 Reader.BaseStream.Seek((long)segment.Addr, SeekOrigin.Begin);
                 segment.Read(Reader);
@@ -251,24 +258,49 @@ namespace WebExpress.WebIndex.Storage
         {
             lock (_guard)
             {
-                // under 80% capacity: only age entries, do not remove to avoid churn
-                if (_readCache.Count < 0.8 * MaxCachedSegments)
+                var count = _readCache.Count;
+                if (count == 0)
                 {
-                    foreach (var kv in _readCache)
+                    return;
+                }
+
+                // under 80% capacity: only age entries, do not remove to avoid churn
+                if (count < 0.8 * MaxCachedSegments)
+                {
+                    // iterate values directly to avoid materializing key/value pairs
+                    foreach (var item in _readCache.Values)
                     {
                         // increment age
-                        kv.Value.IncrementCounter();
+                        item.IncrementCounter();
+                    }
+
+                    return;
+                }
+
+                // at/over 80%: evict entries with above-average age. the average is computed
+                // in a single manual pass because the LINQ Average delegate dominated CPU on
+                // this 500ms timer; survivors are kept by removing the rest in place, which
+                // avoids rebuilding and rehashing the whole dictionary on every tick
+                long sum = 0;
+                foreach (var item in _readCache.Values)
+                {
+                    sum += item.Counter;
+                }
+
+                var average = (double)sum / count;
+
+                _evictionBuffer.Clear();
+                foreach (var kv in _readCache)
+                {
+                    if (kv.Value.Counter > average)
+                    {
+                        _evictionBuffer.Add(kv.Key);
                     }
                 }
-                else
-                {
-                    // at/over 80%: compute average age and evict items with above-average age
-                    var average = _readCache.Count != 0 ? _readCache.Average(x => x.Value.Counter) : 0.0;
 
-                    // build a new dictionary with kept items to avoid mutating during enumeration
-                    _readCache = new Dictionary<ulong, IndexStorageBufferItem>(
-                        _readCache.Where(x => x.Value.Counter <= average)
-                    );
+                foreach (var addr in _evictionBuffer)
+                {
+                    _readCache.Remove(addr);
                 }
             }
         }

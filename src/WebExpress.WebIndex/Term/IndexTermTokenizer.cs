@@ -31,6 +31,8 @@ namespace WebExpress.WebIndex.Term
                 yield break;
             }
 
+            culture ??= CultureInfo.InvariantCulture;
+
             var currentToken = new StringBuilder();
             var position = 0u;
             var isString = false;
@@ -49,19 +51,7 @@ namespace WebExpress.WebIndex.Term
                 var last = i > 0 ? input[i - 1] : (char)0;
                 var next = i + 1 < input.Length ? input[i + 1] : (char)0;
 
-                if (char.IsControl(current))
-                {
-                    if (currentToken.Length > 0)
-                    {
-                        yield return new IndexTermToken
-                        {
-                            Position = position,
-                            Value = Convert(currentToken, false, culture)
-                        };
-                        currentToken.Clear();
-                    }
-                }
-                else if (!isString && (char.IsDigit(current) ||
+                if (!isString && (char.IsDigit(current) ||
                     (isNumber && (current == decimalSeparator && !hasDecimal ||
                     current == groupSeparator || current == ',' ||
                     current == 'e' || current == 'E')) ||
@@ -163,7 +153,11 @@ namespace WebExpress.WebIndex.Term
                         position++;
                     }
 
+                    // control characters (newline, tab, ...) separate tokens exactly like
+                    // whitespace; a dedicated control branch would skip the position
+                    // increment and break phrase searches across line breaks
                     if (char.IsWhiteSpace(current) ||
+                        char.IsControl(current) ||
                         char.IsSymbol(current) ||
                         (
                             char.IsPunctuation(current) &&

@@ -133,6 +133,27 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
+        /// Runs the initialization of the segments stored in this file and releases the file when
+        /// it fails. The file is opened exclusively, and the constructor of its owner hands out no
+        /// instance once it throws, so without this a file with a foreign header or a truncated
+        /// segment would stay locked until the finalizer runs and every retry would fail to open it.
+        /// </summary>
+        /// <param name="initialization">The initialization of the segments.</param>
+        public void Initialize(Action initialization)
+        {
+            try
+            {
+                initialization();
+                Flush();
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Deletes this file from storage.
         /// </summary>
         public void Delete()

@@ -59,9 +59,11 @@ namespace WebExpress.WebIndex.Memory
             {
                 foreach (var child in Children)
                 {
+                    // intermediate nodes that terminate a term (prefix of a longer
+                    // term); the root contributes no character to the term string
                     if (child.Postings is not null && child.Children.Count != 0)
                     {
-                        yield return (Character + child.Character.ToString(), child);
+                        yield return ((IsRoot ? "" : Character.ToString()) + child.Character, child);
                     }
 
                     foreach (var term in child.Terms)
@@ -233,10 +235,13 @@ namespace WebExpress.WebIndex.Memory
                         }
                         break;
                     case '*':
-                        var pattern = next?.Replace("*", ".*").Replace("?", ".") ?? ".*";
+                        // the "*" itself stands for any run of characters at the current
+                        // node, so the pattern is anchored with a leading ".*" and the
+                        // escaped remainder must match the end of the suffix
+                        var pattern = "^.*" + Regex.Escape(next ?? "").Replace("\\*", ".*").Replace("\\?", ".") + "$";
                         foreach (var termTuple in Terms)
                         {
-                            if (Regex.IsMatch(termTuple.Item1, pattern))
+                            if (Regex.IsMatch(termTuple.Item1, pattern, RegexOptions.CultureInvariant))
                             {
                                 yield return termTuple.Item2;
                             }

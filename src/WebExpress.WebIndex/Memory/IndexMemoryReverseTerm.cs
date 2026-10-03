@@ -15,6 +15,8 @@ namespace WebExpress.WebIndex.Memory
     public class IndexMemoryReverseTerm<TIndexItem> : IndexMemoryReverse<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        private readonly IndexTermMatcher<IndexMemorySegmentPosting> _matcher;
+
         /// <summary>
         /// Gets the root term.
         /// </summary>
@@ -37,10 +39,18 @@ namespace WebExpress.WebIndex.Memory
         public IndexMemoryReverseTerm(IIndexDocumemntContext context, IndexFieldData field, CultureInfo culture)
             : base(context, field, culture)
         {
+            _matcher = new
+            (
+                () => Root.Terms.Select(x => x.Item1),
+                term => Root.GetPostings(term),
+                posting => posting.DocumentId,
+                posting => posting.Positions,
+                (term, options) => Root.Retrieve(term, options)
+            );
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="item">The data to be added to the index.</param>
         public override void Add(TIndexItem item)
@@ -52,7 +62,7 @@ namespace WebExpress.WebIndex.Memory
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="item">The data to be added to the index.</param>
         /// <param name="terms">The terms to add to the reverse index for the given item.</param>
@@ -106,100 +116,17 @@ namespace WebExpress.WebIndex.Memory
         }
 
         /// <summary>
-        /// Return all items for a given input.
+        /// Retrieves documents for a given input and retrieval options.
         /// </summary>
-        /// <param name="input">The input.</param>
-        /// <param name="options">The retrieve options.</param>
-        /// <returns>An enumeration of the data ids.</returns>
+        /// <remarks>
+        /// The matching rules are described at <see cref="IndexTermMatcher{TPosting}"/>.
+        /// </remarks>
+        /// <param name="input">The input text.</param>
+        /// <param name="options">The retrieval options.</param>
+        /// <returns>A distinct set of matching document ids.</returns>
         public override IEnumerable<Guid> Retrieve(object input, IndexRetrieveOptions options)
         {
-            var tokens = Context.TokenAnalyzer.Analyze(input?.ToString(), Culture, true);
-            var distinct = new HashSet<Guid>((int)Math.Min(options.MaxResults, int.MaxValue / 2));
-            var count = 0u;
-
-            if (!tokens.Any())
-            {
-                return distinct;
-            }
-
-            switch (options.Method)
-            {
-                case IndexRetrieveMethod.Phrase:
-                    {
-                        var firstTerm = tokens.Take(1).FirstOrDefault();
-                        var nextTerms = tokens.Skip(1);
-
-                        foreach (var posting in Root.GetPostings(firstTerm.Value.ToString()))
-                        {
-                            foreach (var position in posting.Positions)
-                            {
-                                if (CheckForPhraseMatch(posting.DocumentId, position, firstTerm.Position, nextTerms))
-                                {
-                                    distinct.Add(posting.DocumentId);
-                                }
-                            }
-                        }
-
-                        break;
-                    }
-                default:
-                    {
-                        foreach (var document in tokens.Take(1).SelectMany(x => Root.Retrieve(x.Value.ToString(), options)))
-                        {
-                            if (distinct.Add(document) && count++ >= options.MaxResults)
-                            {
-                                break;
-                            }
-                        }
-
-                        foreach (var normalized in tokens.Skip(1))
-                        {
-                            var temp = new HashSet<Guid>(distinct.Count);
-
-                            foreach (var document in Root.Retrieve(normalized.Value.ToString(), options))
-                            {
-                                if (distinct.Contains(document) && temp.Add(document))
-                                {
-                                }
-                            }
-
-                            distinct = temp;
-                        }
-
-                        break;
-                    }
-            }
-
-            return distinct;
-        }
-
-        /// <summary>
-        /// Checks whether there is an exact match.
-        /// </summary>
-        /// <param name="document">The document id to check.</param>
-        /// <param name="position">The position of the term within the document.</param>
-        /// <param name="offset">The position within the search term.</param>
-        /// <param name="terms">Further following search terms.</param>
-        /// <returns>True ff there is an exact match, otherwise false.</returns>
-        private bool CheckForPhraseMatch(Guid document, uint position, uint offset, IEnumerable<IndexTermToken> terms)
-        {
-            if (!terms.Any())
-            {
-                return true;
-            }
-
-            var firstTerm = terms.Take(1).FirstOrDefault();
-            var nextTerms = terms.Skip(1);
-
-            foreach (var posting in Root.GetPostings(firstTerm.Value.ToString()).Where(x => x?.DocumentId == document))
-            {
-                foreach (var pos in posting.Positions.Where(x => x == position + (firstTerm.Position - offset)))
-                {
-                    return CheckForPhraseMatch(posting.DocumentId, pos, firstTerm.Position, nextTerms);
-                }
-            }
-
-            return false;
+            return _matcher.Retrieve(Context.TokenAnalyzer.Analyze(input?.ToString(), Culture, true), options);
         }
     }
 }

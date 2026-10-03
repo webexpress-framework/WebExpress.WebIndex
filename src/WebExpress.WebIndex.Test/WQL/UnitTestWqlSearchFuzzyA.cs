@@ -143,6 +143,32 @@ namespace WebExpress.WebIndex.Test.WQL
         }
 
         /// <summary>
+        /// Tests that the similarity threshold widens and narrows the result set.
+        /// A medium threshold must include similar terms (helena is 50% similar to
+        /// helge), while a high threshold must degrade to an exact word search.
+        /// </summary>
+        [Fact]
+        public void FuzzySimilarityThreshold()
+        {
+            // act
+            var fuzzy = Fixture.ExecuteWql("text~'Helge' ~50");
+            var fuzzyRes = Fixture.IndexManager.Retrieve(fuzzy);
+
+            var strict = Fixture.ExecuteWql("text~'Helge' ~90");
+            var strictRes = Fixture.IndexManager.Retrieve(strict);
+
+            var exact = Fixture.ExecuteWql("text~'Helge'");
+            var exactRes = Fixture.IndexManager.Retrieve(exact);
+
+            // validation
+            Assert.False(fuzzy.HasErrors);
+            Assert.False(strict.HasErrors);
+            Assert.Equal(2, exactRes.Count()); // helge only
+            Assert.Equal(4, fuzzyRes.Count()); // helge plus the similar helena documents
+            Assert.Equal(2, strictRes.Count()); // high threshold behaves like exact search
+        }
+
+        /// <summary>
         /// Tests the wildcard search.
         /// </summary>
         [Fact]

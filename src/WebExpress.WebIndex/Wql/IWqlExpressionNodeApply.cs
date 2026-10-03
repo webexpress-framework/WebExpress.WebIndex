@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
-    /// Interface of a WQL expression node that can apply.
+    /// A WQL expression node that can be evaluated: its <c>Apply</c> method runs the node against an
+    /// index document and returns the ids of the matching items. This is how a parsed query produces results.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public interface IWqlExpressionNodeApply<TIndexItem> : IWqlExpressionNode<TIndexItem>
