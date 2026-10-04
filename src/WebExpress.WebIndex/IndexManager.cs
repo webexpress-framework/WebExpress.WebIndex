@@ -34,6 +34,27 @@ namespace WebExpress.WebIndex
         public event EventHandler<IndexSchemaMigrationEventArgs> SchemaChanged;
 
         /// <summary>
+        /// Raised after an item was inserted, updated or deleted, or a document was cleared. A
+        /// bulk re-index raises nothing: it rebuilds a copy from its source, which every copy
+        /// does on its own.
+        /// </summary>
+        public event EventHandler<IndexChangedEventArgs> Changed;
+
+        /// <summary>
+        /// Gets a snapshot of the item types that have a registered document.
+        /// </summary>
+        public IEnumerable<Type> DocumentTypes
+        {
+            get
+            {
+                lock (_syncDocs)
+                {
+                    return [.. _documents.Keys];
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets a snapshot enumeration of the registered WQL functions.
         /// </summary>
         public IEnumerable<Type> WqlFunctions
@@ -370,6 +391,7 @@ namespace WebExpress.WebIndex
             }
 
             document.Add(item);
+            OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Insert, item));
         }
 
         /// <summary>
@@ -393,6 +415,7 @@ namespace WebExpress.WebIndex
 
             await document.AddAsync(item)
                 .ConfigureAwait(false);
+            OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Insert, item));
         }
 
         /// <summary>
@@ -415,6 +438,7 @@ namespace WebExpress.WebIndex
             }
 
             document.Update(item);
+            OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Update, item));
         }
 
         /// <summary>
@@ -438,6 +462,7 @@ namespace WebExpress.WebIndex
 
             await document.UpdateAsync(item)
                 .ConfigureAwait(false);
+            OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Update, item));
         }
 
         /// <summary>
@@ -500,6 +525,11 @@ namespace WebExpress.WebIndex
             }
 
             document.Remove(item);
+
+            if (item is not null)
+            {
+                OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Delete, item));
+            }
         }
 
         /// <summary>
@@ -531,6 +561,11 @@ namespace WebExpress.WebIndex
 
             await document.RemoveAsync(item)
                 .ConfigureAwait(false);
+
+            if (item is not null)
+            {
+                OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Delete, item));
+            }
         }
 
         /// <summary>
@@ -547,6 +582,7 @@ namespace WebExpress.WebIndex
             }
 
             document.Clear();
+            OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Clear, null));
         }
 
         /// <summary>
@@ -564,6 +600,7 @@ namespace WebExpress.WebIndex
 
             await document.ClearAsync()
                 .ConfigureAwait(false);
+            OnChanged(new IndexChangedEventArgs(typeof(TIndexItem), IndexChangeKind.Clear, null));
         }
 
         /// <summary> 
@@ -766,6 +803,15 @@ namespace WebExpress.WebIndex
         protected virtual void OnSchemaChanged(object sender, IndexSchemaMigrationEventArgs e)
         {
             SchemaChanged?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// Raises the changed event.
+        /// </summary>
+        /// <param name="e">The event data.</param>
+        protected virtual void OnChanged(IndexChangedEventArgs e)
+        {
+            Changed?.Invoke(this, e);
         }
 
         /// <summary>
