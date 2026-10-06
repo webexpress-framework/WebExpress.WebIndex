@@ -35,7 +35,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
-    <ProjectReference Include="..\WebExpress.WebIndex.Wi\WebExpress.WebIndex.Wi.csproj" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
