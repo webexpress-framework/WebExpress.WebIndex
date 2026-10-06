@@ -37,13 +37,13 @@ namespace WebExpress.WebIndex.Memory
         public virtual IEnumerable<Guid> All { get; }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="item">The data to be added to the index.</param>
         public abstract void Add(TIndexItem item);
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="item">The data to be added to the index.</param>
         /// <param name="terms">The terms to add to the reverse index for the given item.</param>

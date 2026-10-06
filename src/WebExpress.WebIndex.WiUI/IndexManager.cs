@@ -53,7 +53,7 @@ namespace WebExpress.WebIndex.WiUI
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
         /// <param name="item">The data to be added to the index.</param>

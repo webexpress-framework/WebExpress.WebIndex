@@ -1,7 +1,9 @@
 ﻿namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
-    /// Represents a token of the wql syntax.
+    /// One token from a WQL query string, as produced by the lexer — a single syntactic unit (such
+    /// as a word, operator, or value) together with its position and length in the raw query.
+    /// WQL (WebExpress Query Language) is the query language used to search the index.
     /// </summary>
     public interface IWqlToken
     {

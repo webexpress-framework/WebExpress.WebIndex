@@ -32,4 +32,8 @@
     <ProjectReference Include="..\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="WebExpress.WebIndex.Test" />
+  </ItemGroup>
+
 </Project>

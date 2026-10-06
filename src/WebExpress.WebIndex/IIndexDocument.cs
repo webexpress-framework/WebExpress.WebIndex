@@ -37,7 +37,7 @@ namespace WebExpress.WebIndex
         IEnumerable<TIndexItem> All { get; }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="item">The data to be added to the index.</param>
         void Add(TIndexItem item);

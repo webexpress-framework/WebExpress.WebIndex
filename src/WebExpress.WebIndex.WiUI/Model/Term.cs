@@ -23,7 +23,7 @@
         /// <summary>
         /// Returns or sets the frequency of the term in the documents.
         /// </summary>
-        public uint Fequency { get; set; }
+        public uint Frequency { get; set; }
 
         /// <summary>
         /// Returns or sets the height of the term tree.

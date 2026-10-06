@@ -6,7 +6,8 @@ using System.Linq.Expressions;
 namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
-    /// Represents a binary equal condition in a WQL expression node.
+    /// The WQL condition for an equality test (<c>=</c>): matches items whose attribute equals the
+    /// given value.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public class WqlExpressionNodeFilterConditionBinaryEqual<TIndexItem> : WqlExpressionNodeFilterConditionBinary<TIndexItem>

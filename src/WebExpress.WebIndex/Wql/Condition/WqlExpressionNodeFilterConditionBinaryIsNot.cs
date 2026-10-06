@@ -48,10 +48,12 @@ namespace WebExpress.WebIndex.Wql.Condition
                     .Select(x => x.Id);
             }
 
-            // for boolean "is not true" / "is not false", exclude matching
+            // for boolean "is not true" / "is not false", exclude matching; the matches are
+            // not capped, since every match left out would turn up in the complement
             var reverseIndex = indexDocument?.GetReverseIndex(attribute);
             var matchingIds = reverseIndex?.Retrieve(paramValue, new IndexRetrieveOptions()
             {
+                MaxResults = uint.MaxValue,
                 Method = IndexRetrieveMethod.Phrase,
                 Distance = 0
             }) ?? [];

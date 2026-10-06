@@ -44,7 +44,7 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Gets or sets the number of postings (documents) for the term ending at this node.
         /// </summary>
-        public uint Fequency { get; set; }
+        public uint Frequency { get; set; }
 
         /// <summary>
         /// Gets the address of the root of the posting tree or 0 if none.
@@ -108,9 +108,13 @@ namespace WebExpress.WebIndex.Storage
             {
                 foreach (var child in Children)
                 {
+                    // intermediate nodes that terminate a term (prefix of a longer
+                    // term); leaf children are yielded by their own bottom case, so
+                    // requiring children here avoids duplicates. The root contributes
+                    // no character to the term string.
                     if (child.PostingAddr != 0 && child.ChildAddr != 0)
                     {
-                        yield return (Character + child.Character.ToString(), child);
+                        yield return ((IsRoot ? "" : Character.ToString()) + child.Character, child);
                     }
 
                     foreach (var term in child.Terms)
@@ -250,21 +254,27 @@ namespace WebExpress.WebIndex.Storage
                         DocumentID = id
                     };
 
-                    Fequency++;
+                    Frequency++;
 
                     Context.IndexFile.Write(this);
                     Context.IndexFile.Write(item);
                 }
                 else
                 {
-                    if (Posting.Insert(id, out IndexStorageSegmentPostingNode node))
-                    {
-                        Fequency++;
+                    // the tree balances itself on the way up and may come back with another
+                    // root, which is then the one this term has to point at
+                    var root = Posting.Insert(id, out item, out var inserted);
 
-                        Context.IndexFile.Write(this);
+                    if (inserted)
+                    {
+                        Frequency++;
                     }
 
-                    item = node;
+                    if (inserted || root.Addr != PostingAddr)
+                    {
+                        PostingAddr = root.Addr;
+                        Context.IndexFile.Write(this);
+                    }
                 }
             }
 
@@ -273,7 +283,6 @@ namespace WebExpress.WebIndex.Storage
 
         /// <summary>
         /// Removes a posting (document id) from this term's posting tree.
-        /// Handles all cases including root replacement with inorder successor.
         /// </summary>
         /// <param name="id">The document id to remove.</param>
         /// <returns>True if removed; otherwise false.</returns>
@@ -291,79 +300,17 @@ namespace WebExpress.WebIndex.Storage
                     return false;
                 }
 
-                var root = Posting;
+                // the tree rebalances after the removal; the root it reports is the one to
+                // point at, and none at all once the last posting is gone
+                var root = Posting.Remove(id, out var removed);
 
-                if (id.CompareTo(root.DocumentID) < 0)
+                if (!removed)
                 {
-                    if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
-                    {
-                        Fequency--;
-                        Context.IndexFile.Write(this);
-                        return true;
-                    }
-
-                    return false;
-                }
-                else if (id.CompareTo(root.DocumentID) > 0)
-                {
-                    if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
-                    {
-                        Fequency--;
-                        Context.IndexFile.Write(this);
-                        return true;
-                    }
-
                     return false;
                 }
 
-                // node with only one child or no child
-                if (root.LeftAddr == 0 || root.RightAddr == 0)
-                {
-                    PostingAddr = root.LeftAddr != 0 ? root.LeftAddr : root.RightAddr;
-
-                    root.RemovePositions();
-                    Context.Allocator.Free(root);
-
-                    Fequency--;
-                    Context.IndexFile.Write(this);
-
-                    return true;
-                }
-
-                // node with two children: replace root with inorder successor (leftmost of right subtree)
-                var rightRoot = root.Right;
-                var leftmostPack = rightRoot.LeftmostChild;
-                var successor = leftmostPack.Leftmost as IndexStorageSegmentPostingNode;
-
-                var oldLeft = root.LeftAddr;
-                var oldRight = root.RightAddr;
-
-                // detach successor from its parent: parent.left becomes successor.right
-                if (leftmostPack.Parent is IndexStorageSegmentPostingNode successorParent)
-                {
-                    successorParent.LeftAddr = successor.RightAddr;
-                    Context.IndexFile.Write(successorParent);
-                }
-
-                // transplant successor in place of root
-                successor.LeftAddr = oldLeft;
-
-                // if successor is not the immediate right child, hook up old right subtree
-                if (successor.Addr != oldRight)
-                {
-                    successor.RightAddr = oldRight;
-                }
-
-                Context.IndexFile.Write(successor);
-
-                // update head to new root of posting tree
-                PostingAddr = successor.Addr;
-
-                // free old root
-                root.RemovePositions();
-                Context.Allocator.Free(root);
-
-                Fequency--;
+                PostingAddr = root?.Addr ?? 0;
+                Frequency--;
                 Context.IndexFile.Write(this);
 
                 return true;
@@ -500,9 +447,10 @@ namespace WebExpress.WebIndex.Storage
                         }
                     case '*':
                         {
-                            // escape regex special chars before expanding wildcards
-                            var escaped = Regex.Escape(next ?? string.Empty);
-                            var pattern = escaped.Replace("\\*", ".*").Replace("\\?", ".");
+                            // the "*" itself stands for any run of characters at the
+                            // current node, so the pattern is anchored with a leading
+                            // ".*" and the escaped remainder must match the suffix end
+                            var pattern = "^.*" + Regex.Escape(next ?? "").Replace("\\*", ".*").Replace("\\?", ".") + "$";
                             foreach (var termTuple in Terms)
                             {
                                 if (Regex.IsMatch(termTuple.Item1, pattern, RegexOptions.CultureInvariant))
@@ -541,7 +489,7 @@ namespace WebExpress.WebIndex.Storage
             Character = (char)reader.ReadUInt32();
             SiblingAddr = reader.ReadUInt64();
             ChildAddr = reader.ReadUInt64();
-            Fequency = reader.ReadUInt32();
+            Frequency = reader.ReadUInt32();
             PostingAddr = reader.ReadUInt64();
         }
 
@@ -554,7 +502,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write((uint)Character);
             writer.Write(SiblingAddr);
             writer.Write(ChildAddr);
-            writer.Write(Fequency);
+            writer.Write(Frequency);
             writer.Write(PostingAddr);
         }
 

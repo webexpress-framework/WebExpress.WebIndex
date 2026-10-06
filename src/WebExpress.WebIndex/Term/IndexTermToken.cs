@@ -1,7 +1,8 @@
 ﻿namespace WebExpress.WebIndex.Term
 {
     /// <summary>
-    /// Represents a term token.
+    /// A single token produced when text is broken up for indexing: one term together with its
+    /// position in the original text (the position is used for proximity and phrase searches).
     /// </summary>
     public class IndexTermToken
     {

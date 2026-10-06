@@ -20,7 +20,7 @@ namespace WebExpress.WebIndex
         uint Capacity { get; }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <typeparam name="T">The data type. This must have the IIndexData interface.</typeparam>
         /// <param name="item">The data to be added to the index.</param>

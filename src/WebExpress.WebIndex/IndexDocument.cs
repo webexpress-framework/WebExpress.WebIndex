@@ -70,7 +70,17 @@ namespace WebExpress.WebIndex
             IndexType = indexType;
             Culture = culture;
 
-            ReBuild(ushort.MaxValue);
+            // the files opened so far are released when a later one fails to open, since a
+            // failed constructor leaves no instance the caller could dispose
+            try
+            {
+                ReBuild(ushort.MaxValue);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         /// <summary>
@@ -120,10 +130,7 @@ namespace WebExpress.WebIndex
 
             _dict.Clear();
 
-            foreach (var field in Schema.Fields)
-            {
-                Add(field);
-            }
+            OpenReverseIndexes();
         }
 
         /// <summary>
@@ -139,12 +146,13 @@ namespace WebExpress.WebIndex
                 {
                     case IndexType.Memory:
                         {
+                            Schema = new IndexMemorySchema<TIndexItem>(Context);
                             DocumentStore = new IndexMemoryDocumentStore<TIndexItem>(Context, capacity);
                             break;
                         }
                     default:
                         {
-                            var indexSchema = new IndexStorageSchema<TIndexItem>(Context);
+                            Schema = new IndexStorageSchema<TIndexItem>(Context);
                             DocumentStore = new IndexStorageDocumentStore<TIndexItem>(Context, capacity);
                             break;
                         }
@@ -171,9 +179,24 @@ namespace WebExpress.WebIndex
                 }
             }
 
-            var tasks = Schema.Fields.Select(property => Task.Run(() => Add(property)));
+            await Task.Run(OpenReverseIndexes);
+        }
 
-            await Task.WhenAll(tasks);
+        /// <summary>
+        /// Opens the reverse index of every field and restores those that do not hold the items
+        /// of the document store. The indexes are opened one after the other, as the dictionary
+        /// that keeps them is not safe for concurrent writes.
+        /// </summary>
+        private void OpenReverseIndexes()
+        {
+            foreach (var field in Schema.Fields)
+            {
+                OpenReverseIndex(field);
+            }
+
+            Restore([.. _dict.Values
+                .OfType<IndexStorageReverse<TIndexItem>>()
+                .Where(x => x.RequiresRebuild)]);
         }
 
         /// <summary>
@@ -182,42 +205,78 @@ namespace WebExpress.WebIndex
         /// <param name="property">The property that makes up the index.</param>
         public virtual void Add(IndexFieldData property)
         {
-            if (!property.Enabled || _dict.ContainsKey(property.PropertyInfo))
+            if (OpenReverseIndex(property) is IndexStorageReverse<TIndexItem> { RequiresRebuild: true } reverseIndex)
             {
-                return;
-            }
-
-            switch (IndexType)
-            {
-                case IndexType.Memory:
-                    {
-                        if (IsNumericType(property.PropertyInfo))
-                        {
-                            _dict.Add(property.PropertyInfo, new IndexMemoryReverseNumeric<TIndexItem>(Context, property, Culture));
-                        }
-                        else
-                        {
-                            _dict.Add(property.PropertyInfo, new IndexMemoryReverseTerm<TIndexItem>(Context, property, Culture));
-                        }
-                        break;
-                    }
-                default:
-                    {
-                        if (IsNumericType(property.PropertyInfo))
-                        {
-                            _dict.Add(property.PropertyInfo, new IndexStorageReverseNumeric<TIndexItem>(Context, property, Culture));
-                        }
-                        else
-                        {
-                            _dict.Add(property.PropertyInfo, new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture));
-                        }
-                        break;
-                    }
+                Restore([reverseIndex]);
             }
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Opens the reverse index of a field and registers it right away, so that a failure while
+        /// it is restored later still finds it in the dictionary and releases its file on dispose.
+        /// </summary>
+        /// <param name="property">The property that makes up the index.</param>
+        /// <returns>The opened reverse index, or null when the field is disabled or already indexed.</returns>
+        private IIndexReverse<TIndexItem> OpenReverseIndex(IndexFieldData property)
+        {
+            if (!property.Enabled || _dict.ContainsKey(property.PropertyInfo))
+            {
+                return null;
+            }
+
+            IIndexReverse<TIndexItem> reverseIndex = IndexType switch
+            {
+                IndexType.Memory => IsNumericType(property.PropertyInfo)
+                    ? new IndexMemoryReverseNumeric<TIndexItem>(Context, property, Culture)
+                    : new IndexMemoryReverseTerm<TIndexItem>(Context, property, Culture),
+                _ => IsNumericType(property.PropertyInfo)
+                    ? new IndexStorageReverseNumeric<TIndexItem>(Context, property, Culture)
+                    : new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture)
+            };
+
+            _dict.Add(property.PropertyInfo, reverseIndex);
+
+            return reverseIndex;
+        }
+
+        /// <summary>
+        /// Fills reverse indexes that do not hold the items of the document store - a file of an
+        /// outdated format was discarded, a rebuild was interrupted or the field is new - so that
+        /// queries are not answered from an empty index. Reading an item from the store means
+        /// decompressing and deserializing it, so all indexes are filled from a single pass.
+        /// </summary>
+        /// <param name="reverseIndexes">The reverse indexes to restore.</param>
+        private void Restore(IReadOnlyList<IndexStorageReverse<TIndexItem>> reverseIndexes)
+        {
+            if (reverseIndexes.Count == 0)
+            {
+                return;
+            }
+
+            if (DocumentStore?.Count() > 0)
+            {
+                foreach (var reverseIndex in reverseIndexes)
+                {
+                    reverseIndex.BeginRebuild();
+                }
+
+                foreach (var item in DocumentStore.All)
+                {
+                    foreach (var reverseIndex in reverseIndexes)
+                    {
+                        reverseIndex.Add(item);
+                    }
+                }
+            }
+
+            foreach (var reverseIndex in reverseIndexes)
+            {
+                reverseIndex.CompleteRebuild();
+            }
+        }
+
+        /// <summary>
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="item">The data to be added to the index.</param>
         public virtual void Add(TIndexItem item)
@@ -515,14 +574,11 @@ namespace WebExpress.WebIndex
         /// </summary>
         public virtual void Dispose()
         {
-            DocumentStore.Dispose();
+            DocumentStore?.Dispose();
 
-            foreach (var field in Fields)
+            foreach (var reverseIndex in _dict.Values)
             {
-                if (GetReverseIndex(field) is IIndexReverse<TIndexItem> reverseIndex)
-                {
-                    reverseIndex.Dispose();
-                }
+                reverseIndex.Dispose();
             }
 
             GC.SuppressFinalize(this);

@@ -282,5 +282,39 @@ namespace WebExpress.WebIndex.Test.WQL
             Assert.Equal(count, ila.Items.Count());
             Assert.Contains(expectedNextTokens, t => ila.ExpectedNextTokens.Contains(t));
         }
+
+        /// <summary>
+        /// Verifies that a value is followed by what its enclosing parentheses permit: a
+        /// separator or the end of the list inside a set or a function call, the end of the
+        /// group inside a group, and the rest of the statement at the top level.
+        /// </summary>
+        [Theory]
+        [InlineData("text in", WqlExpressionType.OpenParenthesis)]
+        [InlineData("text not in", WqlExpressionType.OpenParenthesis)]
+        [InlineData("text in (", WqlExpressionType.Parameter)]
+        [InlineData("text in ('Helena'", WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text in (\"Helena\"", WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text in (Helena", WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text in (1", WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text in ('Helena',", WqlExpressionType.Parameter)]
+        [InlineData("text in ('Helena', 'Hans'", WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("text in ('Helena')", WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ 'Helena'", WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator)]
+        [InlineData("text ~ day('Helena'", WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("(text ~ 'Helena'", WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("(text in ('Helena')", WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("(text ~ 'a' and text ~ 'b'", WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis)]
+        [InlineData("((text ~ 'Helena')", WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis)]
+        public void AnalyzeFollowers(string wql, params WqlExpressionType[] expectedNextTokens)
+        {
+            // arrange
+            var parser = new WqlParser<UnitTestIndexTestDocumentA>();
+
+            // act
+            var ila = parser.Analyze(wql);
+
+            // validation
+            Assert.Equal(expectedNextTokens.Order(), ila.ExpectedNextTokens.Order());
+        }
     }
 }

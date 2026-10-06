@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using WebExpress.WebIndex.Term;
 
 namespace WebExpress.WebIndex.Storage
@@ -59,9 +60,85 @@ namespace WebExpress.WebIndex.Storage
         public CultureInfo Culture { get; private set; } = culture;
 
         /// <summary>
+        /// Determines whether the index does not hold the items of the document store: its file
+        /// was just created, written in an outdated format, or left behind by a rebuild that did
+        /// not complete. The index has to be filled again from the document store, which holds
+        /// every item - a reverse index is derived data and can always be rebuilt, so a format
+        /// change needs no conversion of the old file.
+        /// </summary>
+        public bool RequiresRebuild { get; private set; }
+
+        /// <summary>
         /// Gets all document ids contained in the reverse index.
         /// </summary>
         public abstract IEnumerable<Guid> All { get; }
+
+        /// <summary>
+        /// Gets the path of the file that marks a rebuild in progress. The rebuilt index file
+        /// carries the current version from its first byte on, so the version alone cannot tell
+        /// a complete rebuild from one that was interrupted; the marker outlives the interruption
+        /// and makes the next start discard the partial file.
+        /// </summary>
+        private string RebuildMarker => $"{FileName}.rebuild";
+
+        /// <summary>
+        /// Deletes the index file when it carries the expected identifier but another format
+        /// version, or when a rebuild of it did not complete. Reading an outdated file with the
+        /// current layout would misplace every segment once the size of a node changed, so it is
+        /// never opened. A file with a foreign identifier is left alone; opening it reports the
+        /// mismatch.
+        /// </summary>
+        /// <param name="identifier">The identifier of the index file.</param>
+        /// <param name="version">The current format version.</param>
+        protected void DiscardOutdatedFile(string identifier, byte version)
+        {
+            var interrupted = File.Exists(RebuildMarker);
+
+            if (!File.Exists(FileName))
+            {
+                RequiresRebuild = true;
+
+                return;
+            }
+
+            var stored = IndexStorageSegmentHeader.ReadVersion(FileName, identifier);
+
+            if (stored is null)
+            {
+                return;
+            }
+
+            if (interrupted || stored != version)
+            {
+                // the marker is written before the old file goes, so no moment exists in
+                // which an incomplete file could pass for a complete one
+                BeginRebuild();
+                File.Delete(FileName);
+                RequiresRebuild = true;
+            }
+        }
+
+        /// <summary>
+        /// Marks the index as being rebuilt from the document store. Until the rebuild is
+        /// completed, an interruption leaves the marker behind and the next start rebuilds again.
+        /// </summary>
+        public void BeginRebuild()
+        {
+            if (!File.Exists(RebuildMarker))
+            {
+                File.WriteAllBytes(RebuildMarker, []);
+            }
+        }
+
+        /// <summary>
+        /// Marks the index as holding every item of the document store again.
+        /// </summary>
+        public void CompleteRebuild()
+        {
+            IndexFile?.Flush();
+            File.Delete(RebuildMarker);
+            RequiresRebuild = false;
+        }
 
         /// <summary>
         /// Adds a single item to the index.

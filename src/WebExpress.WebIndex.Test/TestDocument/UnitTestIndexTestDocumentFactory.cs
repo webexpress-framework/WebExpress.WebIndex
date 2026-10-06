@@ -63,14 +63,11 @@ namespace WebExpress.WebIndex.Test.Document
         ];
 
         /// <summary>
-        /// The random number generator.
+        /// The random number generator. Uses the thread-safe shared instance because factories are
+        /// invoked from fixtures of parallel test collections; a single shared <see cref="Random"/>
+        /// instance is not safe for concurrent access.
         /// </summary>
-        protected static Random Rand { get; } = new(10);
-
-        /// <summary>
-        /// Returns a guard to protect against concurrent access.
-        /// </summary>
-        private static object Guard { get; } = new object();
+        protected static Random Rand => Random.Shared;
 
         /// <summary>
         /// Generate lorem ipsum sentence.
@@ -82,13 +79,10 @@ namespace WebExpress.WebIndex.Test.Document
             var sb = new StringBuilder();
             for (int i = 0; i < numWords; i++)
             {
-                lock (Guard)
+                sb.Append(LoremIpsumVocabulary[Rand.Next(LoremIpsumVocabulary.Length)]);
+                if (i < numWords - 1)
                 {
-                    sb.Append(LoremIpsumVocabulary[Rand.Next(LoremIpsumVocabulary.Length)]);
-                    if (i < numWords - 1)
-                    {
-                        sb.Append(' ');
-                    }
+                    sb.Append(' ');
                 }
             }
             return sb.ToString();
@@ -97,28 +91,27 @@ namespace WebExpress.WebIndex.Test.Document
         /// <summary>
         /// Generate the vocabulary.
         /// </summary>
+        /// <param name="random">
+        /// The random number generator to draw from. Callers that require reproducible data pass a
+        /// seeded, locally owned instance so the vocabulary does not depend on a shared generator.
+        /// </param>
         /// <param name="vocabulary">The number of words in the vocabulary.</param>
-        /// <param name="wordLength">The minimum length of the words in the vocabulary.</param>
-        /// /// <param name="wordLength">The maximum length of the words in the vocabulary.</param>
+        /// <param name="minWordLength">The minimum length of the words in the vocabulary.</param>
+        /// <param name="maxWordLength">The maximum length of the words in the vocabulary.</param>
         /// <returns>The vocabulary.</returns>
-        protected static IEnumerable<string> GenerateVocabulary(int vocabulary, int minWordLength, int maxWordLength)
+        protected static IEnumerable<string> GenerateVocabulary(Random random, int vocabulary, int minWordLength, int maxWordLength)
         {
             const string characters = "abcdefghijklmnopqrstuvwxyz";
             var set = new HashSet<string>();
 
             while (set.Count < vocabulary)
             {
-                lock (Guard)
-                {
-                    var rand = Rand.Next(maxWordLength, maxWordLength + 1);
-                    var word = new string(Enumerable.Repeat(characters, rand).Select(s => s[Rand.Next(s.Length)]).ToArray());
+                // preserves the original generator's fixed-length behavior; minWordLength is accepted
+                // for signature clarity but the words are produced at the maximum length
+                var length = random.Next(maxWordLength, maxWordLength + 1);
+                var word = new string(Enumerable.Repeat(characters, length).Select(s => s[random.Next(s.Length)]).ToArray());
 
-                    if (!set.Contains(word))
-                    {
-                        set.Add(word);
-                    }
-
-                }
+                set.Add(word);
             }
 
             return set;

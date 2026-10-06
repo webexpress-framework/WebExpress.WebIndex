@@ -34,7 +34,7 @@ namespace WebExpress.WebIndex.Test.WQL
             // act
             var res = wql?.Apply(document);
 
-            // valdation 
+            // validation 
             Assert.NotNull(res);
             foreach (var item in res)
             {
@@ -49,25 +49,44 @@ namespace WebExpress.WebIndex.Test.WQL
         public void ProximityMatch2()
         {
             // arrange
-            var term = Fixture.RandomItem.Text.Split(' ').Skip(5).FirstOrDefault();
-            var secondTerm = Fixture.RandomItem.Text.Split(' ').Skip(20).FirstOrDefault();
-            var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':3");
+            // both terms must lie within the document length (each test document has ten words),
+            // otherwise the second term is null and the query degenerates into a single-term search
+            var words = Fixture.RandomItem.Text.Split(' ');
+            var term = words.Skip(5).FirstOrDefault();
+            var secondTerm = words.Skip(8).FirstOrDefault();
+            const int distance = 3;
+            var wql = Fixture.ExecuteWql($"text~'{secondTerm} {term}':{distance}");
             var document = Fixture.IndexManager.GetIndexDocument<UnitTestIndexTestDocumentC>();
 
             // act
             var res = wql?.Apply(document);
 
-            // valdation 
+            // validation
             Assert.NotNull(res);
             foreach (var item in res)
             {
-                Assert.Contains($"{term} {secondTerm}", item.Text);
+                // proximity matching is order-independent and uses a symmetric +/- distance window,
+                // so the two terms must co-occur within that distance rather than as an adjacent phrase
+                var tokens = item.Text.Split(' ');
+                var termPositions = tokens
+                    .Select((word, index) => (word, index))
+                    .Where(x => x.word == term)
+                    .Select(x => x.index)
+                    .ToList();
+                var secondTermPositions = tokens
+                    .Select((word, index) => (word, index))
+                    .Where(x => x.word == secondTerm)
+                    .Select(x => x.index)
+                    .ToList();
+
+                Assert.Contains(termPositions, p => secondTermPositions.Any(q => Math.Abs(p - q) <= distance));
             }
+
+            // a wider distance window can only ever match the same or more documents
             Assert.True(res.Count() <= Fixture
                 .ExecuteWql($"text~'{secondTerm} {term}':12")
                 .Apply(document)
                 .Count());
-
         }
     }
 }

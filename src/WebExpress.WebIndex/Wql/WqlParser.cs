@@ -89,7 +89,9 @@ namespace WebExpress.WebIndex.Wql
         /// </summary>
         public WqlParser()
         {
-            Attributes = GetFieldData(typeof(TIndexItem));
+            // materialize once; the deferred enumeration would re-run the
+            // reflection walk on every use
+            Attributes = GetFieldData(typeof(TIndexItem)).ToList();
 
             RegisterCondition<WqlExpressionNodeFilterConditionBinaryEqual<TIndexItem>>();
             RegisterCondition<WqlExpressionNodeFilterConditionBinaryLike<TIndexItem>>();
@@ -231,6 +233,10 @@ namespace WebExpress.WebIndex.Wql
         /// <param name="ilaQueue">
         /// The incremental lookahead analysis stack to record the attribute token.
         /// </param>
+        /// <param name="deep">
+        /// The number of enclosing parentheses, which decides whether a completed condition
+        /// may be followed by a closing parenthesis or by the order and partitioning clauses.
+        /// </param>
         /// <returns>The filter node or null.</returns>
         private WqlExpressionNodeFilter<TIndexItem> ParseFilter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, int deep = 0)
         {
@@ -250,18 +256,18 @@ namespace WebExpress.WebIndex.Wql
                     ExpectedNextTokens = [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis]
                 });
 
-                var filter = ParseFilter(tokenQueue, ilaQueue, deep++);
+                var filter = ParseFilter(tokenQueue, ilaQueue, deep + 1);
 
                 var closeToken = ReadToken(tokenQueue, ")")
                     ?? throw new WqlParseException
                     (
-                        "webexpress.webindex:wql.wql.expected_close_parenthesis",
+                        "webexpress.webindex:wql.expected_close_parenthesis",
                         []
                     );
 
                 ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
+                    ExpectedNextTokens = FilterFollowers(deep)
                 });
 
                 if (PeekToken(tokenQueue, "and") ||
@@ -281,14 +287,14 @@ namespace WebExpress.WebIndex.Wql
                     {
                         LeftFilter = filter,
                         LogicalOperator = logicalOperator,
-                        RightFilter = ParseFilter(tokenQueue, ilaQueue)
+                        RightFilter = ParseFilter(tokenQueue, ilaQueue, deep)
                     };
                 }
 
                 return filter;
             }
 
-            var condition = ParseCondition(tokenQueue, ilaQueue);
+            var condition = ParseCondition(tokenQueue, ilaQueue, FilterFollowers(deep));
 
             if (condition is not null)
             {
@@ -309,7 +315,7 @@ namespace WebExpress.WebIndex.Wql
                     {
                         LeftFilter = new WqlExpressionNodeFilter<TIndexItem> { Condition = condition },
                         LogicalOperator = logicalOperator,
-                        RightFilter = ParseFilter(tokenQueue, ilaQueue)
+                        RightFilter = ParseFilter(tokenQueue, ilaQueue, deep)
                     };
                 }
 
@@ -319,11 +325,11 @@ namespace WebExpress.WebIndex.Wql
                 };
             }
 
-            var leftFilter = ParseFilter(tokenQueue, ilaQueue);
+            var leftFilter = ParseFilter(tokenQueue, ilaQueue, deep);
             if (leftFilter is not null)
             {
                 var logicalOperator = ParseLogicalOperator(tokenQueue, ilaQueue);
-                var rightFilter = ParseFilter(tokenQueue, ilaQueue);
+                var rightFilter = ParseFilter(tokenQueue, ilaQueue, deep);
 
                 return new WqlExpressionNodeFilterBinary<TIndexItem>
                 {
@@ -337,14 +343,35 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
+        /// The token types that may follow a value inside a parenthesized list - the values
+        /// of a set condition or the arguments of a function.
+        /// </summary>
+        private static readonly WqlExpressionType[] ListFollowers = [WqlExpressionType.Separator, WqlExpressionType.CloseParenthesis];
+
+        /// <summary>
+        /// Returns the token types that may follow a completed condition. Inside a group only
+        /// another condition or the end of the group may follow, since the order and
+        /// partitioning clauses belong to the whole statement.
+        /// </summary>
+        /// <param name="deep">The number of enclosing parentheses.</param>
+        /// <returns>The permissible followers.</returns>
+        private static WqlExpressionType[] FilterFollowers(int deep)
+        {
+            return deep > 0
+                ? [WqlExpressionType.LogicalOperator, WqlExpressionType.CloseParenthesis]
+                : [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator];
+        }
+
+        /// <summary>
         /// Parses a single condition expression.
         /// </summary>
         /// <param name="tokenQueue">The token queue.</param>
         /// <param name="ilaQueue">
         /// The incremental lookahead analysis stack to record the attribute token.
         /// </param>
+        /// <param name="followers">The token types that may follow the completed condition.</param>
         /// <returns>The condition node.</returns>
-        private WqlExpressionNodeFilterCondition<TIndexItem> ParseCondition(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
+        private WqlExpressionNodeFilterCondition<TIndexItem> ParseCondition(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers)
         {
             var attribute = ParseAttribute(tokenQueue, ilaQueue);
 
@@ -389,7 +416,7 @@ namespace WebExpress.WebIndex.Wql
                     binary.Culture = Culture;
                     binary.Attribute = attribute;
 
-                    binary.Parameter = ParseParameter(tokenQueue, ilaQueue, true);
+                    binary.Parameter = ParseParameter(tokenQueue, ilaQueue, true, followers);
                     binary.Options = ParseParameterOptions(tokenQueue, ilaQueue);
 
                     return binary;
@@ -409,7 +436,7 @@ namespace WebExpress.WebIndex.Wql
                         ExpectedNextTokens = [WqlExpressionType.Parameter]
                     });
 
-                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
 
                     while (PeekToken(tokenQueue, ","))
                     {
@@ -417,17 +444,17 @@ namespace WebExpress.WebIndex.Wql
 
                         ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
                         {
-                            ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Separator]
+                            ExpectedNextTokens = [WqlExpressionType.Parameter]
                         });
 
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false));
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, false, ListFollowers));
                     }
 
                     var closeToken = ReadToken(tokenQueue, ")");
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                        ExpectedNextTokens = followers
                     });
 
                     set.Culture = Culture;
@@ -572,8 +599,9 @@ namespace WebExpress.WebIndex.Wql
         /// Indicates whether the parameter is expected to be a scalar value. 
         /// If false, the parser may accept or construct a list of values. 
         /// </param>
+        /// <param name="followers">The token types that may follow the completed parameter.</param>
         /// <returns>The parameter node.</returns>
-        private WqlExpressionNodeParameter<TIndexItem> ParseParameter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, bool isScalar)
+        private WqlExpressionNodeParameter<TIndexItem> ParseParameter(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, bool isScalar, WqlExpressionType[] followers)
         {
             var functionOrValueToken = PeekToken(tokenQueue);
             var function = Functions
@@ -587,12 +615,12 @@ namespace WebExpress.WebIndex.Wql
             {
                 return new WqlExpressionNodeParameter<TIndexItem>
                 {
-                    Function = ParseFunction(tokenQueue, ilaQueue)
+                    Function = ParseFunction(tokenQueue, ilaQueue, followers)
                 };
             }
             else if (PeekToken(tokenQueue, DoubleRegex()))
             {
-                return new WqlExpressionNodeParameter<TIndexItem>
+                var parameter = new WqlExpressionNodeParameter<TIndexItem>
                 {
                     Value = new WqlExpressionNodeValue<TIndexItem>()
                     {
@@ -600,6 +628,15 @@ namespace WebExpress.WebIndex.Wql
                         NumberValue = ParseDoubleValue(tokenQueue)
                     }
                 };
+
+                // without its own lookahead entry a number would leave the prompt at the
+                // token before it and offer another value instead of what may follow
+                ilaQueue.Enqueue(new WqlLookaheadToken(functionOrValueToken, WqlExpressionType.Parameter)
+                {
+                    ExpectedNextTokens = followers
+                });
+
+                return parameter;
             }
             else if (functionOrValueToken?.Value == "\"")
             {
@@ -654,7 +691,7 @@ namespace WebExpress.WebIndex.Wql
                 var closeToken = ReadToken(tokenQueue);
                 ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.Quotation)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                    ExpectedNextTokens = followers
                 });
 
                 return parameter;
@@ -712,7 +749,7 @@ namespace WebExpress.WebIndex.Wql
                 var closeToken = ReadToken(tokenQueue);
                 ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.Quotation)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                    ExpectedNextTokens = followers
                 });
 
                 return parameter;
@@ -772,7 +809,7 @@ namespace WebExpress.WebIndex.Wql
 
                 ilaQueue.Enqueue(new WqlLookaheadToken(stringToken, WqlExpressionType.Parameter)
                 {
-                    ExpectedNextTokens = [WqlExpressionType.LogicalOperator]
+                    ExpectedNextTokens = followers
                 });
 
                 return new WqlExpressionNodeParameter<TIndexItem>
@@ -801,7 +838,8 @@ namespace WebExpress.WebIndex.Wql
             // fuzzy can be written as "~" <number> or as a single token "~<number>"
             if (PeekToken(tokenQueue, FuzzyRegex()))
             {
-                options.Similarity = (uint)ParseFuzzyValue(tokenQueue);
+                var token = ReadToken(tokenQueue, FuzzyRegex());
+                options.Similarity = ParseSimilarity(token, token.Value[1..]);
             }
             else if (PeekToken(tokenQueue, "~"))
             {
@@ -809,7 +847,8 @@ namespace WebExpress.WebIndex.Wql
 
                 if (PeekToken(tokenQueue, NumberRegex()))
                 {
-                    options.Similarity = (uint)ParseNumberValue(tokenQueue);
+                    var number = ReadToken(tokenQueue, NumberRegex());
+                    options.Similarity = ParseSimilarity(number, number.Value);
                 }
                 else
                 {
@@ -824,7 +863,8 @@ namespace WebExpress.WebIndex.Wql
             // distance can be written as ":" <number> or as a single token ":<number>"
             if (PeekToken(tokenQueue, DistanceRegex()))
             {
-                options.Distance = (uint)ParseDistanceValue(tokenQueue);
+                var token = ReadToken(tokenQueue, DistanceRegex());
+                options.Distance = ParseDistance(token, token.Value[1..]);
             }
             else if (PeekToken(tokenQueue, ":"))
             {
@@ -832,7 +872,8 @@ namespace WebExpress.WebIndex.Wql
 
                 if (PeekToken(tokenQueue, NumberRegex()))
                 {
-                    options.Distance = (uint)ParseNumberValue(tokenQueue);
+                    var number = ReadToken(tokenQueue, NumberRegex());
+                    options.Distance = ParseDistance(number, number.Value);
                 }
                 else
                 {
@@ -854,8 +895,9 @@ namespace WebExpress.WebIndex.Wql
         /// <param name="ilaQueue">
         /// The incremental lookahead analysis stack to record the attribute token.
         /// </param>
+        /// <param name="followers">The token types that may follow the completed invocation.</param>
         /// <returns>The function node.</returns>
-        private WqlExpressionNodeFilterFunction<TIndexItem> ParseFunction(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
+        private WqlExpressionNodeFilterFunction<TIndexItem> ParseFunction(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers)
         {
             var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
             var function = Functions
@@ -906,12 +948,12 @@ namespace WebExpress.WebIndex.Wql
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.Partitioning]
+                        ExpectedNextTokens = followers
                     });
                 }
                 else
                 {
-                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
 
                     while (PeekToken(tokenQueue, ","))
                     {
@@ -923,7 +965,7 @@ namespace WebExpress.WebIndex.Wql
                             ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Function]
                         });
 
-                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, true));
+                        parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
                     }
 
                     var closeToken = ReadToken(tokenQueue, ")");
@@ -931,7 +973,7 @@ namespace WebExpress.WebIndex.Wql
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.LogicalOperator, WqlExpressionType.Order, WqlExpressionType.PartitioningOperator]
+                        ExpectedNextTokens = followers
                     });
                 }
 
@@ -1274,32 +1316,56 @@ namespace WebExpress.WebIndex.Wql
         /// </summary>
         /// <param name="tokenQueue">The token queue.</param>
         /// <returns>The integer value.</returns>
+        /// <exception cref="WqlParseException">The value is no number or exceeds the range of an integer.</exception>
         private static int ParseNumberValue(Queue<WqlToken> tokenQueue)
         {
             var token = ReadToken(tokenQueue, NumberRegex());
-            return int.Parse(token?.Value);
+
+            if (!int.TryParse(token?.Value, out var number))
+            {
+                throw new WqlParseException("webexpress.webindex:wql.parse.exception", token);
+            }
+
+            return number;
         }
 
         /// <summary>
-        /// Parses a fuzzy similarity token "~<number>".
+        /// Parses the value of a fuzzy similarity option. The similarity is a percentage: 1 to 99
+        /// searches fuzzily, 0 and 100 match exactly. A value outside of that range has no
+        /// meaning, and interpreting it - as an exact search, say - would hand the caller results
+        /// for a query other than the one written, so it is refused.
         /// </summary>
-        /// <param name="tokenQueue">The token queue.</param>
-        /// <returns>The similarity value.</returns>
-        private static int ParseFuzzyValue(Queue<WqlToken> tokenQueue)
+        /// <param name="token">The token that carries the value, reported on failure.</param>
+        /// <param name="digits">The digits of the value.</param>
+        /// <returns>The similarity in percent.</returns>
+        /// <exception cref="WqlParseException">The value lies outside of 0 to 100.</exception>
+        private static uint ParseSimilarity(WqlToken token, string digits)
         {
-            var token = ReadToken(tokenQueue, FuzzyRegex());
-            return int.Parse(token?.Value[1..]);
+            if (!uint.TryParse(digits, out var similarity) || similarity > 100)
+            {
+                throw new WqlParseException("webexpress.webindex:wql.invalid_similarity", token);
+            }
+
+            return similarity;
         }
 
         /// <summary>
-        /// Parses a distance token ":<number>".
+        /// Parses the value of a distance option. The pattern of the token admits any number of
+        /// digits, so a value beyond the range of a distance is refused as a syntax error rather
+        /// than surfacing as an overflow the caller does not expect from a query.
         /// </summary>
-        /// <param name="tokenQueue">The token queue.</param>
-        /// <returns>The distance value.</returns>
-        private static int ParseDistanceValue(Queue<WqlToken> tokenQueue)
+        /// <param name="token">The token that carries the value, reported on failure.</param>
+        /// <param name="digits">The digits of the value.</param>
+        /// <returns>The distance in words.</returns>
+        /// <exception cref="WqlParseException">The value exceeds the range of a distance.</exception>
+        private static uint ParseDistance(WqlToken token, string digits)
         {
-            var token = ReadToken(tokenQueue, DistanceRegex());
-            return int.Parse(token?.Value[1..]);
+            if (!uint.TryParse(digits, out var distance))
+            {
+                throw new WqlParseException("webexpress.webindex:wql.invalid_distance", token);
+            }
+
+            return distance;
         }
 
         /// <summary>
@@ -1373,18 +1439,19 @@ namespace WebExpress.WebIndex.Wql
                 else if (c == '"' || c == '\'')
                 {
                     var startChar = c;
-                    i++;
 
                     if (!currentToken.IsEmpty)
                     {
                         tokens.Enqueue(currentToken);
-                        currentToken = new WqlToken() { Offset = i + 1 };
                     }
 
-                    // opening quote token
+                    // opening quote token, anchored at the quote character
+                    currentToken = new WqlToken() { Offset = i };
                     currentToken.Append(c);
                     tokens.Enqueue(currentToken);
-                    currentToken = new WqlToken() { Offset = i + 1 };
+
+                    i++;
+                    currentToken = new WqlToken() { Offset = i };
 
                     // read content until closing quote
                     while (i < input.Length && input[i] != startChar)
@@ -1396,9 +1463,9 @@ namespace WebExpress.WebIndex.Wql
                     if (i < input.Length)
                     {
                         tokens.Enqueue(currentToken);
-                        currentToken = new WqlToken() { Offset = i + 1 };
 
-                        // closing quote token
+                        // closing quote token, anchored at the closing quote character
+                        currentToken = new WqlToken() { Offset = i };
                         currentToken.Append(input[i]);
                         tokens.Enqueue(currentToken);
                         currentToken = new WqlToken() { Offset = i + 1 };
@@ -1489,7 +1556,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>True if matched; otherwise false.</returns>
         private static bool PeekToken(Queue<WqlToken> tokenQueue, Regex regex)
         {
-            return tokenQueue.Count > 0 && regex.IsMatch(tokenQueue.Peek().Value?.ToLower());
+            return tokenQueue.Count > 0 && regex.IsMatch(tokenQueue.Peek().Value?.ToLower() ?? "");
         }
 
         /// <summary>
@@ -1668,6 +1735,10 @@ namespace WebExpress.WebIndex.Wql
                     }
                 }
             }
+
+            // path-based cycle detection: release the type so sibling properties
+            // of the same type still contribute their nested fields
+            processedTypes.Remove(type);
         }
     }
 }
