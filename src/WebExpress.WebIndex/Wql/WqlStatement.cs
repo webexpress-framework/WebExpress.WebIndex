@@ -161,13 +161,32 @@ namespace WebExpress.WebIndex.Wql
 
             if (Partitioning is not null)
             {
-                var (skip, take) = Partitioning.Window;
+                query = FoldPartitioning(query);
+            }
 
-                // a query pages with at least one item, so an empty window becomes a filter
-                // that admits nothing
-                query = take == 0
-                    ? query.Where(x => false)
-                    : query.WithPaging(skip, take ?? int.MaxValue);
+            return query;
+        }
+
+        /// <summary>
+        /// Transfers the skip and take functions to the query as one offset and an optional
+        /// limit. The functions are folded in the order they are written, through the same
+        /// <see cref="WqlExpressionNodePartitioning{TIndexItem}.Window"/> that the reverse
+        /// index path applies, so both execution paths cut out the same items.
+        /// </summary>
+        /// <param name="query">The query to page.</param>
+        /// <returns>The query with offset and limit applied.</returns>
+        private IQuery<TIndexItem> FoldPartitioning(IQuery<TIndexItem> query)
+        {
+            var (skip, take) = Partitioning.Window;
+
+            if (skip > 0)
+            {
+                query = query.WithSkip(skip);
+            }
+
+            if (take.HasValue)
+            {
+                query = query.WithTake(take.Value);
             }
 
             return query;

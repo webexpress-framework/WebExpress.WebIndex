@@ -207,6 +207,30 @@ namespace WebExpress.WebIndex.Test.WQL
             Assert.Equal(4, reversed.Skip);
             Assert.Equal(6, reversed.Take);
             Assert.Equal(7, skipOnly.Skip);
+            Assert.Null(skipOnly.Take);
+            Assert.Equal(0, Fixture.ExecuteWql("Number > 1 take 0").ToQuery().Take);
+        }
+
+        /// <summary>
+        /// Tests that the query folds skip and take exactly like the reverse index path, by
+        /// comparing the results of both paths with each other.
+        /// </summary>
+        /// <param name="partitioning">The skip and take functions.</param>
+        [Theory]
+        [InlineData("skip 2 take 3")]
+        [InlineData("take 6 skip 4")]
+        [InlineData("take 3")]
+        [InlineData("skip 4")]
+        [InlineData("skip 2 skip 3")]
+        public void PagingBothPaths(string partitioning)
+        {
+            var statement = Fixture.ExecuteWql($"Number < 100 order by Number {partitioning}");
+
+            var indexed = Fixture.RetrieveIndexed(statement);
+            var queried = Fixture.RetrieveQueried(statement);
+
+            Assert.NotEmpty(indexed);
+            Assert.Equal(indexed, queried);
         }
 
         /// <summary>
