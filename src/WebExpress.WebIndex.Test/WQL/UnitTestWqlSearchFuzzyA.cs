@@ -185,10 +185,21 @@ namespace WebExpress.WebIndex.Test.WQL
             var res = query.Apply(data);
             var item = res?.FirstOrDefault();
 
-            // validation
+            // validation - the query matches the words hello, helena and helge by similarity
+            // instead of the text as a substring; the index finds two documents less, as
+            // hello is one of its stop words, which the query does not reproduce
             Assert.NotNull(res); // ensure the result set is not null
             Assert.NotNull(item); // ensure there is at least one result
             Assert.Equal(6, res.Count()); // check if 6 results are returned
+            Assert.Equal(
+            [
+                "0d740124-7707-4b1a-a9f1-3a365a15f60b",
+                "3f3d7066-a925-42ac-90f7-ef100afb8460",
+                "77251abf-437e-4408-97a7-55545d1622b5",
+                "a8901fac-aaef-483b-aba8-dba74e36e7fc",
+                "b2e8a5c3-1f6d-4e7b-9e1f-8c1a9d0f2b4a",
+                "c7d8f9e0-3a2b-4c5d-8e6f-9a1b0c2d4e5f"
+            ], res.Select(x => x.Id.ToString()).Order()); // the documents with a word similar to hel
             Assert.Equal("Text ~ 'Hel' ~50", wql.ToString()); // validate the WQL query string representation
             Assert.NotNull(wql.Filter); // verify that a filter is applied
             Assert.Null(wql.Order); // ensure no explicit ordering is applied

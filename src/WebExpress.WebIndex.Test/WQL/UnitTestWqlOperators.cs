@@ -143,7 +143,7 @@ namespace WebExpress.WebIndex.Test.WQL
             var wql = Fixture.ExecuteWql("text is not null");
 
             // validation
-            Assert.Equal("Text is not 'null'", wql.ToString());
+            Assert.Equal("Text is not null", wql.ToString());
         }
 
         /// <summary>

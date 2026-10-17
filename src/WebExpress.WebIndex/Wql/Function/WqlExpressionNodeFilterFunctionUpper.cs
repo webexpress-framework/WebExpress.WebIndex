@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
@@ -9,50 +8,30 @@ namespace WebExpress.WebIndex.Wql.Function
     /// Usage: <c>attribute = upper('value')</c>
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
-    public class WqlExpressionNodeFilterFunctionUpper<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
+    public class WqlExpressionNodeFilterFunctionUpper<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        private static readonly System.Reflection.MethodInfo EvaluateMethod = typeof(WqlExpressionNodeFilterFunctionUpper<TIndexItem>)
-            .GetMethod(nameof(Evaluate), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?? throw new InvalidOperationException("Failed to resolve upper() runtime evaluator.");
+        /// <summary>
+        /// Returns the type of the computed value.
+        /// </summary>
+        public override Type ReturnType => typeof(string);
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public WqlExpressionNodeFilterFunctionUpper()
-            : base("upper")
+            : base("upper", 1, 1)
         {
         }
 
         /// <summary>
-        /// Executes the function.
+        /// Converts the text to uppercase.
         /// </summary>
-        /// <returns>The return value.</returns>
-        public override object Execute()
+        /// <param name="arguments">The text.</param>
+        /// <returns>The uppercase text, or null for a null value.</returns>
+        protected override object Evaluate(IReadOnlyList<object> arguments)
         {
-            var parameters = Parameters?.Select(x => x.GetValue());
-            var param = parameters?.FirstOrDefault();
-
-            return param?.ToString()?.ToUpperInvariant();
+            return ToText(Argument(arguments, 0))?.ToUpperInvariant();
         }
-
-        /// <summary>
-        /// Builds a LINQ expression that calls <c>string.ToUpperInvariant()</c> on the
-        /// first parameter value.
-        /// </summary>
-        /// <param name="param">The parameter expression representing the current index item.</param>
-        /// <returns>An expression that uppercases the first parameter value at query evaluation time.</returns>
-        public override Expression ToExpression(ParameterExpression param)
-        {
-            var valueExpression = Parameters?.FirstOrDefault()?.ToExpression(param) ?? Expression.Constant(null);
-            return Expression.Call(EvaluateMethod, Expression.Convert(valueExpression, typeof(object)));
-        }
-
-#nullable enable
-        private static string? Evaluate(object value)
-        {
-            return value?.ToString()?.ToUpperInvariant();
-        }
-#nullable restore
     }
 }
