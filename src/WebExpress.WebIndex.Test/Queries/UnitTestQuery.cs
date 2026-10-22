@@ -743,12 +743,14 @@ namespace WebExpress.WebIndex.Test.Queries
         }
 
         /// <summary>
-        /// Verifies that a case-insensitive filter built under one culture still matches when
-        /// it is executed under another. The Turkish culture lowercases an uppercase I to a
-        /// dotless i, which a culture-sensitive comparison would no longer match.
+        /// Verifies that a case-insensitive filter lowers with ToLower, which query providers
+        /// such as Entity Framework translate, and lowers the value in the tree as well, so
+        /// that both sides follow the culture current at execution time. The Turkish culture
+        /// lowercases an uppercase I to a dotless i; a value lowered while the query was built
+        /// under another culture would no longer match.
         /// </summary>
         [Fact]
-        public void IgnoreCaseIsCultureInvariant()
+        public void IgnoreCaseLowersTranslatably()
         {
             // arrange
             var culture = CultureInfo.CurrentCulture;
@@ -758,9 +760,9 @@ namespace WebExpress.WebIndex.Test.Queries
             {
                 CultureInfo.CurrentCulture = new CultureInfo("en-US");
 
-                var equals = new Query<IndexItem>().WhereEqualsIgnoreCase(x => x.Name, "title");
-                var contains = new Query<IndexItem>().WhereContainsIgnoreCase(x => x.Name, "itl");
-                var element = new Query<IndexItem>().WhereElementEqualsIgnoreCase(x => x.Tags, "info");
+                var equals = new Query<IndexItem>().WhereEqualsIgnoreCase(x => x.Name, "TITLE");
+                var contains = new Query<IndexItem>().WhereContainsIgnoreCase(x => x.Name, "ITL");
+                var element = new Query<IndexItem>().WhereElementEqualsIgnoreCase(x => x.Tags, "INFO");
 
                 // act
                 CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
@@ -769,6 +771,12 @@ namespace WebExpress.WebIndex.Test.Queries
                 Assert.True(Matches(equals, item));
                 Assert.True(Matches(contains, item));
                 Assert.True(Matches(element, item));
+
+                foreach (var filter in new[] { equals, contains, element }.SelectMany(x => x.Filters))
+                {
+                    Assert.Contains(".ToLower()", filter.ToString());
+                    Assert.DoesNotContain("ToLowerInvariant", filter.ToString());
+                }
             }
             finally
             {

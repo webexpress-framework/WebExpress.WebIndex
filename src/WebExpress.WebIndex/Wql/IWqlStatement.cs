@@ -65,5 +65,17 @@ namespace WebExpress.WebIndex.Wql
         /// An query that represents a query for retrieving indexed items.
         /// </returns>
         IQuery<TIndexItem> ToQuery();
+
+        /// <summary>
+        /// Converts the current wql statement to a query for a specific kind of query provider.
+        /// </summary>
+        /// <param name="mode">
+        /// <see cref="WqlQueryMode.Translatable"/> for providers such as a database that cannot
+        /// run the text matcher of the index.
+        /// </param>
+        /// <returns>
+        /// An query that represents a query for retrieving indexed items.
+        /// </returns>
+        IQuery<TIndexItem> ToQuery(WqlQueryMode mode);
     }
 }

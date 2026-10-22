@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using WebExpress.WebIndex.Term;
@@ -21,8 +23,21 @@ namespace WebExpress.WebIndex.Wql
     /// </summary>
     public sealed class WqlTextMatcher
     {
+        private static readonly MethodInfo StringToLowerMethod = typeof(string)
+            .GetMethod(nameof(string.ToLower), Type.EmptyTypes);
+
+        private static readonly MethodInfo StringContainsMethod = typeof(string)
+            .GetMethod(nameof(string.Contains), [typeof(string)]);
+
         private readonly IReadOnlyList<(string Term, uint Position)> _query;
         private readonly Regex[] _patterns;
+
+        /// <summary>
+        /// Returns the words searched for, folded to lower case without diacritics the way the
+        /// index folds them and still holding their wildcards. A query provider that cannot
+        /// run the matcher, such as a database, can build its own condition from them.
+        /// </summary>
+        public IReadOnlyList<string> Terms { get; }
 
         /// <summary>
         /// Returns the match mode.
@@ -62,6 +77,7 @@ namespace WebExpress.WebIndex.Wql
 
             _query = Tokenize(query, Culture, true);
             _patterns = [.. _query.Select(x => IsFuzzy ? null : CreatePattern(x.Term))];
+            Terms = [.. _query.Select(x => x.Term)];
         }
 
         /// <summary>
@@ -118,6 +134,47 @@ namespace WebExpress.WebIndex.Wql
         public static bool IsMatch(string text, string query, WqlTextMatchMode mode, uint distance, uint similarity, CultureInfo culture)
         {
             return new WqlTextMatcher(query, mode, distance, similarity, culture).IsMatch(text);
+        }
+
+        /// <summary>
+        /// Creates a condition that a query provider such as a database can translate, for
+        /// example into one LIKE per word: the text must contain every literal part of every
+        /// word without regard to case. It pre-selects rather than reproducing the text
+        /// contract - order, distance, word boundaries and similarity are not checked, and
+        /// whether diacritics are ignored is up to the collation of the database. A fuzzy
+        /// query restricts nothing beyond the null test, since a similar word need not share
+        /// any part with the word searched for.
+        /// </summary>
+        /// <param name="text">The text searched in, of type string.</param>
+        /// <returns>A boolean expression built from null tests, ToLower and Contains only.</returns>
+        public Expression ToTranslatableExpression(Expression text)
+        {
+            ArgumentNullException.ThrowIfNull(text);
+
+            if (_query.Count == 0)
+            {
+                return Expression.Constant(false);
+            }
+
+            Expression condition = Expression.NotEqual(text, Expression.Constant(null, typeof(string)));
+
+            if (IsFuzzy)
+            {
+                return condition;
+            }
+
+            var lower = Expression.Call(text, StringToLowerMethod);
+
+            foreach (var fragment in _query.SelectMany(x => x.Term.Split(IndexTermTokenizer.Wildcards, StringSplitOptions.RemoveEmptyEntries)).Distinct())
+            {
+                condition = Expression.AndAlso
+                (
+                    condition,
+                    Expression.Call(lower, StringContainsMethod, Expression.Constant(fragment))
+                );
+            }
+
+            return condition;
         }
 
         /// <summary>

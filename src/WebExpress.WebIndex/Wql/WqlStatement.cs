@@ -105,6 +105,22 @@ namespace WebExpress.WebIndex.Wql
         /// <exception cref="InvalidOperationException">The statement contains errors.</exception>
         public IQuery<TIndexItem> ToQuery()
         {
+            return ToQuery(WqlQueryMode.Exact);
+        }
+
+        /// <summary>
+        /// Converts the current wql statement to a query for a specific kind of query provider.
+        /// </summary>
+        /// <param name="mode">
+        /// <see cref="WqlQueryMode.Translatable"/> for providers such as a database that cannot
+        /// run the text matcher of the index.
+        /// </param>
+        /// <returns>
+        /// An query that represents a query for retrieving indexed items.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">The statement contains errors.</exception>
+        public IQuery<TIndexItem> ToQuery(WqlQueryMode mode)
+        {
             ThrowIfErroneous();
 
             var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
@@ -117,6 +133,11 @@ namespace WebExpress.WebIndex.Wql
 
                 // build the expression tree for the filter condition 
                 var body = Filter.ToExpression(param);
+
+                if (mode == WqlQueryMode.Translatable)
+                {
+                    body = WqlExpressionBuilder.ToTranslatable(body);
+                }
 
                 // wrap into a lambda: x => <body> 
                 var lambda = Expression.Lambda<Func<TIndexItem, bool>>(body, param);

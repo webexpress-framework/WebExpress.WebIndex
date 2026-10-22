@@ -176,7 +176,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where the specified string property equals
-        /// the given value, using a culture-invariant case-insensitive comparison. Items with
+        /// the given value, using a case-insensitive comparison. Items with
         /// a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -361,7 +361,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include items where the specified string property contains the
-        /// given value as a substring, using a culture-invariant case-insensitive comparison.
+        /// given value as a substring, using a case-insensitive comparison.
         /// Items with a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -379,7 +379,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where at least one element of the specified
-        /// string collection contains the given value as a substring, using a culture-invariant
+        /// string collection contains the given value as a substring, using a
         /// case-insensitive comparison. A null collection is treated as empty and null elements
         /// are skipped. Use <see cref="WhereElementEqualsIgnoreCase"/> to match whole elements.
         /// </summary>
@@ -412,7 +412,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where at least one element of the specified
-        /// string collection equals the given value, using a culture-invariant case-insensitive
+        /// string collection equals the given value, using a case-insensitive
         /// comparison. A null collection is treated as empty and null elements are skipped.
         /// </summary>
         /// <param name="selector">
@@ -446,7 +446,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where the specified string property
-        /// starts with the given value, using a culture-invariant case-insensitive comparison.
+        /// starts with the given value, using a case-insensitive comparison.
         /// Items with a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -484,7 +484,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where the specified string property ends
-        /// with the given value, using a culture-invariant case-insensitive comparison. Items
+        /// with the given value, using a case-insensitive comparison. Items
         /// with a null property value never match.
         /// </summary>
         /// <param name="selector">

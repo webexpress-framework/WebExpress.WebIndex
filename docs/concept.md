@@ -1187,13 +1187,27 @@ A statement can be executed in two ways, which return the same items:
   conditions, and every condition with a function on the left-hand side or an attribute as 
   parameter. A condition retrieves its matches without the result limit of the reverse 
   index, so that combinations and complements stay exact for more than 10,000 hits.
-- **The query path** (`ToQuery()`) creates an expression tree that can be applied to any 
-  `IQueryable`. The text conditions are evaluated by the `WqlTextMatcher`, which reproduces 
-  the text contract of the index: the same tokenizer, lower case without diacritics, phrases, 
-  distances, wildcards and similarity. Stemming, stop words, synonyms and the correction of 
-  misspellings belong to the analyzer of an index and are not reproduced, so a query that 
-  depends on them can differ: in the index, `houses` also finds `house`, and a stop word such 
-  as `hello` is not found at all.
+- **The query path** (`ToQuery()`) creates an expression tree for an `IQueryable` whose 
+  provider runs it in memory, such as LINQ to Objects. The text conditions are evaluated by 
+  the `WqlTextMatcher`, which reproduces the text contract of the index: the same tokenizer, 
+  lower case without diacritics, phrases, distances, wildcards and similarity. Stemming, stop 
+  words, synonyms and the correction of misspellings belong to the analyzer of an index and 
+  are not reproduced, so a query that depends on them can differ: in the index, `houses` also 
+  finds `house`, and a stop word such as `hello` is not found at all. A provider that 
+  translates the tree, such as Entity Framework, cannot translate the matcher nor the string 
+  comparisons that ignore case and rejects such a query.
+
+For a database, `ToQuery(WqlQueryMode.Translatable)` rewrites the tree into null tests, 
+`ToLower`, `Contains`, `StartsWith`, `EndsWith` and `string.Compare`, which such providers 
+translate into SQL. A text search then demands that the text contains every word - or every 
+part of a word between its wildcards - without regard to case, one `LIKE` per word. This 
+selects a superset of the exact result: order, distance, word boundaries and similarity are 
+not checked (a fuzzy search only excludes `null`), and whether diacritics are ignored depends 
+on the collation of the database. A negated text search (`!=`, `!~`, `not in`) accordingly 
+selects a subset. A text search whose words come from a function or another attribute, and 
+the comparisons of functions, stay evaluated in memory and cannot be translated. A provider 
+that builds its own conditions finds the folded words of a text search, wildcards included, 
+in `WqlTextMatcher.Terms`.
 
 `skip` and `take` form one window, merged in the order they are written, and both paths 
 apply this window: `skip 5 take 10` returns the items 6 to 15, `take 10 skip 5` the items 6 

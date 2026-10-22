@@ -141,6 +141,94 @@ namespace WebExpress.WebIndex.Test.WQL
         }
 
         /// <summary>
+        /// Tests that the matcher exposes its words folded like the index, wildcards included,
+        /// so that a query provider can build its own condition from them.
+        /// </summary>
+        [Fact]
+        public void MatcherTerms()
+        {
+            var matcher = new WqlTextMatcher("Héllo, WOR*ld", WqlTextMatchMode.Words, 0, 0, Invariant);
+
+            Assert.Equal(["hello", "wor*ld"], matcher.Terms);
+            Assert.Empty(new WqlTextMatcher(null, WqlTextMatchMode.Phrase, 0, 0, Invariant).Terms);
+        }
+
+        /// <summary>
+        /// Tests that a translatable query calls nothing but the string methods a database
+        /// provider translates, and that a text search there selects a superset of the exact
+        /// result: one substring test per word, order and word boundaries left unchecked.
+        /// </summary>
+        [Theory]
+        [InlineData("Text ~ 'hello wor*'", "Hello World", true, true)]
+        [InlineData("Text = 'world hello'", "Hello World", false, true)]
+        [InlineData("Text ~ 'ell'", "Hello World", false, true)]
+        [InlineData("Text ~ 'moon'", "Hello World", false, false)]
+        [InlineData("Text = 'hello'", null, false, false)]
+        [InlineData("Text ~ 'helo'~80", "Hello World", true, true)]
+        [InlineData("Text in ('moon', 'world')", "Hello World", true, true)]
+        [InlineData("Text != 'world'", "Hello World", false, false)]
+        [InlineData("Text = null", null, true, true)]
+        [InlineData("Text < 'HELLO X'", "hello world", true, true)]
+        [InlineData("Text starts with 'HE'", "hello world", true, true)]
+        [InlineData("Text ends with 'LD'", "hello world", true, true)]
+        [InlineData("Text contains 'O W'", "hello world", true, true)]
+        public void TranslatableQuery(string wql, string text, bool exact, bool translatable)
+        {
+            var statement = new WqlParser<UnitTestIndexTestDocumentG>().Parse(wql);
+            var item = new UnitTestIndexTestDocumentG { Text = text };
+
+            Assert.False(statement.HasErrors, statement.Error?.Message);
+
+            var exactQuery = statement.ToQuery();
+            var translatableQuery = statement.ToQuery(WqlQueryMode.Translatable);
+            var calls = new MethodCollector();
+
+            foreach (var filter in translatableQuery.Filters)
+            {
+                calls.Visit(filter);
+            }
+
+            Assert.All(calls.Methods, x => Assert.Contains(x, TranslatableMethods));
+            Assert.Equal(exact, exactQuery.Apply(new[] { item }.AsQueryable()).Any());
+            Assert.Equal(translatable, translatableQuery.Apply(new[] { item }.AsQueryable()).Any());
+        }
+
+        /// <summary>
+        /// Returns the methods a database provider such as Entity Framework translates.
+        /// </summary>
+        private static readonly System.Reflection.MethodInfo[] TranslatableMethods =
+        [
+            typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes),
+            typeof(string).GetMethod(nameof(string.Contains), [typeof(string)]),
+            typeof(string).GetMethod(nameof(string.StartsWith), [typeof(string)]),
+            typeof(string).GetMethod(nameof(string.EndsWith), [typeof(string)]),
+            typeof(string).GetMethod(nameof(string.Compare), [typeof(string), typeof(string)])
+        ];
+
+        /// <summary>
+        /// Collects the methods called within an expression tree.
+        /// </summary>
+        private sealed class MethodCollector : ExpressionVisitor
+        {
+            /// <summary>
+            /// Returns the methods called.
+            /// </summary>
+            public List<System.Reflection.MethodInfo> Methods { get; } = [];
+
+            /// <summary>
+            /// Records a method call.
+            /// </summary>
+            /// <param name="node">The method call.</param>
+            /// <returns>The visited call.</returns>
+            protected override Expression VisitMethodCall(MethodCallExpression node)
+            {
+                Methods.Add(node.Method);
+
+                return base.VisitMethodCall(node);
+            }
+        }
+
+        /// <summary>
         /// Asserts that a value converts into the expected value.
         /// </summary>
         /// <param name="value">The value.</param>

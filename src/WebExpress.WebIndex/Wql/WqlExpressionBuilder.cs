@@ -48,6 +48,21 @@ namespace WebExpress.WebIndex.Wql
             .GetMethod(nameof(WqlTextMatcher.IsMatch), BindingFlags.Public | BindingFlags.Static,
             [typeof(string), typeof(string), typeof(WqlTextMatchMode), typeof(uint), typeof(uint), typeof(CultureInfo)]);
 
+        private static readonly MethodInfo StringToLowerMethod = typeof(string)
+            .GetMethod(nameof(string.ToLower), Type.EmptyTypes);
+
+        private static readonly MethodInfo StringCompareTranslatableMethod = typeof(string)
+            .GetMethod(nameof(string.Compare), [typeof(string), typeof(string)]);
+
+        private static readonly MethodInfo StringStartsWithTranslatableMethod = typeof(string)
+            .GetMethod(nameof(string.StartsWith), [typeof(string)]);
+
+        private static readonly MethodInfo StringEndsWithTranslatableMethod = typeof(string)
+            .GetMethod(nameof(string.EndsWith), [typeof(string)]);
+
+        private static readonly MethodInfo StringContainsTranslatableMethod = typeof(string)
+            .GetMethod(nameof(string.Contains), [typeof(string)]);
+
         /// <summary>
         /// Creates the constant of a literal, converted into the type of the operand it is
         /// compared with.
@@ -158,6 +173,25 @@ namespace WebExpress.WebIndex.Wql
                 Expression.Constant(similarity),
                 Expression.Constant(culture)
             );
+        }
+
+        /// <summary>
+        /// Rewrites the conditions of an expression tree into forms that a query provider such
+        /// as a database can translate, because neither the <see cref="WqlTextMatcher"/> nor
+        /// the overloads of string methods taking a <see cref="StringComparison"/> exist there.
+        /// A text search on a literal becomes a substring test per word, see
+        /// <see cref="WqlTextMatcher.ToTranslatableExpression"/>; comparisons, prefixes,
+        /// suffixes and substrings compare both sides in lower case. A text search whose
+        /// words are only known at evaluation time and the comparisons of functions are left
+        /// as they are, so a provider rejects them rather than returning a wrong result.
+        /// </summary>
+        /// <param name="expression">An expression built by this class.</param>
+        /// <returns>The rewritten expression.</returns>
+        public static Expression ToTranslatable(Expression expression)
+        {
+            ArgumentNullException.ThrowIfNull(expression);
+
+            return new TranslatableRewriter().Visit(expression);
         }
 
         /// <summary>
@@ -425,6 +459,88 @@ namespace WebExpress.WebIndex.Wql
         private static bool IsFloating(Type type)
         {
             return type == typeof(double) || type == typeof(float);
+        }
+
+        /// <summary>
+        /// Replaces the calls of a tree that only run in memory by their translatable forms.
+        /// </summary>
+        private sealed class TranslatableRewriter : ExpressionVisitor
+        {
+            /// <summary>
+            /// Visits a method call and replaces it if a translatable form exists.
+            /// </summary>
+            /// <param name="node">The method call.</param>
+            /// <returns>The replacement or the visited call.</returns>
+            protected override Expression VisitMethodCall(MethodCallExpression node)
+            {
+                if (base.VisitMethodCall(node) is not MethodCallExpression call)
+                {
+                    return node;
+                }
+
+                if (call.Method == MatcherIsMatchMethod && call.Object is ConstantExpression { Value: WqlTextMatcher matcher })
+                {
+                    return matcher.ToTranslatableExpression(call.Arguments[0]);
+                }
+
+                if (call.Method == StringEqualsMethod && IsIgnoreCase(call.Arguments[2]))
+                {
+                    var left = call.Arguments[0];
+                    var right = call.Arguments[1];
+
+                    // string.Equals treats two nulls as equal, which LOWER alone would lose
+                    return Expression.OrElse
+                    (
+                        Expression.AndAlso(Expression.Not(IsNotNull(left)), Expression.Not(IsNotNull(right))),
+                        Expression.AndAlso
+                        (
+                            Expression.AndAlso(IsNotNull(left), IsNotNull(right)),
+                            Expression.Equal(Lower(left), Lower(right))
+                        )
+                    );
+                }
+
+                if (call.Method == StringCompareMethod && IsIgnoreCase(call.Arguments[2]))
+                {
+                    // the caller already guards both sides against null
+                    return Expression.Call(StringCompareTranslatableMethod, Lower(call.Arguments[0]), Lower(call.Arguments[1]));
+                }
+
+                var substring = call.Method == StringStartsWithMethod ? StringStartsWithTranslatableMethod
+                    : call.Method == StringEndsWithMethod ? StringEndsWithTranslatableMethod
+                    : call.Method == StringContainsMethod ? StringContainsTranslatableMethod
+                    : null;
+
+                if (substring is not null && IsIgnoreCase(call.Arguments[1]))
+                {
+                    return Expression.Call(Lower(call.Object), substring, Lower(call.Arguments[0]));
+                }
+
+                return call;
+            }
+
+            /// <summary>
+            /// Determines whether an argument is the comparison that ignores case.
+            /// </summary>
+            /// <param name="argument">The comparison argument.</param>
+            /// <returns>True for a constant ordinal comparison ignoring case.</returns>
+            private static bool IsIgnoreCase(Expression argument)
+            {
+                return argument is ConstantExpression { Value: StringComparison.OrdinalIgnoreCase };
+            }
+
+            /// <summary>
+            /// Lowers a text; a literal is lowered right away, so that a null literal is not
+            /// dereferenced when a provider evaluates the constant parts of a tree.
+            /// </summary>
+            /// <param name="text">The text.</param>
+            /// <returns>The lowered text.</returns>
+            private static Expression Lower(Expression text)
+            {
+                return text is ConstantExpression constant
+                    ? Expression.Constant(((string)constant.Value)?.ToLower(), typeof(string))
+                    : Expression.Call(text, StringToLowerMethod);
+            }
         }
     }
 }

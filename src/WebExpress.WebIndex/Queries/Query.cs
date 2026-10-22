@@ -27,7 +27,7 @@ namespace WebExpress.WebIndex.Queries
         private static readonly MethodInfo StringContainsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string)]);
         private static readonly MethodInfo StringStartsWithMethod = typeof(string).GetMethod(nameof(string.StartsWith), [typeof(string)]);
         private static readonly MethodInfo StringEndsWithMethod = typeof(string).GetMethod(nameof(string.EndsWith), [typeof(string)]);
-        private static readonly MethodInfo StringToLowerInvariantMethod = typeof(string).GetMethod(nameof(string.ToLowerInvariant), Type.EmptyTypes);
+        private static readonly MethodInfo StringToLowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
         private static readonly MethodInfo StringIsNullOrEmptyMethod = typeof(string).GetMethod(nameof(string.IsNullOrEmpty), [typeof(string)]);
         private static readonly MethodInfo AnyStringMethod = typeof(Enumerable).GetMethods()
             .First(m => m.Name == nameof(Enumerable.Any) && m.GetParameters().Length == 2)
@@ -300,7 +300,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where the specified string property equals
-        /// the given value, using a culture-invariant case-insensitive comparison. Items with
+        /// the given value, using a case-insensitive comparison. Items with
         /// a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -545,7 +545,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include items where the specified string property contains the
-        /// given value as a substring, using a culture-invariant case-insensitive comparison.
+        /// given value as a substring, using a case-insensitive comparison.
         /// Items with a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -566,7 +566,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where at least one element of the specified
-        /// string collection contains the given value as a substring, using a culture-invariant
+        /// string collection contains the given value as a substring, using a
         /// case-insensitive comparison. A null collection is treated as empty and null elements
         /// are skipped.
         /// </summary>
@@ -605,7 +605,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where at least one element of the specified
-        /// string collection equals the given value, using a culture-invariant case-insensitive
+        /// string collection equals the given value, using a case-insensitive
         /// comparison. A null collection is treated as empty and null elements are skipped.
         /// </summary>
         /// <param name="selector">
@@ -645,7 +645,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where the specified string property
-        /// starts with the given value, using a culture-invariant case-insensitive comparison.
+        /// starts with the given value, using a case-insensitive comparison.
         /// Items with a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -689,7 +689,7 @@ namespace WebExpress.WebIndex.Queries
 
         /// <summary>
         /// Filters the query to include only items where the specified string property ends
-        /// with the given value, using a culture-invariant case-insensitive comparison. Items
+        /// with the given value, using a case-insensitive comparison. Items
         /// with a null property value never match.
         /// </summary>
         /// <param name="selector">
@@ -1004,13 +1004,14 @@ namespace WebExpress.WebIndex.Queries
         /// <summary>
         /// Adds a filter that matches a string property against a value. All string filters
         /// share it, so they validate their arguments when the query is built rather than
-        /// when it is executed, never call a method on a null property and normalize case
-        /// with the invariant culture, which keeps the result independent of the culture
-        /// that is current at execution time.
+        /// when it is executed and never call a method on a null property. Case is normalized
+        /// with ToLower, which query providers such as Entity Framework translate into LOWER,
+        /// unlike ToLowerInvariant. Both sides are lowered in the tree, so that in memory they
+        /// follow the same culture - the one current at execution time.
         /// </summary>
         /// <param name="selector">The selector of the string property.</param>
         /// <param name="value">The value to match.</param>
-        /// <param name="ignoreCase">True to compare both sides in invariant lower case.</param>
+        /// <param name="ignoreCase">True to compare both sides in lower case.</param>
         /// <param name="match">Builds the comparison from the property and the value.</param>
         /// <returns>A new query with the additional filter.</returns>
         private IQuery<TIndexItem> WhereString
@@ -1024,8 +1025,8 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(selector);
             ArgumentNullException.ThrowIfNull(value);
 
-            var subject = ignoreCase ? Expression.Call(selector.Body, StringToLowerInvariantMethod) : selector.Body;
-            var operand = Expression.Constant(ignoreCase ? value.ToLowerInvariant() : value, typeof(string));
+            var subject = ignoreCase ? Expression.Call(selector.Body, StringToLowerMethod) : selector.Body;
+            var operand = Operand(value, ignoreCase);
 
             var body = Expression.AndAlso
             (
@@ -1043,7 +1044,7 @@ namespace WebExpress.WebIndex.Queries
         /// </summary>
         /// <param name="selector">The selector of the string collection.</param>
         /// <param name="value">The value to match.</param>
-        /// <param name="ignoreCase">True to compare both sides in invariant lower case.</param>
+        /// <param name="ignoreCase">True to compare both sides in lower case.</param>
         /// <param name="match">Builds the comparison from an element and the value.</param>
         /// <returns>A new query with the additional filter.</returns>
         private IQuery<TIndexItem> WhereAnyElement
@@ -1058,8 +1059,8 @@ namespace WebExpress.WebIndex.Queries
             ArgumentNullException.ThrowIfNull(value);
 
             var element = Expression.Parameter(typeof(string), "s");
-            var subject = ignoreCase ? Expression.Call(element, StringToLowerInvariantMethod) : (Expression)element;
-            var operand = Expression.Constant(ignoreCase ? value.ToLowerInvariant() : value, typeof(string));
+            var subject = ignoreCase ? Expression.Call(element, StringToLowerMethod) : (Expression)element;
+            var operand = Operand(value, ignoreCase);
 
             var elementMatch = Expression.Lambda<Func<string, bool>>
             (
@@ -1076,6 +1077,19 @@ namespace WebExpress.WebIndex.Queries
             var body = Expression.Call(AnyStringMethod, collection, elementMatch);
 
             return Where(Expression.Lambda<Func<TIndexItem, bool>>(body, selector.Parameters));
+        }
+
+        /// <summary>
+        /// Creates the value side of a string filter.
+        /// </summary>
+        /// <param name="value">The value to match.</param>
+        /// <param name="ignoreCase">True to lower the value at execution time like the property.</param>
+        /// <returns>The value expression.</returns>
+        private static Expression Operand(string value, bool ignoreCase)
+        {
+            var constant = Expression.Constant(value, typeof(string));
+
+            return ignoreCase ? Expression.Call(constant, StringToLowerMethod) : constant;
         }
 
         /// <summary>
