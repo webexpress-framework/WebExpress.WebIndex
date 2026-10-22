@@ -1207,7 +1207,9 @@ on the collation of the database. A negated text search (`!=`, `!~`, `not in`) a
 selects a subset. A text search whose words come from a function or another attribute, and 
 the comparisons of functions, stay evaluated in memory and cannot be translated. A provider 
 that builds its own conditions finds the folded words of a text search, wildcards included, 
-in `WqlTextMatcher.Terms`.
+in `WqlTextMatcher.Terms`. The REST endpoints of WebExpress.WebApp (`RestApiTable`, `RestApiList`
+and the others) build their query in `Exact` mode; an endpoint backed by a database overrides
+`protected virtual WqlQueryMode QueryMode` to return `Translatable`.
 
 `skip` and `take` form one window, merged in the order they are written, and both paths 
 apply this window: `skip 5 take 10` returns the items 6 to 15, `take 10 skip 5` the items 6 
