@@ -127,6 +127,61 @@ namespace WebExpress.WebIndex.Test.Storage
         }
 
         /// <summary>
+        /// Keeps initialization writes at their intended offsets when maintenance flushes queued segments.
+        /// </summary>
+        [Fact]
+        public async Task InitializeSerializesStreamAccessWithFlush()
+        {
+            // arrange
+            using var storageFile = new IndexStorageFile(_tempFileName);
+            using var initializationReady = new ManualResetEventSlim();
+            using var releaseInitialization = new ManualResetEventSlim();
+            using var flushStarted = new ManualResetEventSlim();
+            var context = new IndexStorageContext(null);
+            var segment = new IndexStorageSegmentBucket(context, 32) { ItemAddr = 1234 };
+            storageFile.FileStream.Write(BitConverter.GetBytes(4096ul));
+            storageFile.FileStream.SetLength(40);
+            storageFile.FileStream.Flush();
+
+            // act
+            var initialization = Task.Factory.StartNew(() => storageFile.Initialize(() =>
+            {
+                storageFile.Write(segment);
+                storageFile.FileStream.Seek(0, SeekOrigin.Begin);
+                initializationReady.Set();
+                if (!releaseInitialization.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken))
+                {
+                    throw new TimeoutException("Initialization was not released.");
+                }
+
+                storageFile.FileStream.Write(new byte[sizeof(ulong)]);
+            }), TestContext.Current.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            Task flush = Task.CompletedTask;
+            try
+            {
+                Assert.True(initializationReady.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+                flush = Task.Factory.StartNew(() =>
+                {
+                    flushStarted.Set();
+                    storageFile.Flush();
+                }, TestContext.Current.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Assert.True(flushStarted.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+                await Task.WhenAny(flush, Task.Delay(250, TestContext.Current.CancellationToken));
+            }
+            finally
+            {
+                releaseInitialization.Set();
+                await Task.WhenAll(initialization, flush);
+            }
+
+            // validation
+            storageFile.InvalidationAll();
+            Assert.Equal(0ul, storageFile.Read<IndexStorageSegmentBucket>(0, context).ItemAddr);
+            Assert.Equal(1234ul, storageFile.Read<IndexStorageSegmentBucket>(32, context).ItemAddr);
+            Assert.Equal(40, storageFile.FileStream.Length);
+        }
+
+        /// <summary>
         /// Tests that Write, Invalidation, and InvalidationAll do not throw with null arguments.
         /// </summary>
         [Fact]

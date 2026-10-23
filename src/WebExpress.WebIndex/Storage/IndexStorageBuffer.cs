@@ -89,6 +89,19 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
+        /// Keeps storage initialization and its final flush exclusive with other stream operations.
+        /// </summary>
+        /// <param name="initialization">The action that creates or resets the storage segments.</param>
+        internal void Initialize(Action initialization)
+        {
+            lock (_guard)
+            {
+                initialization();
+                Flush();
+            }
+        }
+
+        /// <summary>
         /// Reads a segment from the storage medium.
         /// </summary>
         /// <typeparam name="TIndexStorageSegment">The segment type to read.</typeparam>

@@ -134,7 +134,8 @@ namespace WebExpress.WebIndex.Storage
 
         /// <summary>
         /// Runs the initialization of the segments stored in this file and releases the file when
-        /// it fails. The file is opened exclusively, and the constructor of its owner hands out no
+        /// it fails. Initialization shares the buffer lock with reads and maintenance flushes so direct
+        /// stream writes cannot lose their position. The file is opened exclusively, and its owner hands out no
         /// instance once it throws, so without this a file with a foreign header or a truncated
         /// segment would stay locked until the finalizer runs and every retry would fail to open it.
         /// </summary>
@@ -143,8 +144,7 @@ namespace WebExpress.WebIndex.Storage
         {
             try
             {
-                initialization();
-                Flush();
+                Buffer.Initialize(initialization);
             }
             catch
             {

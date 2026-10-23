@@ -249,7 +249,19 @@ namespace WebExpress.WebIndex.Test.IndexManager
             documents = IndexManager.All<UnitTestIndexTestDocumentB>();
 
             Assert.NotNull(documents);
-            Assert.False(documents.Any());
+            Assert.Empty(documents);
+
+            IndexManager.Close<UnitTestIndexTestDocumentB>();
+            IndexManager.Create<UnitTestIndexTestDocumentB>(CultureInfo.GetCultureInfo("en"), IndexType.Storage);
+            Assert.Empty(IndexManager.All<UnitTestIndexTestDocumentB>());
+
+            var replacement = Fixture.TestData[0];
+            IndexManager.Insert(replacement);
+            Assert.Equal(replacement.Id, Assert.Single(IndexManager.All<UnitTestIndexTestDocumentB>()).Id);
+
+            IndexManager.Close<UnitTestIndexTestDocumentB>();
+            IndexManager.Create<UnitTestIndexTestDocumentB>(CultureInfo.GetCultureInfo("en"), IndexType.Storage);
+            Assert.Equal(replacement.Id, Assert.Single(IndexManager.All<UnitTestIndexTestDocumentB>()).Id);
 
             Postconditions();
         }
