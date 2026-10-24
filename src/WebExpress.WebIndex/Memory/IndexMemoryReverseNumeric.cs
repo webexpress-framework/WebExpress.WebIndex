@@ -45,7 +45,7 @@ namespace WebExpress.WebIndex.Memory
         public override void Add(TIndexItem item)
         {
             var value = Field.GetPropertyValue(item);
-            var terms = Context.TokenAnalyzer.Analyze(value?.ToString(), Culture);
+            var terms = Context.TokenAnalyzer.Analyze(Convert.ToString(value, Culture), Culture);
 
             Add(item, terms);
         }
@@ -59,7 +59,7 @@ namespace WebExpress.WebIndex.Memory
         {
             foreach (var term in terms)
             {
-                Numeric = Numeric.AddAndBalance(item.Id, Convert.ToDecimal(term.Value));
+                Numeric = Numeric.AddAndBalance(item.Id, Convert.ToDecimal(term.Value, Culture));
             }
         }
 
@@ -70,7 +70,7 @@ namespace WebExpress.WebIndex.Memory
         public override void Delete(TIndexItem item)
         {
             var value = Field.GetPropertyValue(item);
-            var terms = Context.TokenAnalyzer.Analyze(value?.ToString(), Culture);
+            var terms = Context.TokenAnalyzer.Analyze(Convert.ToString(value, Culture), Culture);
 
             Delete(item, terms);
         }

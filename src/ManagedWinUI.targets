@@ -1,0 +1,8 @@
+<Project>
+  <!-- managed xaml compilation does not consume vcmeta.dll; winui probes an absent msvc directory in visual studio anyway -->
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj' and '$(TargetPlatformIdentifier)' == 'Windows' and '$(ManagedAssembly)' != 'false'">
+    <MarkupCompilePass1DependsOn>$([MSBuild]::Unescape($(MarkupCompilePass1DependsOn.Replace('GetVCInstallPath;', ''))))</MarkupCompilePass1DependsOn>
+    <MarkupCompilePass2DependsOn>$([MSBuild]::Unescape($(MarkupCompilePass2DependsOn.Replace('GetVCInstallPath;', ''))))</MarkupCompilePass2DependsOn>
+    <Prep_ComputeProcessXamlFilesDependsOn>$([MSBuild]::Unescape($(Prep_ComputeProcessXamlFilesDependsOn.Replace('GetVCInstallPath;', ''))))</Prep_ComputeProcessXamlFilesDependsOn>
+  </PropertyGroup>
+</Project>

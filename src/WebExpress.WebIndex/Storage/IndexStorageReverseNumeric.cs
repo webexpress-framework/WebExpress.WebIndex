@@ -91,7 +91,7 @@ namespace WebExpress.WebIndex.Storage
                 return;
             }
 
-            var value = Field.GetPropertyValue(item)?.ToString();
+            var value = Convert.ToString(Field.GetPropertyValue(item), Culture);
             var terms = Context.TokenAnalyzer.Analyze(value, Culture);
 
             Add(item, terms);
@@ -136,7 +136,7 @@ namespace WebExpress.WebIndex.Storage
             }
 
             var value = Field.GetPropertyValue(item);
-            var terms = Context.TokenAnalyzer.Analyze(value?.ToString(), Culture);
+            var terms = Context.TokenAnalyzer.Analyze(Convert.ToString(value, Culture), Culture);
 
             Delete(item, terms);
         }

@@ -339,10 +339,10 @@ namespace WebExpress.WebIndex
 
             foreach (var field in Fields)
             {
-                var currentValue = field.GetPropertyValue(currentItem)?.ToString();
+                var currentValue = Convert.ToString(field.GetPropertyValue(currentItem), Culture);
                 var currentTerms = Context.TokenAnalyzer.Analyze(currentValue, Culture);
 
-                var changedValue = field.GetPropertyValue(item)?.ToString();
+                var changedValue = Convert.ToString(field.GetPropertyValue(item), Culture);
                 var changedTerms = Context.TokenAnalyzer.Analyze(changedValue, Culture);
 
                 if (GetReverseIndex(field) is IIndexReverse<TIndexItem> reverseIndex)
@@ -388,10 +388,10 @@ namespace WebExpress.WebIndex
 
                 await Task.Run(() =>
                 {
-                    var currentValue = field.GetPropertyValue(currentItem)?.ToString();
+                    var currentValue = Convert.ToString(field.GetPropertyValue(currentItem), Culture);
                     var currentTerms = Context.TokenAnalyzer.Analyze(currentValue, Culture);
 
-                    var changedValue = field.GetPropertyValue(item)?.ToString();
+                    var changedValue = Convert.ToString(field.GetPropertyValue(item), Culture);
                     var changedTerms = Context.TokenAnalyzer.Analyze(changedValue, Culture);
 
                     if (GetReverseIndex(field) is IIndexReverse<TIndexItem> reverseIndex)
