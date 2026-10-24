@@ -1,204 +1,166 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage
-    x:Class="WebExpress.WebIndex.WiUI.Pages.MainPage"
-    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:WebExpress.WebIndex.WiUI"
-    xmlns:pages="clr-namespace:WebExpress.WebIndex.WiUI.Pages"
-    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-    Title="{Binding SelectedProject.ProjectName}">
-
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-
-        <VerticalStackLayout
-            Grid.Row="0"
-            Grid.Column="0"
-            BackgroundColor="LightGoldenrodYellow">
-            <Label
-                Padding="10"
-                FontAttributes="Bold"
-                FontSize="Title"
-                Text="Index files"
-                TextColor="DarkBlue" />
-            <!--  index files from project  -->
-            <ListView
-                x:Name="IndexListView"
-                ItemSelected="OnIndexSelected"
-                ItemsSource="{Binding Indexes}"
-                SelectedItem="{Binding SelectedIndex}">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <ViewCell>
-                            <StackLayout
-                                Padding="10"
-                                Orientation="Horizontal"
-                                Spacing="10">
-                                <StackLayout Orientation="Vertical" VerticalOptions="Center">
-                                    <Label
-                                        Margin="10,0,5,0"
-                                        FontSize="Small"
-                                        Text="{Binding Name}"
-                                        TextColor="Black" />
-                                </StackLayout>
-                            </StackLayout>
-                        </ViewCell>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
-
-            <Label
-                Padding="10"
-                FontAttributes="Bold"
-                FontSize="Title"
-                Text="Fields "
-                TextColor="DarkBlue" />
-
-            <!--  fields from selected index files  -->
-            <ListView
-                x:Name="FieldListView"
-                ItemSelected="OnFieldSelected"
-                ItemsSource="{Binding Fields}"
-                SelectedItem="{Binding SelectedField}">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <ViewCell>
-                            <StackLayout
-                                Padding="10"
-                                Orientation="Horizontal"
-                                Spacing="10">
-                                <StackLayout Orientation="Vertical" VerticalOptions="Center">
-                                    <Label
-                                        Margin="10,0,5,0"
-                                        FontSize="Small"
-                                        Text="{Binding Name}"
-                                        TextColor="Black" />
-                                </StackLayout>
-                            </StackLayout>
-                        </ViewCell>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
-        </VerticalStackLayout>
-
-        <Grid
-            Grid.Row="0"
-            Grid.Column="1"
-            BackgroundColor="LightYellow">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Label
-                Grid.Row="0"
-                Grid.Column="0"
-                Padding="10"
-                FontAttributes="Bold"
-                FontSize="Title"
-                Text="Reverse Index"
-                TextColor="DarkBlue" />
-
-            <ListView
-                x:Name="TermListView"
-                Grid.Row="1"
-                Grid.Column="0"
-                ItemSelected="OnTermSelected"
-                ItemsSource="{Binding Terms}"
-                SelectedItem="{Binding SelectedTerm}">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <ViewCell>
-                            <Grid Padding="5">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Label
-                                    Grid.Row="0"
-                                    Grid.Column="0"
-                                    Margin="0,0,50,0"
-                                    FontSize="Small"
-                                    Text="{Binding Value}"
-                                    TextColor="Black" />
-
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1">
-                                    <HorizontalStackLayout HorizontalOptions="End">
-                                        <Label
-                                            Margin="10,0,5,0"
-                                            FontAttributes="Bold"
-                                            FontSize="Small"
-                                            Text="Fequency:"
-                                            TextColor="Gray" />
-                                        <Label
-                                            Margin="0,0,5,0"
-                                            FontSize="Small"
-                                            Text="{Binding Fequency}"
-                                            TextColor="Gray" />
-                                        <Label
-                                            Margin="0,0,5,0"
-                                            FontAttributes="Bold"
-                                            FontSize="Small"
-                                            Text="Height:"
-                                            TextColor="Gray" />
-                                        <Label
-                                            Margin="0,0,5,0"
-                                            FontSize="Small"
-                                            Text="{Binding Height}"
-                                            TextColor="Gray" />
-                                        <Label
-                                            FontAttributes="Bold"
-                                            FontSize="Small"
-                                            Text="Balance:"
-                                            TextColor="Gray" />
-                                        <Label
-                                            Margin="0,0,5,0"
-                                            FontSize="Small"
-                                            Text="{Binding Balance}"
-                                            TextColor="Gray" />
-
-                                    </HorizontalStackLayout>
-                                    <HorizontalStackLayout HorizontalOptions="End">
-                                        <Label
-                                            Margin="10,0,5,0"
-                                            FontAttributes="Bold"
-                                            FontSize="Small"
-                                            Text="Documents:"
-                                            TextColor="Gray" />
-                                        <Label
-                                            Margin="0,0,5,0"
-                                            FontSize="Small"
-                                            Text="{Binding Documents}"
-                                            TextColor="Gray" />
-                                    </HorizontalStackLayout>
-
-                                </VerticalStackLayout>
-
-                                <ImageButton
-                                    Grid.Row="0"
-                                    Grid.Column="2"
-                                    Margin="5"
-                                    BackgroundColor="Transparent"
-                                    Clicked="OnAddClipboard"
-                                    Source="clipboard.png" />
-                            </Grid>
-                        </ViewCell>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:WebExpress.WebIndex.WiUI.Localization"
+             xmlns:explorer="clr-namespace:WebExpress.WebIndex.WiUI.Explorer"
+             x:Class="WebExpress.WebIndex.WiUI.Pages.MainPage"
+             Title="Index-Explorer" Shell.NavBarIsVisible="False" BackgroundColor="{AppThemeBinding Light=#F4F6FA, Dark=#1E1E1E}">
+    <ContentPage.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=White, Dark=#252526}" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light=#DFE5EF, Dark=#3F3F46}" />
+            <Setter Property="StrokeShape" Value="Rectangle" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style x:Key="Quiet" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#E8EEF8, Dark=#333337}" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#264A7C, Dark=#D4D4D4}" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style x:Key="ResultTab" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor" Value="#D4D4D4" />
+            <Setter Property="BorderWidth" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="MinimumHeightRequest" Value="38" />
+        </Style>
+        <Style x:Key="SuggestionChip" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="#253747" />
+            <Setter Property="TextColor" Value="#B9DFFF" />
+            <Setter Property="BorderColor" Value="#476B88" />
+            <Setter Property="BorderWidth" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="12,2" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinimumHeightRequest" Value="30" />
+            <Setter Property="HeightRequest" Value="30" />
+            <Setter Property="MinimumWidthRequest" Value="40" />
+        </Style>
+        <Style x:Key="Muted" TargetType="Label">
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#64748B, Dark=#A0A0A0}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </ContentPage.Resources>
+    <Grid Padding="0" RowDefinitions="Auto,*,Auto" RowSpacing="0">
+        <Grid Padding="12,6" BackgroundColor="#2D2D30" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <VerticalStackLayout Spacing="3">
+                <Label Text="Index-Explorer" FontSize="16" FontAttributes="Bold" />
+                <Label Text="{x:Static loc:AppText.DocumentsWQLSchemaReverseIndexes}" Style="{StaticResource Muted}" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                <ActivityIndicator x:Name="BusyIndicator" IsVisible="False" />
+                <Button x:Name="CancelButton" Text="{x:Static loc:AppText.Cancel}" Clicked="OnCancel" IsVisible="False" Style="{StaticResource Quiet}" />
+                <Button Text="{x:Static loc:AppText.WQLHelp}" Clicked="OnHelp" Style="{StaticResource Quiet}" />
+            </HorizontalStackLayout>
         </Grid>
+        <Grid x:Name="Workspace" Grid.Row="1" ColumnDefinitions="290,*" ColumnSpacing="4">
+            <Border Style="{StaticResource Card}" Padding="0">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="4">
+                    <Grid Padding="10,8" BackgroundColor="#2D2D30" ColumnDefinitions="*,Auto">
+                        <Label Text="{x:Static loc:AppText.PROJECTEXPLORER}" FontSize="12" VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="{x:Static loc:AppText.Manage}" Clicked="OnManageProjects" Style="{StaticResource Quiet}" />
+                    </Grid>
+                    <HorizontalStackLayout Grid.Row="1" Spacing="2" Padding="6,0">
+                        <Button Text="{x:Static loc:AppText.NewProjectButton}" Clicked="OnNewProject" Style="{StaticResource Quiet}" />
+                        <Button Text="{x:Static loc:AppText.OpenLink}" Clicked="OnOpen" Style="{StaticResource Quiet}" />
+                        <Button Text="{x:Static loc:AppText.Sample}" Clicked="OnSample" Style="{StaticResource Quiet}" />
+                    </HorizontalStackLayout>
+                    <SearchBar x:Name="IndexFilter" Grid.Row="2" Placeholder="{x:Static loc:AppText.SearchProjectTree}" TextChanged="OnIndexFilterChanged" />
+                    <ScrollView Grid.Row="3"><VerticalStackLayout x:Name="ProjectTree" Spacing="1" /></ScrollView>
+                    <VerticalStackLayout Grid.Row="4" Padding="8" Spacing="4">
+                        <Label x:Name="FolderLabel" Text="{x:Static loc:AppText.LinkAnIndexOrCreateAProject}" MaxLines="2" LineBreakMode="MiddleTruncation" Style="{StaticResource Muted}" />
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
+                            <Picker x:Name="CulturePicker" Title="{x:Static loc:AppText.IndexLanguage}" SelectedIndexChanged="OnCultureChanged" />
+                            <Button Grid.Column="1" Text="{x:Static loc:AppText.Refresh}" Clicked="OnRefresh" Style="{StaticResource Quiet}" />
+                            <Button Grid.Column="2" Text="{x:Static loc:AppText.Close}" Clicked="OnClose" Style="{StaticResource Quiet}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="4" Padding="6">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout>
+                        <Label x:Name="IndexTitle" Text="{x:Static loc:AppText.WelcomeToYourIndexes}" FontSize="18" FontAttributes="Bold" />
+                        <Label x:Name="IndexSummary" Text="{x:Static loc:AppText.DocumentsSchemaAndReverseTermsInOneWorkspace}" Style="{StaticResource Muted}" />
+                    </VerticalStackLayout>
+                    <Button x:Name="EditModeButton" Grid.Column="1" Text="{x:Static loc:AppText.EnableEditing}" Clicked="OnToggleEditing" Style="{StaticResource Quiet}" IsEnabled="False" />
+                </Grid>
+                <Border Grid.Row="1" Style="{StaticResource Card}">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                            <Label Text="{x:Static loc:AppText.WQLQUERY}" Style="{StaticResource Muted}" FontAttributes="Bold" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="{x:Static loc:AppText.Clear}" Clicked="OnClearQuery" Style="{StaticResource Quiet}" />
+                            <Button Grid.Column="2" Text="{x:Static loc:AppText.Save}" Clicked="OnFavorite" Style="{StaticResource Quiet}" />
+                            <Button x:Name="RunButton" Grid.Column="3" Text="{x:Static loc:AppText.RunQuery}" Clicked="OnRun" IsEnabled="False" />
+                        </Grid>
+                        <Editor x:Name="QueryEditor" Grid.Row="1" HeightRequest="58" FontFamily="Consolas" FontSize="14"
+                                Placeholder="{x:Static loc:AppText.LeaveBlankToBrowseAllDocuments}" TextChanged="OnQueryChanged" PropertyChanged="OnCaretChanged"
+                                SemanticProperties.Description="{x:Static loc:AppText.QueryEditorDescription}" />
+                        <ScrollView Grid.Row="2" Orientation="Horizontal">
+                            <HorizontalStackLayout x:Name="Suggestions" Spacing="6" Padding="6,2" />
+                        </ScrollView>
+                        <Grid Grid.Row="3" ColumnDefinitions="*,220,Auto" ColumnSpacing="8">
+                            <Label x:Name="ValidationLabel" Text="{x:Static loc:AppText.OpenAnIndexToStartSearching}" Style="{StaticResource Muted}" VerticalOptions="Center" />
+                            <Picker x:Name="HistoryPicker" Grid.Column="1" SemanticProperties.Description="{x:Static loc:AppText.HistoryAndSavedQueries}" ItemDisplayBinding="{Binding Label, x:DataType=explorer:ExplorerQuery}" SelectedIndexChanged="OnHistorySelected" />
+                            <Button Grid.Column="2" Text="{x:Static loc:AppText.Remove}" Clicked="OnRemoveHistory" Style="{StaticResource Quiet}" />
+                        </Grid>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="0">
+                        <Grid Padding="0" BackgroundColor="#181818" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="0">
+                            <Grid x:Name="DocumentsTabSurface" Grid.Column="0" RowDefinitions="3,*" Margin="0,0,1,0">
+                                <BoxView x:Name="DocumentsTabAccent" Color="#3794FF" />
+                                <Button x:Name="DocumentsTab" Grid.Row="1" Text="{x:Static loc:AppText.Documents}" Clicked="OnDocuments" Style="{StaticResource ResultTab}" />
+                            </Grid>
+                            <Grid x:Name="SchemaTabSurface" Grid.Column="1" RowDefinitions="3,*" Margin="0,0,1,0">
+                                <BoxView x:Name="SchemaTabAccent" Color="#3794FF" />
+                                <Button x:Name="SchemaTab" Grid.Row="1" Text="{x:Static loc:AppText.Schema}" Clicked="OnSchema" Style="{StaticResource ResultTab}" />
+                            </Grid>
+                            <Grid x:Name="TermsTabSurface" Grid.Column="2" RowDefinitions="3,*" Margin="0,0,1,0">
+                                <BoxView x:Name="TermsTabAccent" Color="#3794FF" />
+                                <Button x:Name="TermsTab" Grid.Row="1" Text="{x:Static loc:AppText.Terms}" Clicked="OnTerms" Style="{StaticResource ResultTab}" />
+                            </Grid>
+                            <Button x:Name="NewButton" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.New}" Clicked="OnNew" IsEnabled="False" Style="{StaticResource Quiet}" />
+                            <Button Grid.Column="5" Margin="4,4" Text="CSV" Clicked="OnExportCsv" Style="{StaticResource Quiet}" />
+                            <Button Grid.Column="6" Margin="4,4" Text="JSON" Clicked="OnExportJson" Style="{StaticResource Quiet}" />
+                        </Grid>
+                        <Grid Grid.Row="1" Padding="6,0,6,4" ColumnDefinitions="*,220" ColumnSpacing="8">
+                            <SearchBar x:Name="ResultFilter" Placeholder="{x:Static loc:AppText.FilterLoadedRows}" TextChanged="OnResultFilterChanged" />
+                            <Picker x:Name="FieldPicker" Grid.Column="1" Title="{x:Static loc:AppText.SelectAFieldForTerms}" ItemDisplayBinding="{Binding Name, x:DataType=explorer:ExplorerField}" SelectedIndexChanged="OnTermFieldChanged" IsVisible="False" />
+                        </Grid>
+                        <Grid Grid.Row="2">
+                            <ScrollView Orientation="Both">
+                                <VerticalStackLayout x:Name="Table" Spacing="0" MinimumWidthRequest="640" />
+                            </ScrollView>
+                            <VerticalStackLayout x:Name="EmptyState" VerticalOptions="Center" HorizontalOptions="Center" Spacing="8" Padding="24">
+                                <Label x:Name="EmptyTitle" Text="{x:Static loc:AppText.StartExploring}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                                <Label x:Name="EmptyDescription" Text="{x:Static loc:AppText.ChooseAnIndexOnTheLeftToBrowseItsDocuments}" HorizontalTextAlignment="Center" Style="{StaticResource Muted}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <Grid Grid.Row="3" Padding="12,8" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                            <Label x:Name="PageLabel" Text="{x:Static loc:AppText.NoIndexSelected}" Style="{StaticResource Muted}" VerticalOptions="Center" />
+                            <Picker x:Name="PageSizePicker" Grid.Column="1" SemanticProperties.Description="{x:Static loc:AppText.RowsPerPage}" WidthRequest="90" SelectedIndexChanged="OnPageSizeChanged" />
+                            <Button x:Name="PreviousButton" Grid.Column="2" Text="{x:Static loc:AppText.Previous}" Clicked="OnPrevious" IsEnabled="False" Style="{StaticResource Quiet}" />
+                            <Label x:Name="PageNumber" Grid.Column="3" Text="1 / 1" VerticalOptions="Center" />
+                            <Button x:Name="NextButton" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.Next}" Clicked="OnNext" IsEnabled="False" Style="{StaticResource Quiet}" />
+                        </Grid>
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                    <Label x:Name="SelectionLabel" Text="{x:Static loc:AppText.SelectARowToInspectItsFullValues}" Style="{StaticResource Muted}" VerticalOptions="Center" />
+                    <Button x:Name="LinkButton" Grid.Column="1" Text="{x:Static loc:AppText.LinkToProject}" Clicked="OnLinkDocument" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="DetailsButton" Grid.Column="2" Text="{x:Static loc:AppText.DetailsCopy}" Clicked="OnDetails" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="UpdateButton" Grid.Column="3" Text="{x:Static loc:AppText.EditDocument}" Clicked="OnEdit" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="DeleteButton" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.Delete}" Clicked="OnDelete" IsEnabled="False" BackgroundColor="#B42335" TextColor="White" />
+                </Grid>
+            </Grid>
+        </Grid>
+        <Label x:Name="StatusLabel" Grid.Row="2" Text="{x:Static loc:AppText.Ready}" Padding="10,5" BackgroundColor="#007ACC" FontSize="12" TextColor="White" LineBreakMode="WordWrap" />
     </Grid>
 </ContentPage>

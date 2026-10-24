@@ -5,7 +5,8 @@ using WebExpress.WebIndex.WebAttribute;
 namespace WebExpress.WebIndex
 {
     /// <summary>
-    /// Represents an item in the index.
+    /// The contract a data object must implement to be stored in and retrieved from the index.
+    /// The only requirement is a unique <see cref="Id"/> that identifies the item.
     /// </summary>
     public interface IIndexItem
     {

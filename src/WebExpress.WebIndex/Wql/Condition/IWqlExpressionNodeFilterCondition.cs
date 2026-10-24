@@ -3,7 +3,8 @@
 namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
-    /// Interface for a WQL expression node filter condition.
+    /// A WQL node representing a single filter condition, i.e. a comparison of an attribute against
+    /// a value (such as <c>name = 'foo'</c>). When applied, it returns the items that satisfy the comparison.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public interface IWqlExpressionNodeFilterCondition<TIndexItem> : IWqlExpressionNodeApply<TIndexItem>

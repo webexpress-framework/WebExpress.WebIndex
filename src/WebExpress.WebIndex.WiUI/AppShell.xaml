@@ -3,17 +3,18 @@
     x:Class="WebExpress.WebIndex.WiUI.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:WebExpress.WebIndex.WiUI.Localization"
     xmlns:local="clr-namespace:WebExpress.WebIndex.WiUI.Pages"
     Title="WebIndex Explorer"
-    Shell.FlyoutBehavior="Flyout">
+    Shell.FlyoutBehavior="Disabled">
 
     <ShellContent
-        Title="Home"
+        Title="Index-Explorer"
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
 
     <ShellContent
-        Title="Project"
+        Title="{x:Static loc:AppText.Projects}"
         ContentTemplate="{DataTemplate local:ProjectPage}"
         Route="ProjectPage" />
 

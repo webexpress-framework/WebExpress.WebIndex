@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace WebExpress.WebIndex.Memory
 {
     /// <summary>
-    /// Represents a index schema file.
+    /// Describes the structure of an in-memory index: which fields of the indexed type
+    /// <typeparamref name="TIndexItem"/> are indexed, derived by reflection over the type.
     /// </summary>
     /// <typeparam name="TIndexItem">The data type. This must have the IIndexItem interface.</typeparam>
     public class IndexMemorySchema<TIndexItem> : IIndexSchema<TIndexItem>

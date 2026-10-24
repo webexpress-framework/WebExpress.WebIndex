@@ -6,7 +6,7 @@
     internal class ArgumentParser
     {
         /// <summary>
-        /// The singelton.
+        /// The singleton.
         /// </summary>
         private static ArgumentParser m_this = null;
 
@@ -56,9 +56,9 @@
         /// </summary>
         /// <param name="args">The program arguments.</param>
         /// <returns>A list of prepared program arguments.</returns>
-        public ArguemtParserResult Parse(string[] args)
+        public ArgumentParserResult Parse(string[] args)
         {
-            var argsDict = new ArguemtParserResult();
+            var argsDict = new ArgumentParserResult();
 
             var key = "";
             var value = "";
@@ -72,15 +72,7 @@
                 {
                     if (!string.IsNullOrEmpty(key))
                     {
-                        var command = (from x in Commands
-                                       where x.FullName.Equals(key[1..], StringComparison.OrdinalIgnoreCase) ||
-                                             x.ShortName.Equals(key[1..], StringComparison.OrdinalIgnoreCase)
-                                       select x).FirstOrDefault();
-
-                        if (command != null)
-                        {
-                            argsDict.Add(command.FullName.ToLower(), value.Trim());
-                        }
+                        Accept(argsDict, key, value);
 
                         value = "";
                     }
@@ -94,25 +86,37 @@
 
             if (!string.IsNullOrEmpty(key))
             {
-                var command = (from x in Commands
-                               where x.FullName.Equals(key[1..], StringComparison.OrdinalIgnoreCase) ||
-                                     x.ShortName.Equals(key[1..], StringComparison.OrdinalIgnoreCase)
-                               select x).FirstOrDefault();
-
-                if (command != null)
-                {
-                    argsDict.Add(command.FullName.ToLower(), value.Trim());
-                }
+                Accept(argsDict, key, value);
             }
 
             return argsDict;
         }
 
         /// <summary>
+        /// Stores a parsed argument under the full name of its command, so the short and the long
+        /// form of an argument end up under the same key.
+        /// </summary>
+        /// <param name="argsDict">The arguments recognized so far.</param>
+        /// <param name="key">The argument as given on the command line, including the leading dash.</param>
+        /// <param name="value">The collected value of the argument.</param>
+        private void Accept(ArgumentParserResult argsDict, string key, string value)
+        {
+            var command = Commands.FirstOrDefault(x => x.FullName.Equals(key[1..], StringComparison.OrdinalIgnoreCase) ||
+                                                       x.ShortName.Equals(key[1..], StringComparison.OrdinalIgnoreCase));
+
+            if (command != null)
+            {
+                // a repeated argument (or its short and long form together) must not abort the program;
+                // the last occurrence wins, as is common for command lines
+                argsDict[command.FullName.ToLowerInvariant()] = value.Trim();
+            }
+        }
+
+        /// <summary>
         /// Returns the recognized arguments.
         /// </summary>
         /// <param name="args">The program arguments.</param>
-        /// <returns>the recognized argument.</returns>
+        /// <returns>The recognized arguments.</returns>
         public string GetValidArguments(string[] args)
         {
             var argumentDict = Parse(args);
@@ -126,7 +130,7 @@
         /// <summary>
         /// Returns a help string.
         /// </summary>
-        /// <returns>A string that represents the help tret of the commands, separated by commas.</returns>
+        /// <returns>The help text of the commands, one line per command.</returns>
         public string GetHelp()
         {
             return string.Join(Environment.NewLine, Commands.Select(x => string.Join(" ", $"-{x.ShortName} (or {x.FullName}) {x.ParameterDescription}".Trim(), $": {x.Description}")));
@@ -135,7 +139,7 @@
         /// <summary>
         /// Converts the commands to a help string.
         /// </summary>
-        /// <returns>A string that represents the help tret of the commands, separated by commas.</returns>
+        /// <returns>The short forms of the commands with their parameters, separated by vertical bars.</returns>
         public override string ToString()
         {
             return string.Join(" | ", Commands.Select(x => $"-{x.ShortName} {x.ParameterDescription}".Trim()));

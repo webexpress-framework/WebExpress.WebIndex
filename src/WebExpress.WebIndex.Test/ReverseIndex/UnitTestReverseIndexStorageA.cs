@@ -112,14 +112,15 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
                 reverseIndex.Add(item);
             }
 
-            randomItem.Text += ", hello Aurora!";
-            var token = Context.TokenAnalyzer.Analyze(randomItem.Text, CultureInfo.GetCultureInfo("en"));
+            // keep the shared fixture unchanged for subsequent tests
+            var token = Context.TokenAnalyzer.Analyze(randomItem.Text + ", hello Aurora!", CultureInfo.GetCultureInfo("en"));
 
             // act
             reverseIndex.Add(randomItem, token.TakeLast(1));
             var all = reverseIndex.Retrieve("aurora", new IndexRetrieveOptions());
 
-            Assert.Contains(randomItem.Id, all);
+            // validation
+            Assert.Equal(randomItem.Id, Assert.Single(all));
 
             // postconditions
             reverseIndex.Dispose();
@@ -176,13 +177,15 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
                 reverseIndex.Add(item);
             }
 
-            randomItem.Text += ", hello Aurora!";
-            var token = Context.TokenAnalyzer.Analyze(randomItem.Text, CultureInfo.GetCultureInfo("en"));
+            // keep the shared fixture unchanged for subsequent tests
+            var token = Context.TokenAnalyzer.Analyze(randomItem.Text + ", hello Aurora!", CultureInfo.GetCultureInfo("en"));
             reverseIndex.Add(randomItem, token.TakeLast(1));
+            Assert.Equal(randomItem.Id, Assert.Single(reverseIndex.Retrieve("aurora", new IndexRetrieveOptions())));
 
             // act
             reverseIndex.Delete(randomItem, token.TakeLast(1));
 
+            // validation
             var items = reverseIndex.Retrieve("aurora", new IndexRetrieveOptions());
             Assert.Empty(items);
 

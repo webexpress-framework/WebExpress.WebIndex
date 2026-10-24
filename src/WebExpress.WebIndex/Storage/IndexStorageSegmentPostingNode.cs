@@ -7,10 +7,20 @@ using System.Threading;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Represents a posting node storing a document id in a binary search tree.
+    /// Represents a posting node storing a document id in a self-balancing (AVL) binary search tree.
     /// </summary>
     /// <remarks>
-    /// balancing is not implemented; consider an avl/rb-tree or b+-tree layout for on-disk structures.
+    /// The tree is keyed by document id, and ids arrive in whatever order documents are indexed - for
+    /// sequential guids that is sorted order, which turns an unbalanced tree into a list. Every insert
+    /// and removal therefore restores the AVL invariant on its way back up, so a lookup never walks
+    /// more than about 1.44 log2(n) nodes. The height of a node is stored with it: deriving it would
+    /// mean walking the whole subtree on every insert, and a cached copy would not survive eviction
+    /// from the segment buffer.
+    /// <para>
+    /// A rotation changes the root of a subtree, so <see cref="Insert"/> and <see cref="Remove"/>
+    /// return the root the caller has to link - the owner of the tree, the term node, keeps the
+    /// address of the whole tree's root and follows it the same way.
+    /// </para>
     /// </remarks>
     /// <param name="context">The reference to the context of the index.</param>
     /// <param name="addr">The address of the segment.</param>
@@ -21,7 +31,7 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Gets the on-disk size of the segment.
         /// </summary>
-        public const uint SegmentSize = 16 + sizeof(ulong) + sizeof(ulong) + sizeof(ulong);
+        public const uint SegmentSize = 16 + sizeof(ulong) + sizeof(ulong) + sizeof(ulong) + sizeof(byte);
 
         /// <summary>
         /// Gets or sets the document id.
@@ -42,6 +52,11 @@ namespace WebExpress.WebIndex.Storage
         /// Gets the address of the first position element of a sorted list or 0 if there is no element.
         /// </summary>
         public ulong PositionAddr { get; private set; }
+
+        /// <summary>
+        /// Gets the height of the subtree rooted at this node; a leaf has the height 1.
+        /// </summary>
+        public uint Height { get; private set; } = 1;
 
         /// <summary>
         /// Gets the left child of the node or null.
@@ -78,52 +93,22 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Gets the height of the tree (derived recursively; may be expensive on-disk).
-        /// </summary>
-        public uint Height
-        {
-            get
-            {
-                var leftHeight = Left?.Height ?? 0;
-                var rightHeight = Right?.Height ?? 0;
-
-                return Math.Max(leftHeight, rightHeight) + 1;
-            }
-        }
-
-        /// <summary>
-        /// Gets the absolute balance factor of the node.
+        /// Gets the absolute balance factor of the node, which the AVL invariant keeps at 0 or 1.
         /// </summary>
         public uint Balance
         {
             get
             {
-                var leftHeight = Left?.Height ?? 0;
-                var rightHeight = Right?.Height ?? 0;
+                var factor = BalanceFactor;
 
-                return leftHeight > rightHeight ? leftHeight - rightHeight : rightHeight - leftHeight;
+                return (uint)Math.Abs(factor);
             }
         }
 
         /// <summary>
-        /// Gets the leftmost child in the subtree and its parent.
+        /// Gets the signed balance factor: the height of the left subtree minus the height of the right one.
         /// </summary>
-        public dynamic LeftmostChild
-        {
-            get
-            {
-                var node = this;
-                var parent = null as IndexStorageSegmentPostingNode;
-
-                while (node.Left is not null)
-                {
-                    parent = node;
-                    node = node.Left;
-                }
-
-                return new { Leftmost = node, Parent = parent };
-            }
-        }
+        private int BalanceFactor => (int)GetHeight(Left) - (int)GetHeight(Right);
 
         /// <summary>
         /// Traverses the tree in pre-order.
@@ -178,160 +163,151 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Inserts a new node with the given document id into the binary tree.
+        /// Inserts a document id into the subtree rooted at this node and restores the balance.
         /// </summary>
         /// <param name="id">The document id.</param>
         /// <param name="insert">The inserted or existing posting node segment.</param>
-        /// <returns>True if a new node has been inserted, otherwise false.</returns>
-        public bool Insert(Guid id, out IndexStorageSegmentPostingNode insert)
+        /// <param name="inserted">True if a new node has been inserted, false if the id was present.</param>
+        /// <returns>The root of the subtree afterwards - another node than this one when a rotation lifted it.</returns>
+        public IndexStorageSegmentPostingNode Insert(Guid id, out IndexStorageSegmentPostingNode insert, out bool inserted)
         {
             lock (_guard)
             {
-                if (id.CompareTo(DocumentID) < 0)
+                var compare = id.CompareTo(DocumentID);
+
+                if (compare == 0)
+                {
+                    insert = this;
+                    inserted = false;
+
+                    return this;
+                }
+
+                if (compare < 0)
                 {
                     if (LeftAddr == 0)
                     {
-                        LeftAddr = Context.Allocator.Alloc(SegmentSize);
-                        var item = new IndexStorageSegmentPostingNode(Context, LeftAddr)
-                        {
-                            DocumentID = id
-                        };
-
-                        // persist parent pointer update and new node
-                        Context.IndexFile.Write(this);
-                        Context.IndexFile.Write(item);
-
-                        insert = item;
-                        return true;
+                        insert = CreateLeaf(id);
+                        inserted = true;
+                        LeftAddr = insert.Addr;
                     }
                     else
                     {
-                        return Left.Insert(id, out insert);
+                        LeftAddr = Left.Insert(id, out insert, out inserted).Addr;
                     }
                 }
-                else if (id.CompareTo(DocumentID) > 0)
+                else
                 {
                     if (RightAddr == 0)
                     {
-                        RightAddr = Context.Allocator.Alloc(SegmentSize);
-                        var item = new IndexStorageSegmentPostingNode(Context, RightAddr)
-                        {
-                            DocumentID = id
-                        };
-
-                        // persist parent pointer update and new node
-                        Context.IndexFile.Write(this);
-                        Context.IndexFile.Write(item);
-
-                        insert = item;
-                        return true;
+                        insert = CreateLeaf(id);
+                        inserted = true;
+                        RightAddr = insert.Addr;
                     }
                     else
                     {
-                        return Right.Insert(id, out insert);
+                        RightAddr = Right.Insert(id, out insert, out inserted).Addr;
                     }
                 }
 
-                insert = this;
-                return false;
+                // nothing changed below this node, so its shape and height are as they were
+                if (!inserted)
+                {
+                    return this;
+                }
+
+                return Rebalance();
             }
         }
 
         /// <summary>
-        /// Removes a node with the given data from the binary tree.
+        /// Removes a document id from the subtree rooted at this node and restores the balance.
         /// </summary>
         /// <param name="id">The document id.</param>
-        /// <param name="parent">The parent node.</param>
-        /// <param name="direction">The direction from the parent to this node.</param>
-        /// <returns>True if a node has been removed, otherwise false.</returns>
-        public bool Remove(Guid id, IndexStorageSegmentPostingNode parent, IndexStorageBinaryTreeDirection direction)
+        /// <param name="removed">True if a node has been removed, false if the id was not present.</param>
+        /// <returns>The root of the subtree afterwards, or null when the subtree is empty now.</returns>
+        public IndexStorageSegmentPostingNode Remove(Guid id, out bool removed)
         {
             lock (_guard)
             {
-                if (id.CompareTo(DocumentID) < 0)
-                {
-                    return Left?.Remove(id, this, IndexStorageBinaryTreeDirection.Left) ?? false;
-                }
-                else if (id.CompareTo(DocumentID) > 0)
-                {
-                    return Right?.Remove(id, this, IndexStorageBinaryTreeDirection.Right) ?? false;
-                }
+                var compare = id.CompareTo(DocumentID);
 
-                // node with only one child or no child
-                if (LeftAddr == 0 || RightAddr == 0)
+                if (compare < 0)
                 {
-                    var childAddr = LeftAddr != 0 ? LeftAddr : RightAddr;
-
-                    switch (direction)
+                    if (LeftAddr == 0)
                     {
-                        case IndexStorageBinaryTreeDirection.Left:
-                            {
-                                parent.LeftAddr = childAddr;
-                                break;
-                            }
-                        case IndexStorageBinaryTreeDirection.Right:
-                            {
-                                parent.RightAddr = childAddr;
-                                break;
-                            }
+                        removed = false;
+
+                        return this;
                     }
 
-                    // free positions and persist parent
-                    RemovePositions();
-                    Context.Allocator.Free(this);
-                    Context.IndexFile.Write(parent);
+                    var left = Left.Remove(id, out removed);
 
-                    return true;
+                    if (!removed)
+                    {
+                        return this;
+                    }
+
+                    LeftAddr = left?.Addr ?? 0;
                 }
-
-                // node with two children: find inorder successor (leftmost of right subtree)
-                var rightRoot = Right;
-                var leftmostPack = rightRoot.LeftmostChild;
-                var successor = leftmostPack.Leftmost as IndexStorageSegmentPostingNode;
-
-                var oldLeft = LeftAddr;
-                var oldRight = RightAddr;
-
-                // detach successor from its parent: parent.left becomes successor.right
-                if (leftmostPack.Parent is IndexStorageSegmentPostingNode successorParent)
+                else if (compare > 0)
                 {
-                    successorParent.LeftAddr = successor.RightAddr;
-                    Context.IndexFile.Write(successorParent);
+                    if (RightAddr == 0)
+                    {
+                        removed = false;
+
+                        return this;
+                    }
+
+                    var right = Right.Remove(id, out removed);
+
+                    if (!removed)
+                    {
+                        return this;
+                    }
+
+                    RightAddr = right?.Addr ?? 0;
                 }
-
-                // transplant successor in place of current node
-                successor.LeftAddr = oldLeft;
-
-                // if successor is not the immediate right child, hook up the old right subtree
-                if (successor.Addr != oldRight)
+                else
                 {
-                    successor.RightAddr = oldRight;
+                    removed = true;
+
+                    // with at most one child that child takes the place of this node; the
+                    // node and its positions are given back to the allocator
+                    if (LeftAddr == 0 || RightAddr == 0)
+                    {
+                        var child = LeftAddr != 0 ? Left : Right;
+
+                        RemovePositions();
+                        Context.Allocator.Free(this);
+
+                        return child;
+                    }
+
+                    // with two children the inorder successor - the leftmost node of the right
+                    // subtree - is moved into this node, positions included, and its former
+                    // node is removed from the right subtree. Moving the payload rather than
+                    // the node keeps this node as the subtree root, so the parent's link
+                    // stays valid; the positions of the removed id travel along to the
+                    // successor's node, from where the removal frees them
+                    var successor = Right;
+
+                    while (successor.LeftAddr != 0)
+                    {
+                        successor = successor.Left;
+                    }
+
+                    var removedPositions = PositionAddr;
+
+                    DocumentID = successor.DocumentID;
+                    PositionAddr = successor.PositionAddr;
+                    successor.PositionAddr = removedPositions;
+                    Context.IndexFile.Write(successor);
+
+                    RightAddr = Right.Remove(successor.DocumentID, out _)?.Addr ?? 0;
                 }
 
-                Context.IndexFile.Write(successor);
-
-                // connect parent to successor
-                switch (direction)
-                {
-                    case IndexStorageBinaryTreeDirection.Left:
-                        {
-                            parent.LeftAddr = successor.Addr;
-                            break;
-                        }
-                    case IndexStorageBinaryTreeDirection.Right:
-                        {
-                            parent.RightAddr = successor.Addr;
-                            break;
-                        }
-                }
-
-                Context.IndexFile.Write(parent);
-
-                // free current node’s positions and the node itself
-                RemovePositions();
-                Context.Allocator.Free(this);
-
-                return true;
+                return Rebalance();
             }
         }
 
@@ -445,6 +421,7 @@ namespace WebExpress.WebIndex.Storage
             LeftAddr = reader.ReadUInt64();
             RightAddr = reader.ReadUInt64();
             PositionAddr = reader.ReadUInt64();
+            Height = reader.ReadByte();
             DocumentID = new Guid(guid);
         }
 
@@ -458,6 +435,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write(LeftAddr);
             writer.Write(RightAddr);
             writer.Write(PositionAddr);
+            writer.Write((byte)Height);
         }
 
         /// <summary>
@@ -483,6 +461,115 @@ namespace WebExpress.WebIndex.Storage
         public override string ToString()
         {
             return $"{DocumentID}";
+        }
+
+        /// <summary>
+        /// Returns the height of a node that may be missing.
+        /// </summary>
+        /// <param name="node">The node or null.</param>
+        /// <returns>The height, 0 for a missing node.</returns>
+        private static uint GetHeight(IndexStorageSegmentPostingNode node)
+        {
+            return node?.Height ?? 0u;
+        }
+
+        /// <summary>
+        /// Allocates and persists a new leaf for a document id.
+        /// </summary>
+        /// <param name="id">The document id.</param>
+        /// <returns>The new node.</returns>
+        private IndexStorageSegmentPostingNode CreateLeaf(Guid id)
+        {
+            var item = new IndexStorageSegmentPostingNode(Context, Context.Allocator.Alloc(SegmentSize))
+            {
+                DocumentID = id
+            };
+
+            // the leaf is persisted before the link to it, so a crash in between leaves an
+            // unreferenced segment rather than a dangling pointer
+            Context.IndexFile.Write(item);
+
+            return item;
+        }
+
+        /// <summary>
+        /// Recomputes the height of this node from its children and persists it.
+        /// </summary>
+        private void UpdateHeight()
+        {
+            Height = Math.Max(GetHeight(Left), GetHeight(Right)) + 1;
+            Context.IndexFile.Write(this);
+        }
+
+        /// <summary>
+        /// Restores the AVL invariant at this node after a change in one of its subtrees.
+        /// </summary>
+        /// <returns>The root of the subtree afterwards.</returns>
+        private IndexStorageSegmentPostingNode Rebalance()
+        {
+            UpdateHeight();
+
+            var factor = BalanceFactor;
+
+            if (factor > 1)
+            {
+                // left-right case: straighten the left subtree first
+                if (Left.BalanceFactor < 0)
+                {
+                    LeftAddr = Left.RotateLeft().Addr;
+                }
+
+                return RotateRight();
+            }
+
+            if (factor < -1)
+            {
+                // right-left case: straighten the right subtree first
+                if (Right.BalanceFactor > 0)
+                {
+                    RightAddr = Right.RotateRight().Addr;
+                }
+
+                return RotateLeft();
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Rotates the subtree to the right: the left child becomes its root and this node its right child.
+        /// </summary>
+        /// <returns>The new root of the subtree.</returns>
+        private IndexStorageSegmentPostingNode RotateRight()
+        {
+            var pivot = Left;
+
+            LeftAddr = pivot.RightAddr;
+            pivot.RightAddr = Addr;
+
+            // the lower node first, because the pivot's height is derived from it
+            UpdateHeight();
+            pivot.UpdateHeight();
+
+            return pivot;
+        }
+
+        /// <summary>
+        /// Rotates the subtree to the left: the right child becomes its root and this node its left child.
+        /// </summary>
+        /// <returns>The new root of the subtree.</returns>
+        private IndexStorageSegmentPostingNode RotateLeft()
+        {
+            var pivot = Right;
+
+            RightAddr = pivot.LeftAddr;
+            pivot.LeftAddr = Addr;
+
+            // the lower node first, because the pivot's height is derived from it
+            UpdateHeight();
+            pivot.UpdateHeight();
+
+            return pivot;
         }
     }
 }

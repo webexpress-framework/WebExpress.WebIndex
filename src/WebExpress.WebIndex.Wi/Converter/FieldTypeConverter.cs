@@ -18,11 +18,12 @@ namespace WebExpress.WebIndex.Wi.Converter
         }
 
         /// <summary>
-        /// Converts an int to a string.
+        /// Writes the field type under the name the tool shows for it, which is also one of
+        /// the names <see cref="Read"/> accepts, so a file the tool wrote reads back as it was.
         /// </summary>
         public override void Write(Utf8JsonWriter writer, FieldType value, JsonSerializerOptions options)
         {
-            writer.WriteStringValue(value.ToString());
+            writer.WriteStringValue(FieldTypeExtention.ToString(value));
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.Json.Serialization;
 using WebExpress.WebIndex.WebAttribute;
 
 namespace WebExpress.WebIndex.Wi.Model
@@ -14,6 +15,12 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <summary>
         /// Returns or sets the name of the object.
         /// </summary>
+        /// <remarks>
+        /// The schema file the index library writes carries the name under "Type", so the
+        /// name has to be read from and written to that key; without the mapping an index
+        /// reopened from its schema has no name and no runtime class can be built for it.
+        /// </remarks>
+        [JsonPropertyName("Type")]
         public string Name { get; set; }
 
         /// <summary>
@@ -24,11 +31,13 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <summary>
         /// Returns a collection of stored data objects.
         /// </summary>
+        [JsonIgnore]
         public List<object> All => new(WiApp.ViewModel.IndexManager.All(BuildRuntimeClass()));
 
         /// <summary>
         /// Returns the number of items of the index.
         /// </summary>
+        [JsonIgnore]
         public uint Count => WiApp.ViewModel.IndexManager.Count(BuildRuntimeClass());
 
         /// <summary>

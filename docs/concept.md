@@ -417,8 +417,8 @@ Object Notation) format is used for the index schema file and the have the exten
 
 ## IndexStore
 In a filesystem where the `WebIndex` is stored, a process is carried out where an inverted index 
-is created for each field. These indexes are stored as files with the `<document name><field name>.wri` 
-extension. In parallel, a special storage area known as the document store `<document name>.wds` is set 
+is created for each field. These indexes are stored as files named `<document name>.<field name>.wrt` for text 
+fields and `<document name>.<field name>.wrn` for numeric fields. In parallel, a special storage area known as the document store `<document name>.wds` is set 
 up for each document. In this storage area, the document’s data is redundantly stored to enable quick 
 access. The structure of these files follows a uniform format that is divided into various segments. Each 
 of these segments is identifiable by a unique address and has a specific length. There is the option to 
@@ -439,6 +439,27 @@ the system performance.
          ║                   ║ a variable memory area in which the data is stored
          ╚~~~~~~~~~~~~~~~~~~~╝
 ```
+
+The version in the header names the layout of the segments that follow. It is raised whenever the size or the
+structure of a segment on disk changes, because a file of another layout cannot be read with the current one:
+every address after the first changed segment would point into the middle of another record.
+
+| File  | Version | Layout
+|-------|---------|------------------------------------------------------------------------------------
+| `wds` | 1       | document store
+| `wrt` | 2       | term index; since version 2 each posting node stores the height of its subtree
+| `wrn` | 2       | numeric index; since version 2 each posting node stores the height of its subtree
+
+A reverse index holds derived data only - every value it contains is in the document store as well. When a
+reverse index file of another version is opened, it is therefore not converted but discarded, created anew
+and filled again from the document store, so an index written by an earlier release keeps working after an
+update without a manual reindex. A reverse index file that is missing while the document store holds items is
+filled the same way. The rebuilt file carries the current version from its first byte on, so the version cannot
+tell a complete rebuild from an interrupted one; a marker file `*.rebuild` next to it exists for as long as the
+rebuild runs, and a marker found on the next start discards the partial file and rebuilds it again. All reverse
+indexes of a type that need a rebuild are filled from a single pass over the document store. A file that
+carries another identifier is not touched; opening it fails, as it is no index of the expected kind, and the
+file is released again rather than staying locked. The schema file `*.ws` is JSON and carries no version.
 
 Unused memory areas in the file are represented by the `Free` segment, which is located in the body area 
 variable and forms a linked list. The `Allocator` points to the first element of this list.
@@ -744,7 +765,7 @@ The tree structure enables efficient search and retrieval of terms. Each node in
 of the term, and the sequence of characters along the path from the root node to a specific node forms the corresponding 
 term. The `TermNode` segments in the data area of the reverse index is organized in such a way that they enable a fast 
 and accurate search. A term segment contains important metadata. This includes the frequency of the term’s occurrence and 
-a reference to a linked list. This list contains the documents in which the term appears.
+a reference to the root of a posting tree, which contains the documents in which the term appears.
 
 ```
          ╔TermNode═══════════╗
@@ -752,13 +773,17 @@ a reference to a linked list. This list contains the documents in which the term
   8 Byte ║ SiblingAddr       ║ address of the first sibling node or 0 if no sibling node exists
   8 Byte ║ ChildAddr         ║ address of the first child node or 0 if not present
   4 Byte ║ Fequency          ║ the number of times the term is used 
-  8 Byte ║ PostingAddr       ║ adress of the first posting node of a binary tree or 0 if there is no element exists
+  8 Byte ║ PostingAddr       ║ address of the root of the posting tree or 0 if no document holds the term
          ╚═══════════════════╝
 ```
 
-The posting node segment is designed as a binary tree and contains the ids of the documents that belong to a term. For 
-each document, the posting node segment refers to the position information that indicates where the term is located in 
-the document. The posting segment is stored in the variable memory area of the inverted index.
+The posting node segment is designed as a self-balancing binary tree (AVL tree) and contains the ids of the documents 
+that belong to a term. Document ids arrive in insertion order, which for sequential ids would degrade a plain binary 
+tree to a list; every insert and removal therefore restores the AVL invariant, so the search path for a document is 
+bounded by about 1.44 log2(n). The height of the subtree is stored in the node, because deriving it would mean walking 
+the subtree on every insert. For each document, the posting node segment refers to the position information that 
+indicates where the term is located in the document. The posting segment is stored in the variable memory area of the 
+inverted index.
 
 ```
          ╔TermPostingNode════╗
@@ -766,6 +791,7 @@ the document. The posting segment is stored in the variable memory area of the i
   8 Byte ║ LeftAddr          ║ pointer to the address of the left child or 0 if there is no element exists
   8 Byte ║ RightAddr         ║ pointer to the address of the right child or 0 if there is no element exists
   8 Byte ║ PositionAddr      ║ adress of the first position element of a sorted list or 0 if there is no element exists
+  1 Byte ║ Height            ║ the height of the subtree rooted at this node (1 for a leaf)
          ╚═══════════════════╝
 ```
 
@@ -932,20 +958,25 @@ values. Each node has a pointer to a posting tree where the document ids of the 
  16 Byte ║ Value             ║ the numeric value of the node
   8 Byte ║ LeftAddr          ║ address of the left child node or 0 if no left child node exists
   8 Byte ║ RightdAddr        ║ address of the right child node or 0 if not right child node exists
-  4 Byte ║ Fequency          ║ the number of times the numeric value is used
-  8 Byte ║ NumPostingNode    ║ Address of the first posting node of a binary tree or 0 if no element exists
+  4 Byte ║ Frequency         ║ the number of documents that hold the value
+  8 Byte ║ PostingAddr       ║ address of the root of the posting tree or 0 if no document holds the value
          ╚═══════════════════╝
 ```
 
-The posting node segment is designed as a binary tree and contains the ids of the documents that belong to a term. For 
-each document, the posting node segment refers to the position information that indicates where the term is located in 
-the document. The posting segment is stored in the variable memory area of the inverted index.
+The height used to balance the value tree is not part of the record; a value node read back from the file starts with
+the height 1.
+
+The posting node segment is designed as a self-balancing binary tree (AVL tree), like the posting tree of a term, and 
+contains the ids of the documents that carry the value. A field holds a single number, so a numeric index stores no 
+positions at all - neither the value node nor its posting nodes record where in a document the value occurs, and there 
+are no position segments in a `wrn` file. The posting segment is stored in the variable memory area of the inverted index.
 
 ```
          ╔NumericPostingNode═╗
  16 Byte ║ Id                ║ guid of the document item
   8 Byte ║ LeftAddr          ║ pointer to the address of the left child or 0 if there is no element
   8 Byte ║ RightAddr         ║ pointer to the address of the right child or 0 if there is no element
+  1 Byte ║ Height            ║ the height of the subtree rooted at this node (1 for a leaf)
          ╚═══════════════════╝
 ```
 
@@ -1027,18 +1058,26 @@ index and sends it back to the client. The following BNF is used to illustrate t
 
 ```
 <WQL>                      ::= <Filter> <Order> <Partitioning> | ε
-<Filter>                   ::= "(" <Filter> ")" | <Filter> <LogicalOperator> <Filter> |<Condition> | ε
-<Condition>                ::= <Attribute> <BinaryOperator> <Parameter> <ParameterOptions> | <Attribute> <SetOperator> "(" <Parameter> <ParameterNext> ")"
-<LogicalOperator>          ::= "and" | "or" | "&" | "||"
-<Attribute>                ::= <Name> | <Name> "." <Name>
-<Parameter>                ::= <Function> | <DoubleValue> | """ <StringValue> """ | "'" <StringValue> "'"  | <StringValue>
+<Filter>                   ::= <OrFilter> | ε
+<OrFilter>                 ::= <AndFilter> | <OrFilter> <OrOperator> <AndFilter>
+<AndFilter>                ::= <NotFilter> | <AndFilter> <AndOperator> <NotFilter>
+<NotFilter>                ::= "not" <NotFilter> | <PrimaryFilter>
+<PrimaryFilter>            ::= "(" <OrFilter> ")" | <Condition>
+<OrOperator>               ::= "or" | "||"
+<AndOperator>              ::= "and" | "&"
+<Condition>                ::= <Operand> <BinaryOperator> <Parameter> <ParameterOptions> | <Operand> <SetOperator> "(" <Parameter> <ParameterNext> ")" | <Operand> <RangeOperator> <Parameter> "and" <Parameter>
+<Operand>                  ::= <Attribute> | <Function>
+<Attribute>                ::= <Name> | <Name> "." <Attribute>
+<Parameter>                ::= <Function> | <Literal> | <Attribute>
+<Literal>                  ::= <DoubleValue> | "null" | "true" | "false" | """ <QuotedValue> """ | "'" <QuotedValue> "'" | <StringValue>
 <ParameterOptions>         ::= <ParameterFuzzyOptions> | <ParameterDistanceOptions> | <ParameterFuzzyOptions> <ParameterDistanceOptions> | <ParameterDistanceOptions> <ParameterFuzzyOptions> | ε
 <ParameterFuzzyOptions>    ::= "~" <Number>
 <ParameterDistanceOptions> ::= ":" <Number>
-<Function>                 ::= <Name> "(" <Parameter> <ParameterNext> ")" | Name "(" ")"
+<Function>                 ::= <Name> "(" <Parameter> <ParameterNext> ")" | <Name> "(" ")"
 <ParameterNext>            ::= "," <Parameter> <ParameterNext> | ε
-<BinaryOperator>           ::= "=" | ">" | "<" | ">=" | "<=" | "!=" | "~" | "is" | "is not"
+<BinaryOperator>           ::= "=" | ">" | "<" | ">=" | "<=" | "!=" | "~" | "!~" | "is" | "is not" | "starts with" | "ends with" | "contains"
 <SetOperator>              ::= "in" | "not in"
+<RangeOperator>            ::= "between" | "not between"
 <Order>                    ::= "order" "by" <Attribute> <DescendingOrder> <OrderNext> | ε
 <OrderNext>                ::= "," <Attribute> <DescendingOrder> <OrderNext> | ε
 <DescendingOrder>          ::= "asc" | "desc" | ε
@@ -1046,9 +1085,136 @@ index and sends it back to the client. The following BNF is used to illustrate t
 <PartitioningOperator>     ::= "take" | "skip"
 <Name>                     ::= [A-Za-z_][A-Za-z0-9_]+
 <StringValue>              ::= [A-Za-z0-9_@<>=~$%/!+.,;:\-]+
+<QuotedValue>              ::= any characters, the enclosing quotation mark written twice
 <DoubleValue>              ::= [+-]?[0-9]*[.]?[0-9]+
 <Number>                   ::= [0-9]+
 ```
+
+## Operator precedence
+`not` binds strongest, followed by `and` (or `&`) and finally `or` (or `||`). A chain of the 
+same operator is grouped from the left, and parentheses override the precedence:
+
+```wql
+Text ~ 'a' or Text ~ 'b' and Active = true      -- Text ~ 'a' or (Text ~ 'b' and Active = true)
+not Active = true and Number > 3                -- (not Active = true) and Number > 3
+Number = 1 or Number = 2 or Number = 3          -- (Number = 1 or Number = 2) or Number = 3
+```
+
+The `and` between the bounds of `between` belongs to the condition and is not a logical 
+operator, so `Number between 3 and 6 and Active = true` combines a range with a second 
+condition.
+
+## Literals
+Every literal is typed against the attribute it is compared with. The conversion is the 
+same in both execution paths, and a conversion that would lose information is reported as 
+an error instead of being rounded.
+
+| Literal                       | Example                         | Meaning
+|-------------------------------|---------------------------------|------------------------------------------------
+| Number                        | `5`, `-4`, `12.5`               | A number, converted into the numeric type of the attribute. `5.5` cannot be compared with an integer.
+| Quoted string                 | `'lorem'`, `"lorem"`            | Always a string, also `'null'` or `'true'`. The enclosing quotation mark is written twice inside: `'O''Brien'`.
+| Unquoted word                 | `lorem`                         | A string - unless the word is `null`, `true` or `false`, or names an attribute.
+| `null`                        | `Text is null`                  | The absence of a value.
+| `true`, `false`               | `Active = true`                 | Boolean values.
+| Attribute                     | `Number > Optional`             | The value of another attribute of the same item.
+
+Strings are converted into the type of the attribute where needed: dates and times are 
+written as text (`Date > '2024-01-31'`, or culture-independent with `date('2024-01-31')`), 
+enumerations by the name of a member or its number (`State = Closed`, `State = 2`), Guids as 
+text. The supported target types are strings, all numeric types including their nullable 
+forms and `decimal`, `bool`, `DateTime`, `DateTimeOffset`, `DateOnly`, `TimeOnly`, `TimeSpan`, 
+`Guid`, `char` and enumerations.
+
+## Conditions
+
+| Operator                       | Meaning
+|--------------------------------|------------------------------------------------------------------
+| `=`                            | Equality. On a text attribute, the value is searched as a phrase (see term modifiers).
+| `!=`                           | The complement of `=`.
+| `<`, `<=`, `>`, `>=`           | Ordering. Text is ordered without regard to case.
+| `~`                            | Word search on a text attribute (see term modifiers).
+| `!~`                           | The complement of `~`.
+| `is`, `is not`                 | Tests for `null` on every attribute and for `true` or `false` on a boolean one.
+| `in`, `not in`                 | Equality with any of the listed values; on a text attribute each value is a phrase.
+| `between`, `not between`       | A range whose bounds are both included: `Price between 10 and 20`.
+| `starts with`, `ends with`, `contains` | Tests a text for characters at its beginning, its end or anywhere, also inside a word, without regard to case.
+
+```wql
+Price between 10 and 20 and not State = Closed
+Name starts with 'Ann' or Mail ends with '.org'
+Description !~ 'draft' and Date >= date('2024-01-01')
+```
+
+## Null
+Null follows the rules of nullable values in C#:
+
+- Two nulls are equal, and null differs from every value. `is null` is the clear way to ask 
+  for missing values.
+- An ordering comparison involving null is false, and so are `between`, `starts with`, 
+  `ends with` and `contains`. A text search never matches a text that is null.
+- The negating conditions are complements and therefore keep the items whose value is null: 
+  `Optional != 5`, `Optional not in (1, 2)`, `Optional not between 1 and 5`, `Text !~ 'lorem'` 
+  and `not Optional > 3` all include the items without a value.
+- A missing object on the path of a nested attribute counts as null, so 
+  `Address.City is null` holds for an item without address, and neither a filter nor a sort 
+  fails on such an item. In ascending order, null comes first.
+
+## Errors
+The parser never throws. A syntax error and every semantic error is returned as part of the 
+statement, with the position and length of the token in error, and its message is a key of 
+the internationalization files. Besides syntax errors, the following is reported:
+
+- an attribute the index item does not have, in the filter as well as in the sort order,
+- a literal that cannot be converted into the type of its attribute,
+- a similarity or distance on an operator that is no text search,
+- a value other than `null`, `true` or `false` after `is` and `is not`,
+- a text operator such as `~` or `contains` on an attribute that is no text,
+- a function called with too few or too many arguments.
+
+A statement with errors cannot be executed: `Apply()` and `ToQuery()` throw an 
+`InvalidOperationException`, and `IndexManager.Retrieve` returns an empty result.
+
+## Execution paths
+A statement can be executed in two ways, which return the same items:
+
+- **The index path** (`Apply()`, `IndexManager.Retrieve()`) evaluates every condition on its 
+  own and combines the results. Each condition decides whether the reverse index of its 
+  attribute answers the question exactly: text conditions (`=`, `!=`, `~`, `!~`, `in`, 
+  `not in`) on a term index, comparisons and ranges of numbers on a numeric index, and the 
+  equality of booleans on a term index. Every other condition scans the document store with 
+  the same compiled predicate that `ToQuery()` creates - ordering comparisons of dates, texts 
+  and booleans, the equality of dates, Guids and enumerations, `null` tests, the substring 
+  conditions, and every condition with a function on the left-hand side or an attribute as 
+  parameter. A condition retrieves its matches without the result limit of the reverse 
+  index, so that combinations and complements stay exact for more than 10,000 hits.
+- **The query path** (`ToQuery()`) creates an expression tree for an `IQueryable` whose 
+  provider runs it in memory, such as LINQ to Objects. The text conditions are evaluated by 
+  the `WqlTextMatcher`, which reproduces the text contract of the index: the same tokenizer, 
+  lower case without diacritics, phrases, distances, wildcards and similarity. Stemming, stop 
+  words, synonyms and the correction of misspellings belong to the analyzer of an index and 
+  are not reproduced, so a query that depends on them can differ: in the index, `houses` also 
+  finds `house`, and a stop word such as `hello` is not found at all. A provider that 
+  translates the tree, such as Entity Framework, cannot translate the matcher nor the string 
+  comparisons that ignore case and rejects such a query.
+
+For a database, `ToQuery(WqlQueryMode.Translatable)` rewrites the tree into null tests, 
+`ToLower`, `Contains`, `StartsWith`, `EndsWith` and `string.Compare`, which such providers 
+translate into SQL. A text search then demands that the text contains every word - or every 
+part of a word between its wildcards - without regard to case, one `LIKE` per word. This 
+selects a superset of the exact result: order, distance, word boundaries and similarity are 
+not checked (a fuzzy search only excludes `null`), and whether diacritics are ignored depends 
+on the collation of the database. A negated text search (`!=`, `!~`, `not in`) accordingly 
+selects a subset. A text search whose words come from a function or another attribute, and 
+the comparisons of functions, stay evaluated in memory and cannot be translated. A provider 
+that builds its own conditions finds the folded words of a text search, wildcards included, 
+in `WqlTextMatcher.Terms`. The REST endpoints of WebExpress.WebApp (`RestApiTable`, `RestApiList`
+and the others) build their query in `Exact` mode; an endpoint backed by a database overrides
+`protected virtual WqlQueryMode QueryMode` to return `Translatable`.
+
+`skip` and `take` form one window, merged in the order they are written, and both paths 
+apply this window: `skip 5 take 10` returns the items 6 to 15, `take 10 skip 5` the items 6 
+to 10. Without `order by`, the order of the result follows its source, which differs between 
+both paths; a stable page therefore needs an `order by` that orders every item.
 
 ## Term modifiers
 Term modifiers in WQL are special characters or combinations of characters that serve to 
@@ -1060,17 +1226,20 @@ near another term. Term modifiers are an essential part of WQL and contribute to
 the power and flexibility of the search. They allow users to create customized search queries 
 tailored to their specific requirements. It is important to note that all queries are case-
 insensitive. This means that the case is not considered in the search, which simplifies the 
-search and improves user-friendliness.
+search and improves user-friendliness. The options for similarity and distance apply to the 
+text searches `=`, `!=`, `~` and `!~` on text attributes only.
 
 **Phrase search (exact word sequence)**
 
 Phrase search allows users to retrieve content from documents that contain a specific order 
 and combination of words defined by the user. With phrase search, only records that contain 
 the expression in exactly the searched order are returned. For this, the position information 
-of the reverse index is used.
+of the reverse index is used. A distance loosens the phrase: each word may then stand up to that 
+many positions further behind the previous one than in the query.
 
 ```wql
 Description = 'lorem ipsum'
+Description = 'lorem ipsum' :1
 ```
 
 **Proximity search**
@@ -1078,7 +1247,9 @@ Description = 'lorem ipsum'
 A proximity search looks for documents where two or more separately matching terms occur within a 
 certain distance of each other. The distance is determined by the number of intervening words. Proximity 
 search goes beyond simple word matching by adding the constraint of proximity. By limiting proximity, 
-search results can be avoided where the words are scattered and do not cohere. The basic linguistic 
+search results can be avoided where the words are scattered and do not cohere. Each word has to 
+occur within the distance of the previous one; every occurrence of a word is considered, so a 
+document matches as soon as one arrangement of its words fits. The basic linguistic 
 assumption of proximity search is that the proximity of words in a document implies a relationship 
 between the words.
 
@@ -1102,10 +1273,14 @@ Description ~ 'ips*'
 ```
 
 **Fuzzy search**
-Fuzzy search is used to find matches in texts that are not exact, but only approximate.
+Fuzzy search is used to find matches in texts that are not exact, but only approximate. The number 
+is the minimum similarity in percent: from 1 to 99 every indexed word at least that similar to a 
+search word counts as a match, 0 and 100 match exactly. A value above 100 is rejected as a syntax 
+error. The similarity applies to every word of the query, also when it is combined with a distance.
 
 ```wql
 Description ~ 'house' ~80
+Description ~ 'lorem ipsum' ~80 :2
 ```
 
 **Word search**
@@ -1113,32 +1288,83 @@ Description ~ 'house' ~80
 Word search is the search for specific terms in a document, regardless of their capitalization 
 or position. This concept is particularly useful when searching for specific terms in a document 
 without having to pay attention to their exact spelling or occurrence in the document. It enables 
-efficient searches for specific terms.
+efficient searches for specific terms. `!~` returns the documents that do not contain the words.
 
 ```wql
 Description ~ 'lorem ipsum'
+Description !~ 'draft'
 ```
 
 ## WQL functions
 The WebExpress Query Language (WQL) offers a set of functions that allow data to be processed and retrieved 
-in versatile and specific ways. These functions can be integrated into queries to achieve more precise and 
-targeted search results. Below are some common functions and their descriptions:
+in versatile and specific ways. A function may stand on either side of a condition, its arguments may be 
+literals, attributes or further functions, and its value is computed when the query runs:
 
-| Function | Params | Description
-|----------|--------|------------------------------------------------
-| day()    | n      | Returns n days before or after the current day.
-| now()    | -      | Returns the current date and time.
+| Function      | Arguments                  | Description
+|---------------|----------------------------|-------------------------------------------------------------
+| `now()`       | -                          | Returns the current date and time.
+| `day()`       | `[n]`                      | Returns the current date, optionally shifted by n days.
+| `year()`      | `[n]`                      | Returns the current year, optionally shifted by n years.
+| `month()`     | `[n]`                      | Returns the current month, optionally shifted by n months.
+| `date()`      | `text`                     | Reads a date in ISO 8601 form, such as `'2024-01-31'` or `'2024-01-31T12:00'`; any other form yields null.
+| `dateadd()`   | `unit, n, date`            | Shifts a date by n units (truncated to an integer); the unit is `year`, `month`, `day`, `hour`, `minute` or `second`.
+| `datediff()`  | `unit, start, end`         | Counts the unit boundaries crossed from start to end, as SQL does: from 31 December to 1 January is one year.
+| `yearof()`    | `date`                     | Returns the year of a date.
+| `monthof()`   | `date`                     | Returns the month of a date.
+| `dayof()`     | `date`                     | Returns the day of the month of a date.
+| `len()`       | `text`                     | Returns the length of a text; null has the length 0.
+| `upper()`     | `text`                     | Converts a text to upper case.
+| `lower()`     | `text`                     | Converts a text to lower case.
+| `trim()`      | `text`                     | Removes leading and trailing whitespace from a text.
+| `concat()`    | `text, ...`                | Joins its arguments; null contributes nothing.
+| `replace()`   | `text, search, replacement`| Replaces every occurrence of the search text, without regard to case.
+| `substring()` | `text, start, [length]`    | Returns a part of a text; the position counts from 1 as in SQL.
+| `coalesce()`  | `value, value, ...`        | Returns the first argument that is not null.
+| `nullif()`    | `value, value`             | Returns null if both arguments are equal, otherwise the first one.
+| `abs()`       | `n`                        | Returns the absolute value of a number.
+| `round()`     | `n, [digits]`              | Rounds a number to the given decimal places; a midpoint is rounded away from zero.
+| `floor()`     | `n`                        | Rounds a number down to the next integer.
+| `ceil()`      | `n`                        | Rounds a number up to the next integer.
 
-Functions are only allowed on the right-hand side of conditions. This means that functions always appear as 
-part of the parameters in conditions and not as standalone left-hand operands. Here are some examples to 
-illustrate this:
+Arguments that do not fit a function, such as a text that is no date, make it return null, which no 
+comparison except `is null` matches; only `len()` counts null as 0, and `day()`, `month()` and `year()` 
+treat a missing offset as no shift. Here are some examples:
 
 ```wql
-dateField = day(-3)
+Date >= day(-3)
+len(trim(Name)) > 3
+coalesce(Nickname, '') = ''
+datediff('day', Created, now()) > 30
+yearof(Date) = 2024 and monthof(Date) between 1 and 3
 ```
 
-This query filters all records where the dateField has the value that is 3 days before the current day.
+A condition with a function on the left-hand side, or with an argument that refers to an attribute, is 
+evaluated item by item, also in the index path.
 
-Custom functions can be created by implementing the `IWqlExpressionNodeFilterFunction<TIndexItem>` interface and 
-registering it in the `IndexManager`.
+Custom functions derive from `WqlExpressionNodeFilterFunctionScalar<TIndexItem>`. The single method 
+`Evaluate` computes the value for both execution paths, the constructor declares the smallest and the 
+largest number of arguments, which the parser checks, and `ReturnType` names the type of the value:
 
+```csharp
+public class WqlExpressionNodeFilterFunctionInitials<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
+    where TIndexItem : IIndexItem
+{
+    public override Type ReturnType => typeof(string);
+
+    public WqlExpressionNodeFilterFunctionInitials()
+        : base("initials", 1, 1)
+    {
+    }
+
+    protected override object Evaluate(IReadOnlyList<object> arguments)
+    {
+        return ToText(Argument(arguments, 0))?
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Aggregate("", (initials, word) => initials + word[0]);
+    }
+}
+```
+
+Functions written against the original contract, which implement `Execute` and `ToExpression` of 
+`WqlExpressionNodeFilterFunction<TIndexItem>` themselves, keep working and accept any number of 
+arguments. A function is registered in the `IndexManager`.

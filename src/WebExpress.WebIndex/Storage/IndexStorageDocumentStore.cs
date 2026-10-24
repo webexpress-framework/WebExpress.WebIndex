@@ -110,21 +110,22 @@ namespace WebExpress.WebIndex.Storage
             var exists = File.Exists(FileName);
 
             IndexFile = new IndexStorageFile(FileName);
-            Header = new IndexStorageSegmentHeader(StorageContext)
+            IndexFile.Initialize(() =>
             {
-                Identifier = Extension,
-                Version = Version
-            };
-            Allocator = new IndexStorageSegmentAllocatorDocumentStore(StorageContext);
-            Statistic = new IndexStorageSegmentStatistic(StorageContext);
-            HashMap = new IndexStorageSegmentHashMap(StorageContext, Capacity);
+                Header = new IndexStorageSegmentHeader(StorageContext)
+                {
+                    Identifier = Extension,
+                    Version = Version
+                };
+                Allocator = new IndexStorageSegmentAllocatorDocumentStore(StorageContext);
+                Statistic = new IndexStorageSegmentStatistic(StorageContext);
+                HashMap = new IndexStorageSegmentHashMap(StorageContext, Capacity);
 
-            Header.Initialization(exists);
-            Statistic.Initialization(exists);
-            HashMap.Initialization(exists);
-            Allocator.Initialization(exists);
-
-            IndexFile.Flush();
+                Header.Initialization(exists);
+                Statistic.Initialization(exists);
+                HashMap.Initialization(exists);
+                Allocator.Initialization(exists);
+            });
         }
 
         /// <summary>
@@ -215,26 +216,26 @@ namespace WebExpress.WebIndex.Storage
         /// </summary>
         public void Clear()
         {
-            // reset allocator and invalidate on-disk segments
-            IndexFile.NextFreeAddr = 0;
-            IndexFile.InvalidationAll();
-            IndexFile.Flush();
-
-            Header = new IndexStorageSegmentHeader(StorageContext)
+            IndexFile.Initialize(() =>
             {
-                Identifier = Extension,
-                Version = Version
-            };
-            Allocator = new IndexStorageSegmentAllocatorDocumentStore(StorageContext);
-            Statistic = new IndexStorageSegmentStatistic(StorageContext);
-            HashMap = new IndexStorageSegmentHashMap(StorageContext, Capacity);
+                // exclude maintenance while resetting addresses and zeroing the bucket region
+                IndexFile.NextFreeAddr = 0;
+                IndexFile.InvalidationAll();
 
-            Header.Initialization(false);
-            Statistic.Initialization(false);
-            HashMap.Initialization(false);
-            Allocator.Initialization(false);
+                Header = new IndexStorageSegmentHeader(StorageContext)
+                {
+                    Identifier = Extension,
+                    Version = Version
+                };
+                Allocator = new IndexStorageSegmentAllocatorDocumentStore(StorageContext);
+                Statistic = new IndexStorageSegmentStatistic(StorageContext);
+                HashMap = new IndexStorageSegmentHashMap(StorageContext, Capacity);
 
-            IndexFile.Flush();
+                Header.Initialization(false);
+                Statistic.Initialization(false);
+                HashMap.Initialization(false);
+                Allocator.Initialization(false);
+            });
         }
 
         /// <summary>

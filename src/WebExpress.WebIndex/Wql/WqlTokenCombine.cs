@@ -5,7 +5,9 @@ using System.Linq;
 namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
-    /// Represents a token of the wql syntax.
+    /// A WQL token formed by merging several adjacent tokens into one. It concatenates their values
+    /// and spans from the first token's start to the last token's end, used when the parser needs to
+    /// treat a sequence of tokens as a single unit.
     /// </summary>
     public class WqlTokenCombine : IWqlToken
     {

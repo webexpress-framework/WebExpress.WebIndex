@@ -46,16 +46,24 @@ namespace WebExpress.WebIndex.Utility
         }
 
         /// <summary>
-        /// Calculates the similarity between two strings based on the LCS length.
+        /// Calculates the similarity between two strings based on the Levenshtein
+        /// distance, normalized to the longer word. Identical strings yield 1.0,
+        /// completely different strings yield 0.0.
         /// </summary>
         /// <param name="word1">The first string to compare.</param>
         /// <param name="word2">The second string to compare.</param>
-        /// <returns>A double value representing the similarity percentage.</returns>
+        /// <returns>A double value in [0, 1] representing the similarity.</returns>
         public static double CalculateLevenshteinSimilarity(string word1, string word2)
         {
-            int lcsLength = LevenshteinDistance(word1, word2);
+            int distance = LevenshteinDistance(word1, word2);
             int maxLength = Math.Max(word1.Length, word2.Length);
-            return (double)lcsLength / maxLength;
+
+            if (maxLength == 0)
+            {
+                return 1.0;
+            }
+
+            return 1.0 - (double)distance / maxLength;
         }
 
         /// <summary>

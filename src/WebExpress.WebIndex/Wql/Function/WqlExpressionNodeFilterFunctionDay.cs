@@ -1,76 +1,38 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
     /// <summary>
-    /// Describes the function expression of a wql statement.
-    /// Returns the current date.
+    /// WQL function that returns the current date, optionally shifted by a number of days.
+    /// Usage: <c>attribute = day()</c> or <c>attribute = day(-3)</c>. A missing or non-numeric
+    /// offset counts as no shift.
     /// </summary>
-    public class WqlExpressionNodeFilterFunctionDay<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
+    /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
+    public class WqlExpressionNodeFilterFunctionDay<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the type of the computed value.
+        /// </summary>
+        public override Type ReturnType => typeof(DateTime);
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public WqlExpressionNodeFilterFunctionDay()
-            : base("day")
+            : base("day", 0, 1)
         {
         }
 
         /// <summary>
-        /// Executes the function.
+        /// Computes the current date, shifted by the offset in days.
         /// </summary>
-        /// <returns>The return value.</returns>
-        public override object Execute()
+        /// <param name="arguments">The optional offset in days.</param>
+        /// <returns>The date at midnight.</returns>
+        protected override object Evaluate(IReadOnlyList<object> arguments)
         {
-            var parameters = Parameters.Select(x => x.GetValue());
-            var param = parameters.FirstOrDefault();
-
-            if (param is not null)
-            {
-                return DateTime.Now.Date.AddDays(Convert.ToDouble(param));
-            }
-
-            return DateTime.Now.Date;
-        }
-
-        /// <summary>
-        /// Builds a LINQ expression representing the result of the <c>day()</c> function, 
-        /// which returns the current date optionally offset
-        /// by a specified number of days, evaluated at query execution time.
-        /// </summary>
-        /// <param name="param">
-        /// The parameter expression representing the index item in the generated
-        /// expression tree. This function does not use the parameter directly,
-        /// but it is required to satisfy the expression node contract.
-        /// </param>
-        /// <returns>
-        /// An expression that reads <c>DateTime.Today</c> (and optionally calls 
-        /// <c>AddDays</c>) each time the expression is evaluated, rather than 
-        /// freezing the date at query construction time.
-        /// </returns>
-        public override Expression ToExpression(ParameterExpression param)
-        {
-            // DateTime.Today == DateTime.Now.Date
-            var todayProperty = typeof(DateTime).GetProperty(nameof(DateTime.Today))
-                ?? throw new InvalidOperationException("DateTime.Today property not found.");
-            Expression dateExpr = Expression.Property(null, todayProperty);
-
-            // if a day offset parameter was provided, build AddDays call
-            var parameters = Parameters?.Select(x => x.GetValue());
-            var offsetParam = parameters?.FirstOrDefault();
-
-            if (offsetParam is not null)
-            {
-                var addDaysMethod = typeof(DateTime).GetMethod(nameof(DateTime.AddDays), [typeof(double)])
-                    ?? throw new InvalidOperationException("DateTime.AddDays method not found.");
-                var daysConstant = Expression.Constant(Convert.ToDouble(offsetParam));
-                dateExpr = Expression.Call(dateExpr, addDaysMethod, daysConstant);
-            }
-
-            return dateExpr;
+            return DateTime.Today.AddDays(ToNumber(Argument(arguments, 0)) ?? 0);
         }
     }
 }

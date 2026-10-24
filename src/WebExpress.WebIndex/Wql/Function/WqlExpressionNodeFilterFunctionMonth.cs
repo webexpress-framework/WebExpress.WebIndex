@@ -1,67 +1,46 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
     /// <summary>
     /// WQL function that returns the month of the current date, optionally offset.
-    /// Usage: <c>attribute = month()</c> or <c>attribute = month(-1)</c>.
+    /// Usage: <c>attribute = month()</c> or <c>attribute = month(-1)</c>. A missing or
+    /// non-numeric offset counts as no shift.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
-    public class WqlExpressionNodeFilterFunctionMonth<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
+    public class WqlExpressionNodeFilterFunctionMonth<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the type of the computed value.
+        /// </summary>
+        public override Type ReturnType => typeof(double);
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public WqlExpressionNodeFilterFunctionMonth()
-            : base("month")
+            : base("month", 0, 1)
         {
         }
 
         /// <summary>
-        /// Executes the function.
+        /// Computes the month of the current date, shifted by the offset in months.
         /// </summary>
+        /// <param name="arguments">The optional offset in months.</param>
         /// <returns>The month as a double value.</returns>
-        public override object Execute()
+        protected override object Evaluate(IReadOnlyList<object> arguments)
         {
-            var parameters = Parameters?.Select(x => x.GetValue());
-            var param = parameters?.FirstOrDefault();
-
             var date = DateTime.Now;
+            var offset = ToNumber(Argument(arguments, 0));
 
-            if (param is not null)
+            if (offset.HasValue)
             {
-                date = date.AddMonths(Convert.ToInt32(param));
+                date = date.AddMonths(Convert.ToInt32(offset.Value));
             }
 
             return (double)date.Month;
-        }
-
-        /// <summary>
-        /// Builds a LINQ expression that returns the current month at query evaluation time.
-        /// </summary>
-        /// <param name="param">The parameter expression (unused for this function).</param>
-        /// <returns>An expression that evaluates the current month, optionally offset by months.</returns>
-        public override Expression ToExpression(ParameterExpression param)
-        {
-            var nowProperty = typeof(DateTime).GetProperty(nameof(DateTime.Now))
-                ?? throw new InvalidOperationException("Failed to resolve DateTime.Now property during month() expression tree construction.");
-            var monthProperty = typeof(DateTime).GetProperty(nameof(DateTime.Month))
-                ?? throw new InvalidOperationException("Failed to resolve DateTime.Month property during month() expression tree construction.");
-            var addMonthsMethod = typeof(DateTime).GetMethod(nameof(DateTime.AddMonths), [typeof(int)])
-                ?? throw new InvalidOperationException("Failed to resolve DateTime.AddMonths method during month() expression tree construction.");
-
-            Expression dateExpression = Expression.Property(null, nowProperty);
-            var offset = Parameters?.Select(x => x.GetValue()).FirstOrDefault();
-
-            if (offset is not null)
-            {
-                dateExpression = Expression.Call(dateExpression, addMonthsMethod, Expression.Constant(Convert.ToInt32(offset)));
-            }
-
-            return Expression.Convert(Expression.Property(dateExpression, monthProperty), typeof(double));
         }
     }
 }

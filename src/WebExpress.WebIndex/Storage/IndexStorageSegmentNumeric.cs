@@ -1,9 +1,9 @@
 ﻿namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Each node is a numeric value stored in a binary tree. Each node has additional 
-    /// information about the value, such as its frequency, position in the document, and other relevant information that can be
-    /// useful in search queries.
+    /// The root of the value tree of a numeric reverse index. Every node is a distinct value of the
+    /// field with the number of documents that hold it and the tree of their ids; numbers carry no
+    /// positions, see <see cref="IndexStorageSegmentNumericNode"/>.
     /// </summary>
     /// <param name="context">The reference to the context of the index.</param>
     public class IndexStorageSegmentNumeric(IndexStorageContext context)
