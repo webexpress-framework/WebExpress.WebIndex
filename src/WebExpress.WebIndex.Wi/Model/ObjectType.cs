@@ -1,16 +1,17 @@
 ﻿using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using WebExpress.WebIndex.WebAttribute;
 
 namespace WebExpress.WebIndex.Wi.Model
 {
     /// <summary>
-    /// Represents an object within the WebExpress.WebIndex.Studio.
+    /// Describes the schema used to construct runtime index items for the console.
     /// </summary>
     internal class ObjectType
     {
-        private Dictionary<string, Type> _typeCache = [];
+        private readonly Dictionary<string, Type> _typeCache = [];
 
         /// <summary>
         /// Returns or sets the name of the object.
@@ -24,29 +25,9 @@ namespace WebExpress.WebIndex.Wi.Model
         public string Name { get; set; }
 
         /// <summary>
-        /// Retuns a collection of fields associated with the object.
+        /// Returns a collection of fields associated with the object.
         /// </summary>
         public IEnumerable<Field> Fields { get; set; } = [];
-
-        /// <summary>
-        /// Returns a collection of stored data objects.
-        /// </summary>
-        [JsonIgnore]
-        public List<object> All => new(WiApp.ViewModel.IndexManager.All(BuildRuntimeClass()));
-
-        /// <summary>
-        /// Returns the number of items of the index.
-        /// </summary>
-        [JsonIgnore]
-        public uint Count => WiApp.ViewModel.IndexManager.Count(BuildRuntimeClass());
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObjectType"/> class.
-        /// </summary>
-        public ObjectType()
-        {
-
-        }
 
         /// <summary>
         /// Dynamically builds a class based on the object's attributes.
@@ -54,28 +35,63 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <returns>A Type representing the dynamically built class.</returns>
         public Type BuildRuntimeClass()
         {
-            if (_typeCache.TryGetValue(Name, out Type type))
+            Validate();
+            var key = JsonSerializer.Serialize(this);
+
+            if (_typeCache.TryGetValue(key, out Type type))
             {
                 return type;
             }
 
             var assemblyName = new AssemblyName("WebExpress.WebIndex.Wi.Model.Objects");
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule($"Module_{Name}");
 
             var typeBuilder = moduleBuilder.DefineType(Name, TypeAttributes.Public, null, [typeof(IIndexItem)]);
 
-            BildProperty(typeBuilder, "Id", typeof(Guid), true, true);
+            BuildProperty(typeBuilder, "Id", typeof(Guid), true, true);
 
             foreach (var attribute in Fields.Where(x => !x.Name.Equals("id", StringComparison.OrdinalIgnoreCase)))
             {
-                BildProperty(typeBuilder, attribute.Name, attribute.Type.ToType(), attribute.Ignore, attribute.Abstract);
+                BuildProperty(typeBuilder, attribute.Name, attribute.Type.ToType(), attribute.Ignore, attribute.Abstract);
             }
 
             var runtimeClass = typeBuilder.CreateType();
-            _typeCache.Add(Name, runtimeClass);
+            _typeCache.Add(key, runtimeClass);
 
             return runtimeClass;
+        }
+
+        /// <summary>
+        /// Rejects ambiguous fields and names that could escape the index directory.
+        /// </summary>
+        /// <exception cref="FormatException">The schema cannot be represented safely.</exception>
+        public void Validate()
+        {
+            if (string.IsNullOrWhiteSpace(Name) || Name != Name.Trim() || Name.Contains('.')
+                || Name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+                || Name.IndexOfAny(['/', '\\', '*', '?', ':']) >= 0 || Name is "." or "..")
+            {
+                throw new FormatException("The object type must have a valid file name.");
+            }
+
+            if (Fields is null)
+            {
+                throw new FormatException("The schema must contain a field collection.");
+            }
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in Fields)
+            {
+                if (field is null || string.IsNullOrWhiteSpace(field.Name)
+                    || !(char.IsLetter(field.Name[0]) || field.Name[0] == '_')
+                    || field.Name.Any(x => !char.IsLetterOrDigit(x) && x != '_')
+                    || !names.Add(field.Name) || !Enum.IsDefined(field.Type)
+                    || (field.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) && field.Type != FieldType.Guid))
+                {
+                    throw new FormatException("Fields must have unique identifiers and valid types; Id must be a Guid.");
+                }
+            }
         }
 
         /// <summary>
@@ -87,9 +103,9 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <param name="indexIgnore">Indicates whether the property should be ignored by the index.</param>
         /// <param name="virtual">Indicates whether the property should be virtual.</param>
         /// <returns>A PropertyBuilder for the created property.</returns>
-        private PropertyBuilder BildProperty(TypeBuilder typeBuilder, string name, Type type, bool indexIgnore, bool @virtual)
+        private static PropertyBuilder BuildProperty(TypeBuilder typeBuilder, string name, Type type, bool indexIgnore, bool @virtual)
         {
-            var fieldBuilder = typeBuilder.DefineField($"_{name.ToLower()}", type, FieldAttributes.Private);
+            var fieldBuilder = typeBuilder.DefineField($"_{name.ToLowerInvariant()}", type, FieldAttributes.Private);
             var propertyBuilder = typeBuilder.DefineProperty(name, PropertyAttributes.HasDefault, type, Type.EmptyTypes);
 
             if (indexIgnore)

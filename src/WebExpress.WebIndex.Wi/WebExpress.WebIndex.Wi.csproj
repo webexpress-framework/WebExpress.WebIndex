@@ -5,7 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
-    <StartupObject>WiApp</StartupObject>
+    <StartupObject>WebExpress.WebIndex.Wi.WiApp</StartupObject>
     <AssemblyName>wi</AssemblyName>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="WebExpress.WebIndex.Test" />
+    <InternalsVisibleTo Include="WebExpress.WebIndex.Wi.Test" />
   </ItemGroup>
 
 </Project>

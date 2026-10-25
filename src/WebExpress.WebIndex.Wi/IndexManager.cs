@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Linq;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebIndex.Wi
@@ -12,8 +11,10 @@ namespace WebExpress.WebIndex.Wi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public IndexManager()
+        /// <param name="context">The storage location and indexing configuration.</param>
+        public IndexManager(IIndexContext context)
         {
+            Initialization(context);
         }
 
         /// <summary>

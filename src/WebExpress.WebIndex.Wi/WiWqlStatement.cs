@@ -1,4 +1,3 @@
-using System.Reflection;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebIndex.Wi
@@ -47,7 +46,12 @@ namespace WebExpress.WebIndex.Wi
         /// <returns>An enumeration of matching items, or an empty sequence on error.</returns>
         public IEnumerable<object> Apply(Type dataType)
         {
-            if (_statement is null || _indexDocument is null)
+            if (dataType != _itemType)
+            {
+                throw new ArgumentException("The item type must match the parsed statement.", nameof(dataType));
+            }
+
+            if (_statement is null || _indexDocument is null || HasErrors)
             {
                 return [];
             }

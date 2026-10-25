@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="WebExpress.WebIndex.Test/WebExpress.WebIndex.Test.csproj" />
   <Project Path="WebExpress.WebIndex.Wi/WebExpress.WebIndex.Wi.csproj" />
+  <Project Path="WebExpress.WebIndex.Wi.Test/WebExpress.WebIndex.Wi.Test.csproj" />
   <Project Path="WebExpress.WebIndex.WiUI.Test/WebExpress.WebIndex.WiUI.Test.csproj" />
   <Project Path="WebExpress.WebIndex.WiUI/WebExpress.WebIndex.WiUI.csproj">
     <Deploy Solution="Debug|*" />

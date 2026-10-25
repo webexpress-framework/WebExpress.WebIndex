@@ -1,6 +1,4 @@
-﻿using WebExpress.WebIndex.Wql;
-
-namespace WebExpress.WebIndex.Wi
+﻿namespace WebExpress.WebIndex.Wi
 {
     /// <summary>
     /// A simple parser that handles a command line. This parser recognizes commands and optional parameters. In 
@@ -8,7 +6,7 @@ namespace WebExpress.WebIndex.Wi
     /// </summary>
     internal class CommandParser
     {
-        private Dictionary<string, CommandType> commands = [];
+        private readonly Dictionary<string, CommandType> _commands = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Initializes a new instance of the CommandParser class.
@@ -24,9 +22,12 @@ namespace WebExpress.WebIndex.Wi
         /// <param name="type">The command as a type.</param>
         public void Register(string command, CommandType type)
         {
-            if (!commands.ContainsKey(command))
+            ArgumentException.ThrowIfNullOrWhiteSpace(command);
+            ArgumentNullException.ThrowIfNull(type);
+
+            if (!_commands.ContainsKey(command))
             {
-                commands.Add(command, type);
+                _commands.Add(command, type);
             }
         }
 
@@ -40,6 +41,7 @@ namespace WebExpress.WebIndex.Wi
         /// values may itself contain spaces and must reach the command whole.
         /// </remarks>
         /// <param name="input">The input string to parse.</param>
+        /// <returns>The recognized action and its unmodified parameter values.</returns>
         public Command Parse(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
@@ -47,11 +49,11 @@ namespace WebExpress.WebIndex.Wi
                 return new Command() { Action = CommandAction.Empty };
             }
 
-            var parts = input.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var command = parts[0].ToLowerInvariant();
+            var parts = input.Trim().Split((char[])null, 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var command = parts[0];
             var rest = parts.Length > 1 ? parts[1] : null;
 
-            if (!commands.TryGetValue(command, out CommandType type))
+            if (!_commands.TryGetValue(command, out CommandType type))
             {
                 return new Command() { Action = CommandAction.None };
             }
@@ -61,7 +63,7 @@ namespace WebExpress.WebIndex.Wi
                 return new Command() { Action = type.Action, Parameter1 = rest };
             }
 
-            var pair = rest.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var pair = rest.Split((char[])null, 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             return new Command()
             {
@@ -77,7 +79,7 @@ namespace WebExpress.WebIndex.Wi
         public void PrintHelp()
         {
             Console.WriteLine("Available commands:");
-            foreach (var c in commands.Where(x => !x.Value.Secret))
+            foreach (var c in _commands.Where(x => !x.Value.Secret))
             {
                 Console.WriteLine($"- {$"{c.Key} {c.Value.Action.GetParameterDescription()}".Trim()} : {c.Value.Action.GetDescription()}");
             }

@@ -5,38 +5,13 @@
     /// </summary>
     internal class ArgumentParser
     {
-        /// <summary>
-        /// The singleton.
-        /// </summary>
-        private static ArgumentParser m_this = null;
-
-        /// <summary>
-        /// Enumeration of all registered commands.
-        /// </summary>
-        private List<ArgumentParserCommand> Commands { get; set; }
-
-        /// <summary>
-        /// Returns the current ArgumentParser object.
-        /// </summary>
-        public static ArgumentParser Current
-        {
-            get
-            {
-                if (m_this == null)
-                {
-                    m_this = new ArgumentParser();
-                }
-
-                return m_this;
-            }
-        }
+        private readonly List<ArgumentParserCommand> _commands = [];
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public ArgumentParser()
         {
-            Commands = new List<ArgumentParserCommand>();
         }
 
         /// <summary>
@@ -45,7 +20,9 @@
         /// <param name="command">The command to register.</param>
         public void Register(ArgumentParserCommand command)
         {
-            Commands.Add(command);
+            ArgumentNullException.ThrowIfNull(command);
+            ArgumentException.ThrowIfNullOrWhiteSpace(command.FullName);
+            _commands.Add(command);
         }
 
         /// <summary>
@@ -58,6 +35,7 @@
         /// <returns>A list of prepared program arguments.</returns>
         public ArgumentParserResult Parse(string[] args)
         {
+            ArgumentNullException.ThrowIfNull(args);
             var argsDict = new ArgumentParserResult();
 
             var key = "";
@@ -73,12 +51,11 @@
                     if (!string.IsNullOrEmpty(key))
                     {
                         Accept(argsDict, key, value);
-
-                        value = "";
                     }
+                    value = "";
                     key = s;
                 }
-                else
+                else if (!string.IsNullOrEmpty(key))
                 {
                     value += " " + s;
                 }
@@ -101,8 +78,8 @@
         /// <param name="value">The collected value of the argument.</param>
         private void Accept(ArgumentParserResult argsDict, string key, string value)
         {
-            var command = Commands.FirstOrDefault(x => x.FullName.Equals(key[1..], StringComparison.OrdinalIgnoreCase) ||
-                                                       x.ShortName.Equals(key[1..], StringComparison.OrdinalIgnoreCase));
+            var command = _commands.FirstOrDefault(x => string.Equals(x.FullName, key[1..], StringComparison.OrdinalIgnoreCase) ||
+                                                       string.Equals(x.ShortName, key[1..], StringComparison.OrdinalIgnoreCase));
 
             if (command != null)
             {
@@ -133,7 +110,7 @@
         /// <returns>The help text of the commands, one line per command.</returns>
         public string GetHelp()
         {
-            return string.Join(Environment.NewLine, Commands.Select(x => string.Join(" ", $"-{x.ShortName} (or {x.FullName}) {x.ParameterDescription}".Trim(), $": {x.Description}")));
+            return string.Join(Environment.NewLine, _commands.Select(x => string.Join(" ", $"-{x.FullName}{(string.IsNullOrWhiteSpace(x.ShortName) ? "" : $" (or -{x.ShortName})")} {x.ParameterDescription}".Trim(), $": {x.Description}")));
         }
 
         /// <summary>
@@ -142,7 +119,7 @@
         /// <returns>The short forms of the commands with their parameters, separated by vertical bars.</returns>
         public override string ToString()
         {
-            return string.Join(" | ", Commands.Select(x => $"-{x.ShortName} {x.ParameterDescription}".Trim()));
+            return string.Join(" | ", _commands.Select(x => $"-{(string.IsNullOrWhiteSpace(x.ShortName) ? x.FullName : x.ShortName)} {x.ParameterDescription}".Trim()));
         }
     }
 }

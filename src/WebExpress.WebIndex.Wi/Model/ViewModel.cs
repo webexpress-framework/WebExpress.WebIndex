@@ -10,7 +10,7 @@ namespace WebExpress.WebIndex.Wi.Model
     /// <summary>
     /// Represents the ViewModel for managing the indexing of project objects.
     /// </summary>
-    internal class ViewModel
+    internal class ViewModel : IDisposable
     {
         /// <summary>
         /// Returns or sets the name of the application.
@@ -48,6 +48,16 @@ namespace WebExpress.WebIndex.Wi.Model
         public Field CurrentIndexField { get; set; }
 
         /// <summary>
+        /// Returns a snapshot of the active index without depending on console state.
+        /// </summary>
+        public List<object> All => [.. IndexManager.All(CurrentObjectType.BuildRuntimeClass())];
+
+        /// <summary>
+        /// Returns the number of items in the active index.
+        /// </summary>
+        public uint Count => IndexManager.Count(CurrentObjectType.BuildRuntimeClass());
+
+        /// <summary>
         /// Creates an index file for an object type without fields.
         /// </summary>
         /// <param name="indexFile">The name of the index file.</param>
@@ -64,47 +74,61 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <returns>True if successful, otherwise false.</returns>
         public bool CreateIndexFile(ObjectType objectType)
         {
-            CurrentObjectType = objectType;
-            CurrentIndexFile = Path.Combine(CurrentDirectory, $"{objectType.Name}.ws");
+            ArgumentNullException.ThrowIfNull(objectType);
+            objectType.Validate();
+            if (IndexExists(objectType.Name))
+            {
+                throw new IndexExistsException(objectType.Name, CurrentDirectory);
+            }
 
-            var runtimeClass = CurrentObjectType.BuildRuntimeClass();
-            var context = new IndexContext { IndexDirectory = CurrentDirectory };
-            IndexManager = new IndexManager();
-
-            // use reflection to call the protected Initialization method
-            var method = typeof(IndexManager).GetMethod("Initialization", BindingFlags.Instance | BindingFlags.NonPublic);
-            method.Invoke(IndexManager, [context]);
-
-            IndexManager.Create(runtimeClass, CultureInfo.GetCultureInfo("en"), IndexType.Storage);
-
-            return true;
+            return OpenIndex(objectType, Path.GetFullPath(CurrentDirectory));
         }
 
         /// <summary>
-        /// Opens the specified index file.
+        /// Opens a stored schema after validating it without changing the active selection on parse failure.
         /// </summary>
-        /// <param name="indexFile">The full path to the index file.</param>
-        /// <returns>True if successful, otherwise false.</returns>
+        /// <param name="indexFile">The schema path, relative to the current index directory or absolute.</param>
+        /// <returns>True when the index has been opened.</returns>
         public bool OpenIndexFile(string indexFile)
         {
-            CurrentDirectory = Path.GetDirectoryName(indexFile);
-            CurrentIndexFile = indexFile;
+            ArgumentException.ThrowIfNullOrWhiteSpace(indexFile);
+            var path = Path.GetFullPath(indexFile, Path.GetFullPath(CurrentDirectory));
+            var objectType = JsonSerializer.Deserialize<ObjectType>(File.ReadAllText(path), DumpOptions)
+                ?? throw new FormatException("The index schema is missing.");
+            objectType.Validate();
+            if (!string.Equals(Path.GetFileNameWithoutExtension(path), objectType.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new FormatException("The schema type must match its file name.");
+            }
 
-            var schema = File.ReadAllText(CurrentIndexFile);
-            var options = new JsonSerializerOptions { Converters = { new FieldTypeConverter() } };
-            CurrentObjectType = JsonSerializer.Deserialize<ObjectType>(schema, options);
+            return OpenIndex(objectType, Path.GetDirectoryName(path));
+        }
 
-            var runtimeClass = CurrentObjectType.BuildRuntimeClass();
+        /// <summary>
+        /// Transfers ownership to a new manager after releasing the previous index.
+        /// </summary>
+        /// <param name="objectType">The validated schema to open.</param>
+        /// <param name="directory">The absolute storage directory.</param>
+        /// <returns>True when initialization succeeds.</returns>
+        private bool OpenIndex(ObjectType objectType, string directory)
+        {
+            var runtimeClass = objectType.BuildRuntimeClass();
+            CloseIndexFile();
+            var manager = new IndexManager(new IndexContext { IndexDirectory = directory });
+            try
+            {
+                manager.Create(runtimeClass, CultureInfo.GetCultureInfo("en"), IndexType.Storage);
+            }
+            catch
+            {
+                manager.Dispose();
+                throw;
+            }
 
-            var context = new IndexContext { IndexDirectory = CurrentDirectory };
-            IndexManager = new IndexManager();
-
-            // use reflection to call the protected Initialization method
-            var method = typeof(IndexManager).GetMethod("Initialization", BindingFlags.Instance | BindingFlags.NonPublic);
-            method.Invoke(IndexManager, [context]);
-
-            IndexManager.Create(runtimeClass, CultureInfo.GetCultureInfo("en"), IndexType.Storage);
-
+            IndexManager = manager;
+            CurrentDirectory = directory;
+            CurrentObjectType = objectType;
+            CurrentIndexFile = Path.Combine(directory, $"{objectType.Name}.ws");
             return true;
         }
 
@@ -115,6 +139,12 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <returns>True if successful, otherwise false.</returns>
         public bool OpenIndexField(Field indexField)
         {
+            if (indexField is null || indexField.Ignore || CurrentObjectType is null
+                || !CurrentObjectType.Fields.Contains(indexField))
+            {
+                return false;
+            }
+
             CurrentIndexField = indexField;
 
             return true;
@@ -126,28 +156,35 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <returns>True if successful, otherwise false.</returns>
         public bool CloseIndexFile()
         {
-            var runtimeClass = CurrentObjectType.BuildRuntimeClass();
-            IndexManager.Close(runtimeClass);
+            IndexManager?.Dispose();
+            IndexManager = null;
             CurrentIndexFile = null;
-
             CurrentObjectType = null;
-
+            CurrentIndexField = null;
             return true;
         }
 
         /// <summary>
-        /// Drop the current index file.
+        /// Removes the active index and clears its selection after releasing storage handles.
         /// </summary>
-        /// <returns>True if successful, otherwise false.</returns>
+        /// <returns>True when the active index has been removed.</returns>
         public bool DropIndexFile()
         {
-            var runtimeClass = CurrentObjectType.BuildRuntimeClass();
-            IndexManager.Drop(runtimeClass);
-            CurrentIndexFile = null;
+            if (CurrentObjectType is null)
+            {
+                return false;
+            }
 
-            CurrentObjectType = null;
+            IndexManager.Drop(CurrentObjectType.BuildRuntimeClass());
+            return CloseIndexFile();
+        }
 
-            return true;
+        /// <summary>
+        /// Releases the active manager and all associated storage handles.
+        /// </summary>
+        public void Dispose()
+        {
+            CloseIndexFile();
         }
 
         /// <summary>
@@ -222,7 +259,7 @@ namespace WebExpress.WebIndex.Wi.Model
             {
                 Name = CurrentObjectType.Name,
                 Fields = CurrentObjectType.Fields,
-                Items = [.. CurrentObjectType.All.Select(item => properties.ToDictionary
+                Items = [.. All.Select(item => properties.ToDictionary
                 (
                     x => x.Name,
                     x => JsonSerializer.SerializeToElement(x.GetValue(item), x.PropertyType)
@@ -257,6 +294,13 @@ namespace WebExpress.WebIndex.Wi.Model
                 throw new FormatException("The export file names no object type.");
             }
 
+            var objectType = new ObjectType { Name = dump.Name, Fields = dump.Fields };
+            objectType.Validate();
+            if (dump.Items is null)
+            {
+                throw new FormatException("The export file must contain an item collection.");
+            }
+
             var exists = IndexExists(dump.Name);
 
             if (exists && !replace)
@@ -264,7 +308,6 @@ namespace WebExpress.WebIndex.Wi.Model
                 throw new IndexExistsException(dump.Name, CurrentDirectory);
             }
 
-            var objectType = new ObjectType() { Name = dump.Name, Fields = [.. dump.Fields] };
             var runtimeClass = objectType.BuildRuntimeClass();
 
             // every item is converted before anything is deleted, so a dump whose values do not
@@ -296,17 +339,26 @@ namespace WebExpress.WebIndex.Wi.Model
         {
             var properties = runtimeClass.GetProperties().ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
             var items = new List<object>();
+            var identifiers = new HashSet<Guid>();
 
             foreach (var values in dumpItems)
             {
+                if (values is null)
+                {
+                    throw new FormatException("Exported items cannot be null.");
+                }
+
+                var assigned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var item = Activator.CreateInstance(runtimeClass);
 
                 foreach (var (name, value) in values)
                 {
-                    if (properties.TryGetValue(name, out var property))
+                    if (!properties.TryGetValue(name, out var property) || !assigned.Add(name))
                     {
-                        property.SetValue(item, value.Deserialize(property.PropertyType));
+                        throw new FormatException($"Unknown or repeated field '{name}' in exported item.");
                     }
+
+                    property.SetValue(item, value.Deserialize(property.PropertyType));
                 }
 
                 // an item without an id would collide with every other such item; a fresh
@@ -314,6 +366,11 @@ namespace WebExpress.WebIndex.Wi.Model
                 if ((Guid)properties["Id"].GetValue(item) == Guid.Empty)
                 {
                     properties["Id"].SetValue(item, Guid.NewGuid());
+                }
+
+                if (!identifiers.Add((Guid)properties["Id"].GetValue(item)))
+                {
+                    throw new FormatException("Exported item identifiers must be unique.");
                 }
 
                 items.Add(item);
@@ -331,6 +388,7 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <returns>True if the index exists, otherwise false.</returns>
         public bool IndexExists(string name)
         {
+            new ObjectType { Name = name }.Validate();
             return File.Exists(Path.Combine(CurrentDirectory, $"{name}.ws"))
                 || File.Exists(Path.Combine(CurrentDirectory, $"{name}.wds"));
         }
@@ -343,10 +401,8 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <param name="name">The name of the object type.</param>
         private void DeleteIndexFiles(string name)
         {
-            if (string.Equals(CurrentObjectType?.Name, name, StringComparison.Ordinal))
-            {
-                CloseIndexFile();
-            }
+            // replacement changes the active index even when file names differ only by casing
+            CloseIndexFile();
 
             var files = new[] { $"{name}.ws", $"{name}.wds" }
                 .Select(x => Path.Combine(CurrentDirectory, x))
@@ -364,17 +420,22 @@ namespace WebExpress.WebIndex.Wi.Model
         /// <summary>
         /// Returns the index terms.
         /// </summary>
-        /// <returns>The index terms</returns>
+        /// <returns>The index terms.</returns>
         public IEnumerable<(string, uint, uint, uint, IEnumerable<Guid>)> GetIndexTerms()
         {
+            if (CurrentIndexField is null)
+            {
+                throw new InvalidOperationException("No index field is selected.");
+            }
+
             var runtimeClass = CurrentObjectType.BuildRuntimeClass();
             var document = IndexManager.GetIndexDocument(runtimeClass);
             var fieldProperty = runtimeClass.GetProperty(CurrentIndexField?.Name);
             var fieldData = new IndexFieldData(fieldProperty);
             var methodInfo = document.GetType().GetMethod("GetReverseIndex");
             var reverseIndex = methodInfo.Invoke(document, [fieldData]);
-            var termProperty = reverseIndex.GetType().GetProperty("Term");
-            var term = termProperty.GetValue(reverseIndex) as IndexStorageSegmentTerm;
+            var term = reverseIndex?.GetType().GetProperty("Term")?.GetValue(reverseIndex) as IndexStorageSegmentTerm
+                ?? throw new NotSupportedException("Term details are available only for text fields.");
 
             return term.Terms.Select(x =>
             (
@@ -418,27 +479,29 @@ namespace WebExpress.WebIndex.Wi.Model
                 .Where(x => !x.Name.Equals("Id", StringComparison.OrdinalIgnoreCase))
                 .ToList();
             var result = new Dictionary<PropertyInfo, object>();
-            var position = 0;
-
             foreach (var token in SplitValues(values ?? ""))
             {
-                var separator = token.IndexOf('=');
-                var field = separator > 0
-                    ? fields.FirstOrDefault(x => x.Name.Equals(token[..separator].Trim(), StringComparison.OrdinalIgnoreCase))
-                    : null;
-                var text = field is not null ? token[(separator + 1)..] : token;
-
-                if (field is null)
+                var separator = token.StartsWith('"') || token.StartsWith('\'') ? -1 : token.IndexOf('=');
+                PropertyInfo field;
+                string text;
+                if (separator >= 0)
                 {
-                    if (position >= fields.Count)
-                    {
-                        throw new FormatException($"More values than fields: '{token}' has no field to go to.");
-                    }
-
-                    field = fields[position++];
+                    var name = token[..separator].Trim();
+                    field = fields.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                        ?? throw new FormatException($"Unknown field '{name}'.");
+                    text = token[(separator + 1)..];
+                }
+                else
+                {
+                    field = fields.FirstOrDefault(x => !result.ContainsKey(x))
+                        ?? throw new FormatException($"More values than fields: '{token}' has no field to go to.");
+                    text = token;
                 }
 
-                result[field] = ConvertValue(Unquote(text), field);
+                if (!result.TryAdd(field, ConvertValue(Unquote(text), field)))
+                {
+                    throw new FormatException($"Field '{field.Name}' was assigned more than once.");
+                }
             }
 
             return result;
@@ -481,7 +544,12 @@ namespace WebExpress.WebIndex.Wi.Model
                 }
             }
 
-            if (token.Length > 0)
+            if (quote != '\0')
+            {
+                throw new FormatException("A quoted value is not terminated.");
+            }
+
+            if (values.Length > 0)
             {
                 yield return token.ToString().Trim();
             }
@@ -497,7 +565,7 @@ namespace WebExpress.WebIndex.Wi.Model
             text = text.Trim();
 
             return text.Length >= 2 && (text[0] is '"' or '\'') && text[^1] == text[0]
-                ? text[1..^1]
+                ? text[1..^1].Replace(new string(text[0], 2), text[0].ToString())
                 : text;
         }
 
