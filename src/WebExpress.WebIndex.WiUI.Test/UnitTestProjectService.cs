@@ -118,6 +118,44 @@ public sealed class UnitTestProjectService : IDisposable
         Assert.Equal("unchanged", File.ReadAllText(path));
     }
 
+    /// <summary>Keeps projects without sample data free of generated index files.</summary>
+    [Fact]
+    public void Create_WithoutSampleDoesNotCreateStorage()
+    {
+        // arrange
+        var root = Path.Combine(_directory, "data");
+        // act
+        var project = ProjectService.Create(" Empty ", false, root);
+        // validation
+        Assert.Equal("Empty", project.ProjectName);
+        Assert.Empty(project.Indexes);
+        Assert.False(Directory.Exists(root));
+    }
+
+    /// <summary>Isolates sample storage even when two projects have the same display name.</summary>
+    [Fact]
+    public void Create_SamplesHaveIndependentStorageAndPersistedLinks()
+    {
+        // arrange
+        var settings = Path.Combine(_directory, "samples.xml");
+        // act
+        var first = ProjectService.Create("Demo", true, _directory);
+        var second = ProjectService.Create("Demo", true, _directory);
+        ProjectService.SaveProjects([first, second], settings);
+        var restored = ProjectService.LoadProjects(settings);
+        // validation
+        Assert.NotEqual(first.IndexPath, second.IndexPath);
+        Assert.Equal(2, restored.Count);
+        foreach (var project in restored)
+        {
+            var index = Assert.Single(project.Indexes);
+            Assert.True(ProjectService.IsAvailable(index));
+            Assert.Equal("en", index.Culture);
+            using var session = new Explorer.ExplorerSession(index.Path, false, System.Globalization.CultureInfo.GetCultureInfo("en"));
+            Assert.Equal(128u, session.Count);
+        }
+    }
+
     /// <summary>Removes only test-owned temporary files.</summary>
     public void Dispose() => Directory.Delete(_directory, true);
 }

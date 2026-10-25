@@ -12,14 +12,14 @@
             <Setter Property="StrokeShape" Value="Rectangle" />
             <Setter Property="Padding" Value="0" />
         </Style>
-        <Style x:Key="Quiet" TargetType="Button">
+        <Style x:Key="Quiet" TargetType="Button" BasedOn="{StaticResource CompactButton}">
             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#E8EEF8, Dark=#333337}" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light=#264A7C, Dark=#D4D4D4}" />
             <Setter Property="Padding" Value="10,4" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="CornerRadius" Value="0" />
         </Style>
-        <Style x:Key="ResultTab" TargetType="Button">
+        <Style x:Key="ResultTab" TargetType="Button" BasedOn="{StaticResource CompactButton}">
             <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="TextColor" Value="#D4D4D4" />
             <Setter Property="BorderWidth" Value="0" />
@@ -28,7 +28,7 @@
             <Setter Property="FontSize" Value="13" />
             <Setter Property="MinimumHeightRequest" Value="38" />
         </Style>
-        <Style x:Key="SuggestionChip" TargetType="Button">
+        <Style x:Key="SuggestionChip" TargetType="Button" BasedOn="{StaticResource CompactButton}">
             <Setter Property="BackgroundColor" Value="#253747" />
             <Setter Property="TextColor" Value="#B9DFFF" />
             <Setter Property="BorderColor" Value="#476B88" />
@@ -53,44 +53,44 @@
                 <Label Text="{x:Static loc:AppText.DocumentsWQLSchemaReverseIndexes}" Style="{StaticResource Muted}" />
             </VerticalStackLayout>
             <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
-                <ActivityIndicator x:Name="BusyIndicator" IsVisible="False" />
                 <Button x:Name="CancelButton" Text="{x:Static loc:AppText.Cancel}" Clicked="OnCancel" IsVisible="False" Style="{StaticResource Quiet}" />
                 <Button Text="{x:Static loc:AppText.WQLHelp}" Clicked="OnHelp" Style="{StaticResource Quiet}" />
             </HorizontalStackLayout>
         </Grid>
-        <Grid x:Name="Workspace" Grid.Row="1" ColumnDefinitions="290,*" ColumnSpacing="4">
+        <Grid x:Name="Workspace" Grid.Row="1" ColumnDefinitions="290,*" ColumnSpacing="8">
             <Border Style="{StaticResource Card}" Padding="0">
-                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="4">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="8">
                     <Grid Padding="10,8" BackgroundColor="#2D2D30" ColumnDefinitions="*,Auto">
                         <Label Text="{x:Static loc:AppText.PROJECTEXPLORER}" FontSize="12" VerticalOptions="Center" />
                         <Button Grid.Column="1" Text="{x:Static loc:AppText.Manage}" Clicked="OnManageProjects" Style="{StaticResource Quiet}" />
                     </Grid>
-                    <HorizontalStackLayout Grid.Row="1" Spacing="2" Padding="6,0">
+                    <HorizontalStackLayout Grid.Row="1" Spacing="6" Padding="8,2">
                         <Button Text="{x:Static loc:AppText.NewProjectButton}" Clicked="OnNewProject" Style="{StaticResource Quiet}" />
                         <Button Text="{x:Static loc:AppText.OpenLink}" Clicked="OnOpen" Style="{StaticResource Quiet}" />
-                        <Button Text="{x:Static loc:AppText.Sample}" Clicked="OnSample" Style="{StaticResource Quiet}" />
                     </HorizontalStackLayout>
                     <SearchBar x:Name="IndexFilter" Grid.Row="2" Placeholder="{x:Static loc:AppText.SearchProjectTree}" TextChanged="OnIndexFilterChanged" />
                     <ScrollView Grid.Row="3"><VerticalStackLayout x:Name="ProjectTree" Spacing="1" /></ScrollView>
                     <VerticalStackLayout Grid.Row="4" Padding="8" Spacing="4">
                         <Label x:Name="FolderLabel" Text="{x:Static loc:AppText.LinkAnIndexOrCreateAProject}" MaxLines="2" LineBreakMode="MiddleTruncation" Style="{StaticResource Muted}" />
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
-                            <Picker x:Name="CulturePicker" Title="{x:Static loc:AppText.IndexLanguage}" SelectedIndexChanged="OnCultureChanged" />
-                            <Button Grid.Column="1" Text="{x:Static loc:AppText.Refresh}" Clicked="OnRefresh" Style="{StaticResource Quiet}" />
-                            <Button Grid.Column="2" Text="{x:Static loc:AppText.Close}" Clicked="OnClose" Style="{StaticResource Quiet}" />
-                        </Grid>
+
                     </VerticalStackLayout>
                 </Grid>
             </Border>
-            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="4" Padding="6">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8" Padding="6">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="12">
                     <VerticalStackLayout>
                         <Label x:Name="IndexTitle" Text="{x:Static loc:AppText.WelcomeToYourIndexes}" FontSize="18" FontAttributes="Bold" />
                         <Label x:Name="IndexSummary" Text="{x:Static loc:AppText.DocumentsSchemaAndReverseTermsInOneWorkspace}" Style="{StaticResource Muted}" />
                     </VerticalStackLayout>
+                    <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Spacing="8" VerticalOptions="Center">
+                        <Label Text="{x:Static loc:AppText.IndexLanguage}" VerticalOptions="Center" Style="{StaticResource Muted}" />
+                        <Picker x:Name="CulturePicker" WidthRequest="100" SemanticProperties.Description="{x:Static loc:AppText.IndexLanguage}" SelectedIndexChanged="OnCultureChanged" />
+                        <Button Text="{x:Static loc:AppText.Refresh}" Clicked="OnRefresh" VerticalOptions="Center" Style="{StaticResource Quiet}" />
+                        <Button Text="{x:Static loc:AppText.Close}" Clicked="OnClose" VerticalOptions="Center" Style="{StaticResource Quiet}" />
+                    </HorizontalStackLayout>
                     <Button x:Name="EditModeButton" Grid.Column="1" Text="{x:Static loc:AppText.EnableEditing}" Clicked="OnToggleEditing" Style="{StaticResource Quiet}" IsEnabled="False" />
                 </Grid>
-                <Border Grid.Row="1" Style="{StaticResource Card}">
+                <Border Grid.Row="1" Style="{StaticResource Card}" Padding="10">
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                             <Label Text="{x:Static loc:AppText.WQLQUERY}" Style="{StaticResource Muted}" FontAttributes="Bold" VerticalOptions="Center" />
@@ -126,13 +126,13 @@
                                 <BoxView x:Name="TermsTabAccent" Color="#3794FF" />
                                 <Button x:Name="TermsTab" Grid.Row="1" Text="{x:Static loc:AppText.Terms}" Clicked="OnTerms" Style="{StaticResource ResultTab}" />
                             </Grid>
-                            <Button x:Name="NewButton" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.New}" Clicked="OnNew" IsEnabled="False" Style="{StaticResource Quiet}" />
+                            <Button x:Name="NewButton" BackgroundColor="#238636" TextColor="White" IsVisible="False" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.New}" Clicked="OnNew" IsEnabled="False" Style="{StaticResource Quiet}" />
                             <Button Grid.Column="5" Margin="4,4" Text="CSV" Clicked="OnExportCsv" Style="{StaticResource Quiet}" />
                             <Button Grid.Column="6" Margin="4,4" Text="JSON" Clicked="OnExportJson" Style="{StaticResource Quiet}" />
                         </Grid>
-                        <Grid Grid.Row="1" Padding="6,0,6,4" ColumnDefinitions="*,220" ColumnSpacing="8">
-                            <SearchBar x:Name="ResultFilter" Placeholder="{x:Static loc:AppText.FilterLoadedRows}" TextChanged="OnResultFilterChanged" />
-                            <Picker x:Name="FieldPicker" Grid.Column="1" Title="{x:Static loc:AppText.SelectAFieldForTerms}" ItemDisplayBinding="{Binding Name, x:DataType=explorer:ExplorerField}" SelectedIndexChanged="OnTermFieldChanged" IsVisible="False" />
+                        <Grid Grid.Row="1" Padding="12,8" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <SearchBar x:Name="ResultFilter" HorizontalOptions="Fill" Placeholder="{x:Static loc:AppText.FilterLoadedRows}" TextChanged="OnResultFilterChanged" />
+                            <Picker x:Name="FieldPicker" Grid.Column="1" WidthRequest="220" Title="{x:Static loc:AppText.SelectAFieldForTerms}" ItemDisplayBinding="{Binding Name, x:DataType=explorer:ExplorerField}" SelectedIndexChanged="OnTermFieldChanged" IsVisible="False" />
                         </Grid>
                         <Grid Grid.Row="2">
                             <ScrollView Orientation="Both">
@@ -146,20 +146,27 @@
                         <Grid Grid.Row="3" Padding="12,8" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                             <Label x:Name="PageLabel" Text="{x:Static loc:AppText.NoIndexSelected}" Style="{StaticResource Muted}" VerticalOptions="Center" />
                             <Picker x:Name="PageSizePicker" Grid.Column="1" SemanticProperties.Description="{x:Static loc:AppText.RowsPerPage}" WidthRequest="90" SelectedIndexChanged="OnPageSizeChanged" />
-                            <Button x:Name="PreviousButton" Grid.Column="2" Text="{x:Static loc:AppText.Previous}" Clicked="OnPrevious" IsEnabled="False" Style="{StaticResource Quiet}" />
+                            <Button x:Name="PreviousButton" Grid.Column="2" WidthRequest="72" HeightRequest="32" VerticalOptions="Center" Text="{x:Static loc:AppText.Previous}" Clicked="OnPrevious" IsEnabled="False" Style="{StaticResource Quiet}" />
                             <Label x:Name="PageNumber" Grid.Column="3" Text="1 / 1" VerticalOptions="Center" />
-                            <Button x:Name="NextButton" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.Next}" Clicked="OnNext" IsEnabled="False" Style="{StaticResource Quiet}" />
+                            <Button x:Name="NextButton" Grid.Column="4" WidthRequest="72" HeightRequest="32" VerticalOptions="Center" Text="{x:Static loc:AppText.Next}" Clicked="OnNext" IsEnabled="False" Style="{StaticResource Quiet}" />
                         </Grid>
                     </Grid>
                 </Border>
-                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                     <Label x:Name="SelectionLabel" Text="{x:Static loc:AppText.SelectARowToInspectItsFullValues}" Style="{StaticResource Muted}" VerticalOptions="Center" />
-                    <Button x:Name="LinkButton" Grid.Column="1" Text="{x:Static loc:AppText.LinkToProject}" Clicked="OnLinkDocument" IsEnabled="False" Style="{StaticResource Quiet}" />
-                    <Button x:Name="DetailsButton" Grid.Column="2" Text="{x:Static loc:AppText.DetailsCopy}" Clicked="OnDetails" IsEnabled="False" Style="{StaticResource Quiet}" />
-                    <Button x:Name="UpdateButton" Grid.Column="3" Text="{x:Static loc:AppText.EditDocument}" Clicked="OnEdit" IsEnabled="False" Style="{StaticResource Quiet}" />
-                    <Button x:Name="DeleteButton" Grid.Column="4" Margin="4,4" Text="{x:Static loc:AppText.Delete}" Clicked="OnDelete" IsEnabled="False" BackgroundColor="#B42335" TextColor="White" />
+                    <Button x:Name="DetailsButton" Grid.Column="1" Text="{x:Static loc:AppText.DetailsCopy}" Clicked="OnDetails" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="UpdateButton" IsVisible="False" Grid.Column="2" Text="{x:Static loc:AppText.EditDocument}" Clicked="OnEdit" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="DeleteButton" IsVisible="False" Grid.Column="3" Style="{StaticResource Quiet}" Text="{x:Static loc:AppText.Delete}" Clicked="OnDelete" IsEnabled="False" BackgroundColor="#B42335" TextColor="White" />
                 </Grid>
             </Grid>
+        </Grid>
+        <Grid x:Name="BusyOverlay" Grid.Row="1" IsVisible="False" BackgroundColor="#66000000" ZIndex="10">
+            <Border HorizontalOptions="Center" VerticalOptions="Center" Padding="28" BackgroundColor="{AppThemeBinding Light=White, Dark=#252526}" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout Spacing="16" MaximumWidthRequest="420">
+                    <ActivityIndicator x:Name="BusyIndicator" WidthRequest="48" HeightRequest="48" Color="#4FC1FF" HorizontalOptions="Center" />
+                    <Label x:Name="BusyMessage" HorizontalTextAlignment="Center" TextColor="{AppThemeBinding Light=#264A7C, Dark=White}" />
+                </VerticalStackLayout>
+            </Border>
         </Grid>
         <Label x:Name="StatusLabel" Grid.Row="2" Text="{x:Static loc:AppText.Ready}" Padding="10,5" BackgroundColor="#007ACC" FontSize="12" TextColor="White" LineBreakMode="WordWrap" />
     </Grid>

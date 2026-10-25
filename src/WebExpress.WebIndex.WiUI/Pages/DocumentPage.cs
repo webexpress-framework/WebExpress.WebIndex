@@ -13,9 +13,10 @@ public sealed class DocumentPage : ContentPage
     private readonly Editor _json = new() { FontFamily = "Consolas", FontSize = 14, IsVisible = false };
     private readonly ScrollView _form;
     private readonly Label _error = new() { TextColor = Color.FromArgb("#FDA4AF") };
-    private readonly Button _save = new() { Text = AppText.SaveDocument };
+    private readonly Button _save = new() { Text = AppText.SaveDocument, BackgroundColor = Color.FromArgb("#007ACC"), TextColor = Colors.White };
     private readonly Func<string, Task> _commit;
     private readonly string _original;
+    private readonly ActivityIndicator _busy = new() { IsVisible = false, WidthRequest = 32, HeightRequest = 32, Color = Color.FromArgb("#4FC1FF") };
     private bool _saving;
 
     /// <summary>Builds a schema driven form while preserving explicit null and numeric values.</summary>
@@ -77,7 +78,10 @@ public sealed class DocumentPage : ContentPage
         body.Add(_json, 0, 2);
         body.Add(_error, 0, 3);
         _save.Clicked += OnSave;
-        body.Add(_save, 0, 4);
+        var saveActions = new HorizontalStackLayout { Spacing = 12, HorizontalOptions = LayoutOptions.Center };
+        saveActions.Add(_busy);
+        saveActions.Add(_save);
+        body.Add(saveActions, 0, 4);
         Content = body;
         var cancel = new ToolbarItem { Text = AppText.Cancel };
         cancel.Clicked += async (_, _) => await Cancel();
@@ -130,13 +134,14 @@ public sealed class DocumentPage : ContentPage
         {
             var json = _json.IsVisible ? _json.Text : BuildJson();
             _saving = true;
+            _busy.IsVisible = _busy.IsRunning = true;
             _save.IsEnabled = false;
             _save.Text = AppText.Saving;
             _error.Text = "";
             await _commit(json);
         }
         catch (Exception error) { _error.Text = AppText.Diagnostic(error.Message); }
-        finally { _saving = false; _save.IsEnabled = true; _save.Text = AppText.SaveDocument; }
+        finally { _busy.IsVisible = _busy.IsRunning = false; _saving = false; _save.IsEnabled = true; _save.Text = AppText.SaveDocument; }
     }
 
     /// <summary>Protects pending edits when closing the form.</summary>
@@ -147,7 +152,7 @@ public sealed class DocumentPage : ContentPage
         var changed = true;
         try { changed = !JsonNode.DeepEquals(JsonNode.Parse(_original), JsonNode.Parse(_json.IsVisible ? _json.Text : BuildJson())); }
         catch (Exception) { /* invalid input still counts as an unsaved change */ }
-        if (!changed || await DisplayAlertAsync(AppText.DiscardChanges, AppText.LeaveWithoutSavingThisDocument, AppText.Discard, AppText.KeepEditing)) await Navigation.PopModalAsync();
+        if (!changed || await WorkspaceDialogs.Confirm(this, AppText.DiscardChanges, AppText.LeaveWithoutSavingThisDocument, AppText.Discard, AppText.KeepEditing)) await Navigation.PopModalAsync();
     }
 
     /// <summary>Routes hardware back navigation through the unsaved change check.</summary>

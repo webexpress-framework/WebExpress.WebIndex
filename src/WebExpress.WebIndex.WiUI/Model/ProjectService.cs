@@ -70,6 +70,25 @@ namespace WebExpress.WebIndex.WiUI.Model
             return result ?? [];
         }
 
+        /// <summary>Creates an independent workspace and optionally links a new sample index.</summary>
+        /// <param name="name">The required display name.</param>
+        /// <param name="sample">Whether to provision sample documents.</param>
+        /// <param name="dataRoot">The parent directory for project-owned sample data.</param>
+        /// <returns>The project ready to persist with the existing project collection.</returns>
+        public static Project Create(string name, bool sample, string dataRoot)
+        {
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException(AppText.EnterAProjectName, nameof(name));
+            var project = new Project { ProjectName = name.Trim(), IsDiscovered = true };
+            if (sample)
+            {
+                var directory = Path.Combine(dataRoot, Guid.NewGuid().ToString("N"));
+                var path = Explorer.ExplorerSample.Create(directory);
+                project.IndexPath = directory;
+                LinkIndex(project, path).Culture = "en";
+            }
+            return project;
+        }
+
         /// <summary>Adds discovered schemas without removing durable links to absent files.</summary>
         /// <param name="project">The project receiving new references.</param>
         public static void Discover(Project project)

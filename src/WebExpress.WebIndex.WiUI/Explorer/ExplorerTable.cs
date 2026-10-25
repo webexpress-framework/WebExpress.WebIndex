@@ -48,6 +48,7 @@ public static class ExplorerTable
     /// <returns>The ordered, filtered result.</returns>
     public static IReadOnlyList<object> Select(IEnumerable<object> items, IEnumerable<string> fields, string filter, string? sort, bool descending)
     {
+        if (string.IsNullOrWhiteSpace(filter) && sort == null && items is IReadOnlyList<object> snapshot) return snapshot;
         var columns = fields.ToArray();
         var result = items.Where(item => string.IsNullOrWhiteSpace(filter)
             || columns.Any(field => Format(Value(item, field)).Contains(filter, StringComparison.OrdinalIgnoreCase)));

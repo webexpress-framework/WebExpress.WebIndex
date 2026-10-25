@@ -16,6 +16,8 @@ public sealed class ExplorerSession : IDisposable
 {
     private readonly IExplorerDocument _document;
     private readonly string? _snapshotDirectory;
+    private string? _cachedQuery;
+    private IReadOnlyList<object>? _cachedRows;
 
     /// <summary>Gets the selected schema path.</summary>
     public string Path { get; }
@@ -23,6 +25,8 @@ public sealed class ExplorerSession : IDisposable
     public ExplorerSchema Schema { get; }
     /// <summary>Gets whether explicit document writes are enabled.</summary>
     public bool Writable { get; }
+    /// <summary>Gets the token language required when reusing this connection.</summary>
+    public CultureInfo Culture { get; }
     /// <summary>Gets the number of stored documents.</summary>
     public uint Count => _document.Count;
     /// <summary>Gets the bounded result size used to keep the desktop responsive.</summary>
@@ -34,8 +38,11 @@ public sealed class ExplorerSession : IDisposable
     /// <param name="path">The existing schema file.</param>
     /// <param name="writable">Whether the user explicitly enabled editing.</param>
     /// <param name="culture">The token processing culture of this index.</param>
-    public ExplorerSession(string path, bool writable, CultureInfo culture)
+    /// <param name="cancellationToken">Stops snapshot copying when the user cancels opening.</param>
+    public ExplorerSession(string path, bool writable, CultureInfo culture, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        Culture = culture;
         Path = System.IO.Path.GetFullPath(path);
         Writable = writable;
         Schema = ExplorerSchema.Read(Path);
@@ -67,12 +74,20 @@ public sealed class ExplorerSession : IDisposable
                             || System.IO.Path.GetFileName(x) == type.Name + ".wds"
                             || System.IO.Path.GetExtension(x) is ".wrt" or ".wrn" or ".rebuild")))
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         sources.Add(new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read));
                     }
+                    var buffer = new byte[81920];
                     foreach (var source in sources)
                     {
                         using var target = File.Create(System.IO.Path.Combine(_snapshotDirectory, System.IO.Path.GetFileName(source.Name)));
-                        source.CopyTo(target);
+                        int read;
+                        do
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            read = source.Read(buffer);
+                            target.Write(buffer, 0, read);
+                        } while (read > 0);
                     }
                 }
                 finally
@@ -82,6 +97,7 @@ public sealed class ExplorerSession : IDisposable
                 directory = _snapshotDirectory;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             _document = (IExplorerDocument)Activator.CreateInstance(typeof(ExplorerDocument<>).MakeGenericType(type), directory, writable, culture)!;
         }
         catch (Exception error)
@@ -127,7 +143,21 @@ public sealed class ExplorerSession : IDisposable
     /// <param name="query">The WQL expression, or blank for all documents.</param>
     /// <param name="cancellationToken">The cooperative cancellation token.</param>
     /// <returns>At most one more row than the display limit to detect truncation.</returns>
-    public IReadOnlyList<object> Query(string query, CancellationToken cancellationToken) => _document.Query(query, cancellationToken);
+    public IReadOnlyList<object> Query(string query, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        // expressions such as now() must be evaluated again even when storage is unchanged
+        var cacheable = string.IsNullOrWhiteSpace(query);
+        if (cacheable && _cachedRows != null && string.Equals(query, _cachedQuery, StringComparison.Ordinal)) return _cachedRows;
+        var rows = _document.Query(query, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (cacheable)
+        {
+            _cachedQuery = query;
+            _cachedRows = rows;
+        }
+        return rows;
+    }
 
     /// <summary>
     /// Reads reverse terms for a selected text field.
@@ -156,6 +186,7 @@ public sealed class ExplorerSession : IDisposable
     public void Save(string json, Guid? existingId)
     {
         EnsureWritable();
+        _cachedRows = null;
         _document.Save(json, existingId);
     }
 
@@ -166,6 +197,7 @@ public sealed class ExplorerSession : IDisposable
     public void Delete(Guid id)
     {
         EnsureWritable();
+        _cachedRows = null;
         _document.Delete(id);
     }
 
@@ -178,6 +210,7 @@ public sealed class ExplorerSession : IDisposable
     /// <summary>Releases storage locks and the private inspection copy.</summary>
     public void Dispose()
     {
+        _cachedRows = null;
         _document.Dispose();
         DeleteSnapshot();
     }
@@ -359,7 +392,7 @@ internal sealed class ExplorerDocument<T> : WebIndex.IndexManager, IExplorerDocu
         var item = JsonSerializer.Deserialize<T>(json, _jsonOptions) ?? throw new InvalidDataException(AppText.ADocumentObjectIsRequired);
         if (item.Id == Guid.Empty) throw new InvalidDataException(AppText.IdMustNotBeEmpty);
         if (existingId.HasValue && item.Id != existingId.Value) throw new InvalidDataException(AppText.AnExistingDocumentSIdCannotBeChanged);
-        var exists = All<T>().Any(x => x.Id == item.Id);
+        var exists = Find(item.Id) != null;
         if (existingId.HasValue && !exists) throw new InvalidDataException(AppText.TheDocumentNoLongerExistsRefreshTheIndex);
         if (!existingId.HasValue && exists) throw new InvalidDataException(AppText.ADocumentWithThisIdAlreadyExists);
         if (existingId.HasValue) Update(item); else Insert(item);
@@ -386,7 +419,7 @@ internal sealed class ExplorerDocument<T> : WebIndex.IndexManager, IExplorerDocu
     /// <param name="id">The selected identifier.</param>
     public void Delete(Guid id)
     {
-        var item = All<T>().FirstOrDefault(x => x.Id == id) ?? throw new InvalidDataException(AppText.TheDocumentNoLongerExists);
+        var item = (T?)Find(id) ?? throw new InvalidDataException(AppText.TheDocumentNoLongerExists);
         Delete(item);
     }
 }

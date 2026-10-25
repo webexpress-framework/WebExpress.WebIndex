@@ -10,6 +10,7 @@ namespace WebExpress.WebIndex.WiUI.Pages;
 public partial class MainPage : ContentPage
 {
     private ExplorerSession? _session;
+    private readonly ExplorerTableProjection _projection = new();
     private ExplorerHistory _history = new();
     private readonly string _historyPath = Path.Combine(FileSystem.AppDataDirectory, "query-history.json");
     private IReadOnlyList<object> _documents = [], _terms = [], _visibleRows = [];
@@ -74,7 +75,8 @@ public partial class MainPage : ContentPage
         using var cancellation = new CancellationTokenSource();
         _operation = cancellation;
         Workspace.IsEnabled = false;
-        BusyIndicator.IsVisible = BusyIndicator.IsRunning = CancelButton.IsVisible = true;
+        BusyMessage.Text = message;
+        BusyOverlay.IsVisible = BusyIndicator.IsRunning = CancelButton.IsVisible = true;
         StatusLabel.Text = message;
         try { await action(cancellation.Token); if (StatusLabel.Text == message) StatusLabel.Text = AppText.Ready; }
         catch (OperationCanceledException) { StatusLabel.Text = AppText.OperationCanceled; }
@@ -86,7 +88,7 @@ public partial class MainPage : ContentPage
         {
             _operation = null;
             Workspace.IsEnabled = true;
-            BusyIndicator.IsVisible = BusyIndicator.IsRunning = CancelButton.IsVisible = false;
+            BusyOverlay.IsVisible = BusyIndicator.IsRunning = CancelButton.IsVisible = false;
             UpdateActions();
             AnalyzeQuery();
             if (_closing) { _session?.Dispose(); _session = null; }
@@ -110,29 +112,38 @@ public partial class MainPage : ContentPage
     /// <param name="path">The schema path.</param>
     /// <param name="writable">Whether editing is enabled.</param>
     /// <param name="preserveQuery">Whether to retain the query of this same index.</param>
+    /// <param name="forceReload">Whether an explicit refresh must replace the existing snapshot.</param>
+    /// <param name="documentId">The optional linked identity to retrieve without loading all documents.</param>
     /// <returns>The completion task.</returns>
-    private Task OpenIndex(string path, bool writable = false, bool preserveQuery = false) => RunOperation(AppText.OpeningIndex, async token =>
+    private Task OpenIndex(string path, bool writable = false, bool preserveQuery = false, bool forceReload = false, Guid? documentId = null)
     {
         var culture = CultureInfo.GetCultureInfo((string)CulturePicker.SelectedItem);
-        await Task.Run(() => { _session?.Dispose(); _session = null; }, token);
-        ResetResults();
-        if (!preserveQuery) QueryEditor.Text = "";
-        ExplorerSession? opened = null;
-        try
+        if (!forceReload && _session != null && _session.Writable == writable && _session.Culture.Equals(culture)
+            && string.Equals(_session.Path, Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase)) return Task.CompletedTask;
+        return RunOperation(AppText.OpeningIndex, async token =>
         {
-            opened = await Task.Run(() => new ExplorerSession(path, writable, culture), token);
-            token.ThrowIfCancellationRequested();
-            _session = opened;
-            opened = null;
-        }
-        finally { opened?.Dispose(); }
-        IndexTitle.Text = Path.GetFileNameWithoutExtension(path);
-        FieldPicker.ItemsSource = _session.Schema.Fields.Where(x => !x.Ignore).ToList();
-        FieldPicker.SelectedIndex = -1;
-        RefreshHistory();
-        UpdateSummary();
-        await ExecuteQuery(token);
-    });
+            await Task.Run(() => { _session?.Dispose(); _session = null; }, token);
+            ResetResults();
+            if (!preserveQuery) QueryEditor.Text = "";
+            ExplorerSession? opened = null;
+            try
+            {
+                opened = await Task.Run(() => new ExplorerSession(path, writable, culture, token), token);
+                token.ThrowIfCancellationRequested();
+                _session = opened;
+                opened = null;
+            }
+            finally { opened?.Dispose(); }
+            IndexTitle.Text = Path.GetFileNameWithoutExtension(path);
+            FieldPicker.ItemsSource = _session.Schema.Fields.Where(x => !x.Ignore).ToList();
+            FieldPicker.SelectedIndex = -1;
+            RefreshHistory();
+            UpdateSummary();
+            await RefreshLinkedDocuments(token, true);
+            if (documentId.HasValue) await ExecuteLinkedDocument(documentId.Value, token);
+            else await ExecuteQuery(token);
+        });
+    }
 
     /// <summary>Replaces results and records history only after a successful query.</summary>
     /// <param name="token">The cancellation token.</param>
@@ -156,7 +167,7 @@ public partial class MainPage : ContentPage
         _truncated = rows.Count > ExplorerSession.ResultLimit;
         _documents = rows.Take(ExplorerSession.ResultLimit).ToArray();
         _executedQuery = query;
-        await RefreshLinkedDocuments(token, true);
+        if (_session.Writable) await RefreshLinkedDocuments(token, true);
         _terms = [];
         SwitchView("Documents");
         UpdateSummary();
@@ -194,7 +205,7 @@ public partial class MainPage : ContentPage
         if (Table == null) return;
         var fields = CurrentColumns();
         var source = _view == "Schema" ? _session?.Schema.Fields.Cast<object>().ToArray() ?? [] : _view == "Terms" ? _terms : _documents;
-        _visibleRows = ExplorerTable.Select(source, fields, ResultFilter.Text ?? "", _sort, _descending);
+        _visibleRows = _projection.Select(source, fields, ResultFilter.Text ?? "", _sort, _descending);
         var size = PageSizePicker.SelectedItem is int count ? count : 50;
         var pages = Math.Max(1, (int)Math.Ceiling(_visibleRows.Count / (double)size));
         _page = Math.Clamp(_page, 0, pages - 1);
@@ -210,10 +221,10 @@ public partial class MainPage : ContentPage
             for (var c = 0; c < fields.Length; c++)
             {
                 var field = fields[c];
-                var button = new Button { Text = (_view == "Documents" ? field : AppText.Get("Column" + field)) + (_sort == field ? (_descending ? "  ▾" : "  ▴") : ""),
+                var button = new WorkspaceButton { Text = (_view == "Documents" ? field : AppText.Get("Column" + field)) + (_sort == field ? (_descending ? "  ▾" : "  ▴") : ""),
                     BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#D4D4D4"), CornerRadius = 0,
                     FontSize = 12, FontAttributes = FontAttributes.Bold, BorderWidth = 0, Padding = new Thickness(12, 6),
-                    HorizontalOptions = LayoutOptions.Start, MinimumHeightRequest = 28 };
+                    HorizontalOptions = LayoutOptions.Fill, MinimumHeightRequest = 30 };
                 ToolTipProperties.SetText(button, AppText.SortLoadedRowsBy + field);
                 button.Clicked += (_, _) => { _descending = _sort == field && !_descending; _sort = field; _page = 0; RenderTable(); };
                 var cell = new Border { BackgroundColor = Color.FromArgb("#2D2D30"), Stroke = Color.FromArgb("#454545"), StrokeThickness = 0.5, Content = button };
@@ -235,8 +246,8 @@ public partial class MainPage : ContentPage
                     ToolTipProperties.SetText(label, text.Length > 2000 ? text[..2000] + "…" : text);
                     if (c == 0)
                     {
-                        var select = new Button { Text = text, BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#D4D4D4"),
-                            Padding = new Thickness(12, 6), FontSize = 13, CornerRadius = 0, HorizontalOptions = LayoutOptions.Start };
+                        var select = new WorkspaceButton { Text = text, BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#D4D4D4"),
+                            Padding = new Thickness(12, 6), FontSize = 13, CornerRadius = 0, HorizontalOptions = LayoutOptions.Fill };
                         SemanticProperties.SetDescription(select, AppText.SelectRow + text);
                         select.Clicked += (_, _) => SelectRow(item, fields[0]);
                         row.Add(select, c);
@@ -292,6 +303,7 @@ public partial class MainPage : ContentPage
             row.BackgroundColor = ReferenceEquals(row.BindingContext, item) ? Color.FromArgb("#094771")
                 : Color.FromArgb(alternate ? "#1E1E1E" : "#242424");
         }
+        RenderProjectTree();
         UpdateActions();
     }
 
@@ -318,9 +330,9 @@ public partial class MainPage : ContentPage
     {
         var available = _session != null && _operation == null;
         EditModeButton.IsEnabled = RunButton.IsEnabled = available;
+        NewButton.IsVisible = UpdateButton.IsVisible = DeleteButton.IsVisible = _session?.Writable == true;
         NewButton.IsEnabled = available && _session!.Writable;
         DetailsButton.IsEnabled = available && _selected != null;
-        LinkButton.IsEnabled = available && _selected != null && _view == "Documents";
         UpdateButton.IsEnabled = DeleteButton.IsEnabled = available && _session!.Writable && _view == "Documents" && _selected != null;
         if (_selected == null) SelectionLabel.Text = AppText.SelectARowToInspectItsFullValues;
     }

@@ -11,24 +11,6 @@ namespace WebExpress.WebIndex.WiUI.Pages;
 /// <summary>Connects native workspace commands to validated explorer operations.</summary>
 public partial class MainPage
 {
-    /// <summary>Opens isolated sample data for learning query and editing workflows.</summary>
-    /// <param name="sender">The sample button.</param>
-    /// <param name="e">The click event.</param>
-    private async void OnSample(object sender, EventArgs e)
-    {
-        string? path = null;
-        await RunOperation(AppText.PreparingSampleIndex, async token =>
-        {
-            path = await Task.Run(() => ExplorerSample.Create(Path.Combine(FileSystem.AppDataDirectory, "sample-index")), token);
-        });
-        if (path != null)
-        {
-            LoadFolder(Path.GetDirectoryName(path));
-            SetCulture("en");
-            await OpenIndex(path);
-        }
-    }
-
     /// <summary>Displays diagnostics and completion choices from the engine grammar.</summary>
     private void AnalyzeQuery()
     {
@@ -244,7 +226,7 @@ public partial class MainPage
     /// <param name="e">The event context.</param>
     private async void OnRefresh(object sender, EventArgs e)
     {
-        if (_session != null) await OpenIndex(_session.Path, _session.Writable, true);
+        if (_session != null) await OpenIndex(_session.Path, _session.Writable, true, forceReload: true);
         else await RunOperation(AppText.RefreshingProjects, token => RefreshLinkedDocuments(token));
     }
 
@@ -258,7 +240,7 @@ public partial class MainPage
         {
             foreach (var index in _projects.SelectMany(x => x.Indexes).Where(x => string.Equals(x.Path, _session.Path, StringComparison.OrdinalIgnoreCase))) index.Culture = (string)CulturePicker.SelectedItem;
             ProjectService.SaveProjects(_projects);
-            await OpenIndex(_session.Path, _session.Writable, true);
+            await OpenIndex(_session.Path, _session.Writable, true, forceReload: true);
         }
         catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
     }
@@ -280,7 +262,7 @@ public partial class MainPage
     {
         if (_session == null) return;
         var writable = !_session.Writable;
-        if (writable && !await DisplayAlertAsync(AppText.EnableEditing, AppText.EnableEditingConfirmation, AppText.EnableEditing, AppText.Cancel)) return;
+        if (writable && !await WorkspaceDialogs.Confirm(this, AppText.EnableEditing, AppText.EnableEditingConfirmation, AppText.EnableEditing, AppText.Cancel)) return;
         await OpenIndex(_session.Path, writable, true);
     }
 
@@ -291,7 +273,7 @@ public partial class MainPage
     {
         if (_session?.Writable != true || _selected == null || _view != "Documents") return;
         var id = (Guid)ExplorerTable.Value(_selected, "Id")!;
-        if (!await DisplayAlertAsync(AppText.DeleteDocument, AppText.Format("ConfirmDelete", id), AppText.DeleteDocument, AppText.Cancel)) return;
+        if (!await WorkspaceDialogs.Confirm(this, AppText.DeleteDocument, AppText.Format("ConfirmDelete", id), AppText.DeleteDocument, AppText.Cancel)) return;
         await RunOperation(AppText.DeletingDocument, async token =>
         {
             token.ThrowIfCancellationRequested();
@@ -364,6 +346,6 @@ public partial class MainPage
     private async void OnHelp(object sender, EventArgs e)
     {
         var field = _session?.Schema.Fields.FirstOrDefault(x => x.Type is "String" or "Text")?.Name ?? "Name";
-        await DisplayAlertAsync(AppText.WQLQuickReference, AppText.Format("WqlHelpBody", field), AppText.GotIt);
+        await WorkspaceDialogs.Confirm(this, AppText.WQLQuickReference, AppText.Format("WqlHelpBody", field), AppText.GotIt);
     }
 }

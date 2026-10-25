@@ -23,6 +23,63 @@ public sealed class UnitTestExplorer : IDisposable
         manager.Insert(new ExplorerTestItem { Id = Guid.NewGuid(), Name = "Server beta", Price = 2.25m, Rank = 2, Address = new ExplorerTestAddress { City = "London" } });
     }
 
+    /// <summary>Reuses the last bounded result until a document mutation invalidates it.</summary>
+    [Fact]
+    public void Query_ReusesSnapshotAndInvalidatesAfterSaveAndDelete()
+    {
+        // arrange
+        using var session = Open(true);
+        var original = session.Query("", TestContext.Current.CancellationToken);
+
+        // act
+        var repeated = session.Query("", TestContext.Current.CancellationToken);
+
+        // validation
+        Assert.Same(original, repeated);
+        var first = original[0];
+        var id = (Guid)ExplorerTable.Value(first, "Id")!;
+        session.Save(ExplorerTable.Json([first]).TrimStart('[').TrimEnd(']'), id);
+        var saved = session.Query("", TestContext.Current.CancellationToken);
+        Assert.NotSame(original, saved);
+        session.Delete(id);
+        Assert.Single(session.Query("", TestContext.Current.CancellationToken));
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+        Assert.Throws<OperationCanceledException>(() => session.Query("", canceled.Token));
+    }
+
+    /// <summary>Reevaluates explicit WQL expressions instead of caching time-dependent function results.</summary>
+    [Fact]
+    public void Query_ExplicitExpressionsAreReevaluated()
+    {
+        // arrange
+        using var session = Open();
+        var first = session.Query("Rank > 0", TestContext.Current.CancellationToken);
+
+        // act
+        var second = session.Query("Rank > 0", TestContext.Current.CancellationToken);
+
+        // validation
+        Assert.NotSame(first, second);
+        Assert.Equal(first.Count, second.Count);
+    }
+
+    /// <summary>Stops a canceled open before touching source files or creating a snapshot.</summary>
+    [Fact]
+    public void Snapshot_PreCanceledOpenPreservesSource()
+    {
+        // arrange
+        var before = Hashes();
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+
+        // act
+        Assert.Throws<OperationCanceledException>(() => new ExplorerSession(SchemaPath, false, CultureInfo.InvariantCulture, canceled.Token));
+
+        // validation
+        Assert.Equal(before, Hashes());
+    }
+
     /// <summary>Resolves pinned identities independently of WQL and detects deletion after reopen.</summary>
     [Fact]
     public void LinkedDocument_ResolvesIdentityAndDetectsDeletion()

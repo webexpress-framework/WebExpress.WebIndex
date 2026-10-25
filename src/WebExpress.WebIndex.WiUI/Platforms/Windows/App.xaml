@@ -5,4 +5,11 @@
     xmlns:maui="using:Microsoft.Maui"
     xmlns:local="using:WebExpress.WebIndex.WiUI.WinUI">
 
+    <maui:MauiWinUIApplication.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="ContentDialogPrimaryButtonBackground" Color="#007ACC" />
+            <SolidColorBrush x:Key="ContentDialogPrimaryButtonBackgroundPointerOver" Color="#168BDD" />
+            <SolidColorBrush x:Key="ContentDialogPrimaryButtonForeground" Color="White" />
+        </ResourceDictionary>
+    </maui:MauiWinUIApplication.Resources>
 </maui:MauiWinUIApplication>

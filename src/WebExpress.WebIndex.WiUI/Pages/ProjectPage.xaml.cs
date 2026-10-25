@@ -38,28 +38,44 @@ public partial class ProjectPage : ContentPage
         _selected = e.CurrentSelection.FirstOrDefault() as Project;
         NameInput.Text = _selected?.ProjectName;
         PathInput.Text = _selected?.IndexPath;
-        SaveButton.IsEnabled = RemoveButton.IsEnabled = AddIndexButton.IsEnabled = _selected != null;
+        SaveButton.IsEnabled = AddIndexButton.IsEnabled = _selected != null;
         RenderLinks();
     }
 
     /// <summary>Creates a named project before editing its optional discovery settings.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnAdd(object sender, EventArgs e)
+    private async void OnAdd(object sender, EventArgs e) => await AddProject();
+
+    /// <summary>Opens the project wizard from either navigation entry point.</summary>
+    /// <returns>The completion task.</returns>
+    internal async Task AddProject()
     {
         if (!await CanLeaveProperties()) return;
-        var name = await DisplayPromptAsync(AppText.NewProjectTitle, AppText.ProjectName, placeholder: AppText.MyIndexes);
-        if (string.IsNullOrWhiteSpace(name)) return;
+        var options = await WorkspaceDialogs.NewProject(this);
+        if (options == null) return;
         try
         {
-            var project = new Project { ProjectName = name.Trim() };
-            _projects.Add(project);
-            ProjectService.SaveProjects(_projects);
+            ProjectBusy.IsVisible = ProjectBusy.IsRunning = true;
+            ProjectWorkspace.IsEnabled = false;
+            AddProjectButton.IsEnabled = false;
+            StatusLabel.Text = options.Value.Sample ? AppText.PreparingSampleIndex : AppText.CreateProject;
+            var project = await Task.Run(() => ProjectService.Create(options.Value.Name, options.Value.Sample, Path.Combine(FileSystem.AppDataDirectory, "projects")));
+            var updated = new ObservableCollection<Project>(_projects) { project };
+            ProjectService.SaveProjects(updated);
+            _projects = updated;
+            ProjectsList.ItemsSource = _projects;
             NameInput.Text = _selected?.ProjectName;
             PathInput.Text = _selected?.IndexPath;
             ProjectsList.SelectedItem = project;
+            StatusLabel.Text = AppText.ProjectSavedLinksAreAvailableInTheIndexExplorerTree;
         }
         catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
+        finally
+        {
+            ProjectBusy.IsVisible = ProjectBusy.IsRunning = false;
+            ProjectWorkspace.IsEnabled = AddProjectButton.IsEnabled = true;
+        }
     }
 
     /// <summary>Chooses a directory through one of its schema files.</summary>
@@ -98,26 +114,6 @@ public partial class ProjectPage : ContentPage
         catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
     }
 
-    /// <summary>Removes only the shortcut after confirmation.</summary>
-    /// <param name="sender">The control raising the event.</param>
-    /// <param name="e">The event context.</param>
-    private async void OnRemove(object sender, EventArgs e)
-    {
-        if (_selected == null || !await DisplayAlertAsync(AppText.RemoveProject, AppText.RemoveProjectConfirmation, AppText.RemoveShortcut, AppText.Cancel)) return;
-        try
-        {
-            var removed = _selected;
-            _selected = null;
-            _projects.Remove(removed);
-            ProjectService.SaveProjects(_projects);
-            SaveButton.IsEnabled = RemoveButton.IsEnabled = AddIndexButton.IsEnabled = false;
-            LinkedIndexes.Clear();
-            NameInput.Text = PathInput.Text = "";
-            StatusLabel.Text = AppText.ProjectShortcutRemoved;
-        }
-        catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
-    }
-
     /// <summary>Shows durable file references and permits repairs without opening storage.</summary>
     private void RenderLinks()
     {
@@ -150,7 +146,7 @@ public partial class ProjectPage : ContentPage
             var remove = new Button { Text = AppText.Unlink, VerticalOptions = LayoutOptions.Center };
             remove.Clicked += async (_, _) =>
             {
-                if (!await DisplayAlertAsync(AppText.RemoveIndexLink, AppText.UnlinkIndexConfirmation, AppText.Unlink, AppText.Cancel)) return;
+                if (!await WorkspaceDialogs.Confirm(this, AppText.RemoveIndexLink, AppText.UnlinkIndexConfirmation, AppText.Unlink, AppText.Cancel)) return;
                 try { _selected.Indexes.Remove(index); ProjectService.SaveProjects(_projects); RenderLinks(); }
                 catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
             };
@@ -197,6 +193,6 @@ public partial class ProjectPage : ContentPage
     private Task<bool> CanLeaveProperties()
     {
         var changed = _selected != null && ((NameInput.Text ?? "") != (_selected.ProjectName ?? "") || (PathInput.Text ?? "") != (_selected.IndexPath ?? ""));
-        return changed ? DisplayAlertAsync(AppText.UnsavedProjectProperties, AppText.DiscardTheUnsavedProjectNameOrFolderChanges, AppText.Discard, AppText.KeepEditing) : Task.FromResult(true);
+        return changed ? WorkspaceDialogs.Confirm(this, AppText.UnsavedProjectProperties, AppText.DiscardTheUnsavedProjectNameOrFolderChanges, AppText.Discard, AppText.KeepEditing) : Task.FromResult(true);
     }
 }

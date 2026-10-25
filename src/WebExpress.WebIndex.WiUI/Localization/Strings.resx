@@ -686,4 +686,5 @@ Select the language used when the index was created. Enable editing to create, u
   <data name="webexpress.webindex:wql.unexpected_token" xml:space="preserve">
     <value>Unexpected query token.</value>
   </data>
+  <data name="IncludeSampleData" xml:space="preserve"><value>Include sample data</value></data>
 </root>

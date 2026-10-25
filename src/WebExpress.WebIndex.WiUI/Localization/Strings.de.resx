@@ -686,4 +686,5 @@ Wählen Sie die Sprache, mit der der Index erstellt wurde. Aktivieren Sie die Be
   <data name="webexpress.webindex:wql.unexpected_token" xml:space="preserve">
     <value>Unerwartetes Abfrageelement.</value>
   </data>
+  <data name="IncludeSampleData" xml:space="preserve"><value>Beispieldaten erstellen</value></data>
 </root>

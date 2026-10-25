@@ -6,6 +6,8 @@ namespace WebExpress.WebIndex.WiUI.Localization;
 /// <summary>Resolves desktop text using the display culture without changing index or query semantics.</summary>
 public static class AppText
 {
+    /// <summary>Gets the optional sample data setting for new projects.</summary>
+    public static string IncludeSampleData => Get("IncludeSampleData");
     private static readonly ResourceManager _resources = new("WebExpress.WebIndex.WiUI.Localization.Strings", typeof(AppText).Assembly);
 
     /// <summary>Uses the neutral English resource when no matching display translation exists.</summary>
