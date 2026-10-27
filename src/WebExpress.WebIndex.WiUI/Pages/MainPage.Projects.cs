@@ -220,6 +220,35 @@ public partial class MainPage
         if (Shell.Current.CurrentPage is ProjectPage page) await page.AddProject();
     }
 
+    /// <summary>Links the selected document persistently using its immutable identity.</summary>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="e">The event context.</param>
+    private async void OnLinkDocument(object sender, EventArgs e)
+    {
+        if (_session == null || _selected == null || _view != "Documents") return;
+        try
+        {
+            if (_activeProject == null)
+            {
+                var name = await WorkspaceDialogs.Prompt(this, AppText.CreateProject, AppText.NameTheProjectForThisDocument, AppText.MyIndexes);
+                if (string.IsNullOrWhiteSpace(name)) return;
+                CreateProject(name.Trim());
+            }
+            var index = ProjectService.LinkIndex(_activeProject!, _session.Path);
+            index.Culture = (string)CulturePicker.SelectedItem;
+            var id = (Guid)ExplorerTable.Value(_selected, "Id")!;
+            var nameValue = ExplorerTable.Value(_selected, "Name")?.ToString();
+            ProjectService.LinkDocument(index, id, string.IsNullOrWhiteSpace(nameValue) ? id.ToString() : nameValue);
+            _documentAvailability[(index.Path, id)] = true;
+            _collapsed.Remove(_activeProject!);
+            _collapsed.Remove(index);
+            ProjectService.SaveProjects(_projects);
+            RenderProjectTree();
+            StatusLabel.Text = AppText.Format("DocumentLinked", _activeProject!.ProjectName);
+        }
+        catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
+    }
+
     /// <summary>Opens project properties in the same application shell.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event context.</param>

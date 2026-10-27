@@ -333,6 +333,7 @@ public partial class MainPage : ContentPage
         NewButton.IsVisible = UpdateButton.IsVisible = DeleteButton.IsVisible = _session?.Writable == true;
         NewButton.IsEnabled = available && _session!.Writable;
         DetailsButton.IsEnabled = available && _selected != null;
+        LinkButton.IsEnabled = available && _view == "Documents" && _selected != null;
         UpdateButton.IsEnabled = DeleteButton.IsEnabled = available && _session!.Writable && _view == "Documents" && _selected != null;
         if (_selected == null) SelectionLabel.Text = AppText.SelectARowToInspectItsFullValues;
     }

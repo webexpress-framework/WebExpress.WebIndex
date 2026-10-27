@@ -152,11 +152,12 @@
                         </Grid>
                     </Grid>
                 </Border>
-                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                     <Label x:Name="SelectionLabel" Text="{x:Static loc:AppText.SelectARowToInspectItsFullValues}" Style="{StaticResource Muted}" VerticalOptions="Center" />
-                    <Button x:Name="DetailsButton" Grid.Column="1" Text="{x:Static loc:AppText.DetailsCopy}" Clicked="OnDetails" IsEnabled="False" Style="{StaticResource Quiet}" />
-                    <Button x:Name="UpdateButton" IsVisible="False" Grid.Column="2" Text="{x:Static loc:AppText.EditDocument}" Clicked="OnEdit" IsEnabled="False" Style="{StaticResource Quiet}" />
-                    <Button x:Name="DeleteButton" IsVisible="False" Grid.Column="3" Style="{StaticResource Quiet}" Text="{x:Static loc:AppText.Delete}" Clicked="OnDelete" IsEnabled="False" BackgroundColor="#B42335" TextColor="White" />
+                    <Button x:Name="LinkButton" Grid.Column="1" Text="{x:Static loc:AppText.LinkToProject}" Clicked="OnLinkDocument" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="DetailsButton" Grid.Column="2" Text="{x:Static loc:AppText.DetailsCopy}" Clicked="OnDetails" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="UpdateButton" IsVisible="False" Grid.Column="3" Text="{x:Static loc:AppText.EditDocument}" Clicked="OnEdit" IsEnabled="False" Style="{StaticResource Quiet}" />
+                    <Button x:Name="DeleteButton" IsVisible="False" Grid.Column="4" Style="{StaticResource Quiet}" Text="{x:Static loc:AppText.Delete}" Clicked="OnDelete" IsEnabled="False" BackgroundColor="#B42335" TextColor="White" />
                 </Grid>
             </Grid>
         </Grid>
