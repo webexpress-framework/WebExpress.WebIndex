@@ -10,7 +10,6 @@ namespace WebExpress.WebIndex.Test.WQL
     /// against the same expected items: operator precedence, null, every attribute type,
     /// paging and results beyond the default limit of the index.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestWqlConsistency(UnitTestIndexFixtureWqlG fixture, ITestOutputHelper output) : IClassFixture<UnitTestIndexFixtureWqlG>
     {
         private static readonly int[] Alpha = [1, 2, 3, 5, 11, 15];

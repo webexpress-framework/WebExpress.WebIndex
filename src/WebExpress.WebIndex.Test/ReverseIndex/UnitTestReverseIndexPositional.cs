@@ -9,7 +9,6 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
     /// Tests phrase, proximity and fuzzy retrieval as well as the result limit, on the memory and
     /// the storage index alike, since both have to answer a query the same way.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestReverseIndexPositional(UnitTestIndexFixtureWqlA fixture) : IClassFixture<UnitTestIndexFixtureWqlA>, IDisposable
     {
         private readonly IndexContext _context = new() { IndexDirectory = Path.Combine(new IndexContext().IndexDirectory, Guid.NewGuid().ToString()) };

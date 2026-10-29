@@ -12,7 +12,6 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
     /// </summary>
     /// <param name="fixture">The fixture.</param>
     /// <param name="output">The test context.</param>
-    [Collection("NonParallelTests")]
     public class UnitTestPostingTree(UnitTestIndexFixture fixture, ITestOutputHelper output) : UnitTestReverseIndex<UnitTestIndexFixture>(fixture, output)
     {
         /// <summary>

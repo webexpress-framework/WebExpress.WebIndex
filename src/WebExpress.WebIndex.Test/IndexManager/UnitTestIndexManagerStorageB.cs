@@ -12,7 +12,6 @@ namespace WebExpress.WebIndex.Test.IndexManager
     /// </remarks>
     /// <param name="fixture">The log.</param>
     /// <param name="output">The test context.</param>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexManagerStorageB(UnitTestIndexFixtureIndexB fixture, ITestOutputHelper output)
         : UnitTestIndexManager<UnitTestIndexFixtureIndexB>(fixture, output)
     {

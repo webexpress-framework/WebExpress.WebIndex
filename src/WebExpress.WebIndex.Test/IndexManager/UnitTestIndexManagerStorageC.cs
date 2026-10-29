@@ -10,7 +10,6 @@ namespace WebExpress.WebIndex.Test.IndexManager
     /// </summary>
     /// <param name="fixture">The log.</param>
     /// <param name="output">The test context.</param>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexManagerStorageC(UnitTestIndexFixtureIndexC fixture, ITestOutputHelper output) : UnitTestIndexManager<UnitTestIndexFixtureIndexC>(fixture, output)
     {
         /// <summary>

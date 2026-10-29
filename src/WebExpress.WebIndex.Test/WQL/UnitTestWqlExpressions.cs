@@ -13,7 +13,6 @@ namespace WebExpress.WebIndex.Test.WQL
     /// attributes as parameters and the scalar functions, whose value must be the same in
     /// the reverse index and in a query.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestWqlExpressions(UnitTestIndexFixtureWqlG fixture, ITestOutputHelper output) : IClassFixture<UnitTestIndexFixtureWqlG>
     {
         /// <summary>

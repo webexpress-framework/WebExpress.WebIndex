@@ -7,7 +7,6 @@ namespace WebExpress.WebIndex.Test.IndexManager
     /// <summary>
     /// Test class for testing the storage-based index manager.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexManagerStorageE : UnitTestIndexManager<UnitTestIndexFixtureIndexE>
     {
         /// <summary>

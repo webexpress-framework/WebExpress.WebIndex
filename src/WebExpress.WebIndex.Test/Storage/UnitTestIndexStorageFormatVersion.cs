@@ -8,7 +8,6 @@ namespace WebExpress.WebIndex.Test.Storage
     /// <summary>
     /// Tests how the on-disk reverse indexes deal with files of another format version.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexStorageFormatVersion : IDisposable
     {
         private readonly IndexContext _context = new();

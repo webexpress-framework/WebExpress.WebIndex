@@ -10,7 +10,6 @@ namespace WebExpress.WebIndex.Test.WQL
     /// Tests the conditions between, not between, starts with, ends with, contains and !~,
     /// the unary not and the typed set conditions, each through the reverse index and as a query.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestWqlConditions(UnitTestIndexFixtureWqlG fixture, ITestOutputHelper output) : IClassFixture<UnitTestIndexFixtureWqlG>
     {
         private static readonly int[] Alpha = [1, 2, 3, 5, 11, 15];

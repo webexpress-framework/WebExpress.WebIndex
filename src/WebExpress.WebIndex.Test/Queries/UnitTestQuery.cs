@@ -8,7 +8,6 @@ namespace WebExpress.WebIndex.Test.Queries
     /// <summary>
     /// Provides unit tests for the Query class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestQuery
     {
         /// <summary>
