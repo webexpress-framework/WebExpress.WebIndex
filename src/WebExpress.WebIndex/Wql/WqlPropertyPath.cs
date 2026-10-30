@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using WebExpress.WebIndex.WebAttribute;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -53,8 +54,8 @@ namespace WebExpress.WebIndex.Wql
         /// segments.
         /// </returns>
         /// <exception cref="ArgumentException">
-        /// Thrown if raw is null, empty, consists only of whitespace, or contains no valid 
-        /// segments.
+        /// Thrown if raw is null, empty, consists only of whitespace, contains no valid
+        /// segments, or passes through a property marked with <see cref="WqlIgnoreAttribute"/>.
         /// </exception>
         public static WqlPropertyPath<TIndexItem> Parse(string raw)
         {
@@ -86,6 +87,11 @@ namespace WebExpress.WebIndex.Wql
                 var prop = currentType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
                     .FirstOrDefault(p => string.Equals(p.Name, part, StringComparison.OrdinalIgnoreCase))
                     ?? throw new ArgumentException($"Property '{part}' not found on type {currentType.FullName} when parsing '{raw}'");
+
+                if (prop.GetCustomAttribute<WqlIgnoreAttribute>() is not null)
+                {
+                    throw new ArgumentException($"Property '{part}' on type {currentType.FullName} is excluded from WQL when parsing '{raw}'");
+                }
 
                 segments.Add(prop.Name); // add member-casing name
                 currentType = prop.PropertyType;

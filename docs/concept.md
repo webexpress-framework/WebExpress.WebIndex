@@ -1164,7 +1164,8 @@ The parser never throws. A syntax error and every semantic error is returned as 
 statement, with the position and length of the token in error, and its message is a key of 
 the internationalization files. Besides syntax errors, the following is reported:
 
-- an attribute the index item does not have, in the filter as well as in the sort order,
+- an attribute the index item does not have, in the filter as well as in the sort order;
+  a property marked with `[WqlIgnore]`, or any path through it, counts as not existing,
 - a literal that cannot be converted into the type of its attribute,
 - a similarity or distance on an operator that is no text search,
 - a value other than `null`, `true` or `false` after `is` and `is not`,
