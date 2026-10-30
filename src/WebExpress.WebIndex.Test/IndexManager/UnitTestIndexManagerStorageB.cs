@@ -87,22 +87,23 @@ namespace WebExpress.WebIndex.Test.IndexManager
         }
 
         /// <summary>
-        /// Tests the reindex function from the index manager.
+        /// Ensures cancellation stops reindexing while retaining completed items.
         /// </summary>
         [Fact]
         public async Task ReIndexAsyncCancel()
         {
             // arrange
             Preconditions();
-            var lastItem = Fixture.TestData.LastOrDefault();
+            var firstItem = Fixture.TestData.First();
+            var lastItem = Fixture.TestData.Last();
             IndexManager.Create<UnitTestIndexTestDocumentB>(CultureInfo.GetCultureInfo("en"), IndexType.Storage);
-            var cancellationTokenSource = new CancellationTokenSource();
+            using var cancellationTokenSource = new CancellationTokenSource();
 
-            var progress = new Progress<int>(percent =>
+            // cancellation must occur before the next item rather than in a queued callback
+            var progress = new SynchronousProgress(percent =>
             {
                 if (percent > 30)
                 {
-                    // cancel task
                     cancellationTokenSource.Cancel();
                 }
             });
@@ -111,6 +112,8 @@ namespace WebExpress.WebIndex.Test.IndexManager
             await IndexManager.ReIndexAsync(Fixture.TestData, progress, cancellationTokenSource.Token);
 
             // validation
+            Assert.True(cancellationTokenSource.IsCancellationRequested);
+            Assert.Single(IndexManager.Retrieve<UnitTestIndexTestDocumentB>($"name = '{firstItem.Name}'"));
             var items = IndexManager.Retrieve<UnitTestIndexTestDocumentB>($"name = '{lastItem.Name}'");
             Assert.NotNull(items);
             Assert.Empty(items);
@@ -388,6 +391,22 @@ namespace WebExpress.WebIndex.Test.IndexManager
 
             // postconditions
             Postconditions();
+        }
+
+        /// <summary>
+        /// Keeps progress-triggered cancellation independent of synchronization context scheduling.
+        /// </summary>
+        /// <param name="handler">The callback to complete before indexing can continue.</param>
+        private sealed class SynchronousProgress(Action<int> handler) : IProgress<int>
+        {
+            /// <summary>
+            /// Runs the callback inline so cancellation is observed before the next item.
+            /// </summary>
+            /// <param name="value">The completed indexing percentage.</param>
+            public void Report(int value)
+            {
+                handler(value);
+            }
         }
     }
 }
