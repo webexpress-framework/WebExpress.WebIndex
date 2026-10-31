@@ -1,0 +1,690 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="WQLHelp" xml:space="preserve">
+    <value>WQL help</value>
+  </data>
+  <data name="DocumentsWQLSchemaReverseIndexes" xml:space="preserve">
+    <value>Documents · WQL · Schema · Reverse indexes</value>
+  </data>
+  <data name="PROJECTEXPLORER" xml:space="preserve">
+    <value>PROJECT EXPLORER</value>
+  </data>
+  <data name="Manage" xml:space="preserve">
+    <value>Manage</value>
+  </data>
+  <data name="NewProjectButton" xml:space="preserve">
+    <value>+ Project</value>
+  </data>
+  <data name="OpenLink" xml:space="preserve">
+    <value>Open / link…</value>
+  </data>
+  <data name="Sample" xml:space="preserve">
+    <value>Sample</value>
+  </data>
+  <data name="SearchProjectTree" xml:space="preserve">
+    <value>Search project tree</value>
+  </data>
+  <data name="LinkAnIndexOrCreateAProject" xml:space="preserve">
+    <value>Link an index or create a project.</value>
+  </data>
+  <data name="IndexLanguage" xml:space="preserve">
+    <value>Index language</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="WelcomeToYourIndexes" xml:space="preserve">
+    <value>Welcome to your indexes</value>
+  </data>
+  <data name="DocumentsSchemaAndReverseTermsInOneWorkspace" xml:space="preserve">
+    <value>Documents, schema and reverse terms in one workspace.</value>
+  </data>
+  <data name="EnableEditing" xml:space="preserve">
+    <value>Enable editing</value>
+  </data>
+  <data name="WQLQUERY" xml:space="preserve">
+    <value>WQL QUERY</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>★ Save</value>
+  </data>
+  <data name="RunQuery" xml:space="preserve">
+    <value>Run query</value>
+  </data>
+  <data name="LeaveBlankToBrowseAllDocuments" xml:space="preserve">
+    <value>Leave blank to browse all documents</value>
+  </data>
+  <data name="QueryEditorDescription" xml:space="preserve">
+    <value>WQL query. Use the suggestions below to insert fields and operators.</value>
+  </data>
+  <data name="OpenAnIndexToStartSearching" xml:space="preserve">
+    <value>Open an index to start searching.</value>
+  </data>
+  <data name="HistoryAndSavedQueries" xml:space="preserve">
+    <value>History and saved queries</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Documents" xml:space="preserve">
+    <value>Documents</value>
+  </data>
+  <data name="Schema" xml:space="preserve">
+    <value>Schema</value>
+  </data>
+  <data name="Terms" xml:space="preserve">
+    <value>Terms</value>
+  </data>
+  <data name="New" xml:space="preserve">
+    <value>+ New</value>
+  </data>
+  <data name="FilterLoadedRows" xml:space="preserve">
+    <value>Filter loaded rows…</value>
+  </data>
+  <data name="SelectAFieldForTerms" xml:space="preserve">
+    <value>Select a field for terms</value>
+  </data>
+  <data name="StartExploring" xml:space="preserve">
+    <value>Start exploring</value>
+  </data>
+  <data name="ChooseAnIndexOnTheLeftToBrowseItsDocuments" xml:space="preserve">
+    <value>Choose an index on the left to browse its documents.</value>
+  </data>
+  <data name="NoIndexSelected" xml:space="preserve">
+    <value>No index selected</value>
+  </data>
+  <data name="RowsPerPage" xml:space="preserve">
+    <value>Rows per page</value>
+  </data>
+  <data name="Previous" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="SelectARowToInspectItsFullValues" xml:space="preserve">
+    <value>Select a row to inspect its full values.</value>
+  </data>
+  <data name="LinkToProject" xml:space="preserve">
+    <value>Link to project</value>
+  </data>
+  <data name="DetailsCopy" xml:space="preserve">
+    <value>Details / copy</value>
+  </data>
+  <data name="EditDocument" xml:space="preserve">
+    <value>Edit document</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Projects" xml:space="preserve">
+    <value>Projects</value>
+  </data>
+  <data name="ProjectsHeading" xml:space="preserve">
+    <value>PROJECTS</value>
+  </data>
+  <data name="AddProjectButton" xml:space="preserve">
+    <value>+ New project</value>
+  </data>
+  <data name="BackToIndexExplorer" xml:space="preserve">
+    <value>Back to Index-Explorer</value>
+  </data>
+  <data name="CreateAProjectToGroupIndexFilesAndDurableDocumentLinks" xml:space="preserve">
+    <value>Create a project to group index files and durable document links.</value>
+  </data>
+  <data name="ProjectProperties" xml:space="preserve">
+    <value>Project properties</value>
+  </data>
+  <data name="ProjectPropertiesDescription" xml:space="preserve">
+    <value>Group indexes from different folders and keep links to individual documents.</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="MyIndexes" xml:space="preserve">
+    <value>My indexes</value>
+  </data>
+  <data name="DiscoveryFolderOptional" xml:space="preserve">
+    <value>Discovery folder (optional)</value>
+  </data>
+  <data name="FolderContainingIndexSchemas" xml:space="preserve">
+    <value>Folder containing index schemas</value>
+  </data>
+  <data name="Browse" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="DiscoveryFolderDescription" xml:space="preserve">
+    <value>A new folder is scanned once. Existing links remain when files are moved or temporarily unavailable.</value>
+  </data>
+  <data name="SaveProject" xml:space="preserve">
+    <value>Save project</value>
+  </data>
+  <data name="RemoveProject" xml:space="preserve">
+    <value>Remove project</value>
+  </data>
+  <data name="LinkedIndexes" xml:space="preserve">
+    <value>Linked indexes</value>
+  </data>
+  <data name="LinkIndex" xml:space="preserve">
+    <value>+ Link index…</value>
+  </data>
+  <data name="ProjectLinksDescription" xml:space="preserve">
+    <value>Link individual documents from the result table in Index-Explorer. Removing a project or link never deletes index data.</value>
+  </data>
+  <data name="SelectAProjectToEditItsProperties" xml:space="preserve">
+    <value>Select a project to edit its properties.</value>
+  </data>
+  <data name="SaveDocument" xml:space="preserve">
+    <value>Save document</value>
+  </data>
+  <data name="DocumentEditorDescription" xml:space="preserve">
+    <value>Review all fields before saving. Numbers use a decimal point; dates use ISO 8601. Changes update the document and its reverse indexes.</value>
+  </data>
+  <data name="EditAsJSON" xml:space="preserve">
+    <value>Edit as JSON</value>
+  </data>
+  <data name="JSONModeReopenEditorForFields" xml:space="preserve">
+    <value>JSON mode · reopen editor for fields</value>
+  </data>
+  <data name="Saving" xml:space="preserve">
+    <value>Saving…</value>
+  </data>
+  <data name="DiscardChanges" xml:space="preserve">
+    <value>Discard changes</value>
+  </data>
+  <data name="LeaveWithoutSavingThisDocument" xml:space="preserve">
+    <value>Leave without saving this document?</value>
+  </data>
+  <data name="Discard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="KeepEditing" xml:space="preserve">
+    <value>Keep editing</value>
+  </data>
+  <data name="PreparingSampleIndex" xml:space="preserve">
+    <value>Preparing sample index…</value>
+  </data>
+  <data name="ValidWQLDisplayedResult" xml:space="preserve">
+    <value>Valid WQL · displayed result</value>
+  </data>
+  <data name="ValidWQLRunToUpdateResults" xml:space="preserve">
+    <value>Valid WQL · run to update results</value>
+  </data>
+  <data name="LoadingReverseTerms" xml:space="preserve">
+    <value>Loading reverse terms…</value>
+  </data>
+  <data name="LimitedTo10000Terms" xml:space="preserve">
+    <value> Limited to 10,000 terms.</value>
+  </data>
+  <data name="ExportingLoadedRows" xml:space="preserve">
+    <value>Exporting loaded rows…</value>
+  </data>
+  <data name="NoLoadedRowsToExport" xml:space="preserve">
+    <value>No loaded rows to export.</value>
+  </data>
+  <data name="ExportCanceled" xml:space="preserve">
+    <value>Export canceled.</value>
+  </data>
+  <data name="NewDocument" xml:space="preserve">
+    <value>New document</value>
+  </data>
+  <data name="RefreshingAfterSave" xml:space="preserve">
+    <value>Refreshing after save…</value>
+  </data>
+  <data name="OpenIndexSchema" xml:space="preserve">
+    <value>Open index schema</value>
+  </data>
+  <data name="ExecutingWQL" xml:space="preserve">
+    <value>Executing WQL…</value>
+  </data>
+  <data name="RefreshingProjects" xml:space="preserve">
+    <value>Refreshing projects…</value>
+  </data>
+  <data name="ClosingIndex" xml:space="preserve">
+    <value>Closing index…</value>
+  </data>
+  <data name="IndexClosed" xml:space="preserve">
+    <value>Index closed.</value>
+  </data>
+  <data name="EnableEditingConfirmation" xml:space="preserve">
+    <value>Changes are saved directly to this index. Other applications must release the index while editing is enabled.</value>
+  </data>
+  <data name="DeleteDocument" xml:space="preserve">
+    <value>Delete document</value>
+  </data>
+  <data name="DeletingDocument" xml:space="preserve">
+    <value>Deleting document…</value>
+  </data>
+  <data name="DocumentDeletedResultsAndReverseIndexesUpdated" xml:space="preserve">
+    <value>Document deleted. Results and reverse indexes updated.</value>
+  </data>
+  <data name="RowDetails" xml:space="preserve">
+    <value>Row details</value>
+  </data>
+  <data name="CopyFullJSON" xml:space="preserve">
+    <value>Copy full JSON</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="EnterValidWQLBeforeSavingIt" xml:space="preserve">
+    <value>Enter valid WQL before saving it.</value>
+  </data>
+  <data name="QuerySavedToFavorites" xml:space="preserve">
+    <value>Query saved to favorites.</value>
+  </data>
+  <data name="WQLQuickReference" xml:space="preserve">
+    <value>WQL quick reference</value>
+  </data>
+  <data name="GotIt" xml:space="preserve">
+    <value>Got it</value>
+  </data>
+  <data name="ProjectLabel" xml:space="preserve">
+    <value>Project</value>
+  </data>
+  <data name="LinkedIndexesFromMultipleFolders" xml:space="preserve">
+    <value>Linked indexes from multiple folders</value>
+  </data>
+  <data name="Missing" xml:space="preserve">
+    <value> (missing)</value>
+  </data>
+  <data name="Unavailable" xml:space="preserve">
+    <value> (unavailable)</value>
+  </data>
+  <data name="Unchecked" xml:space="preserve">
+    <value> (unchecked)</value>
+  </data>
+  <data name="NoProjectsYetCreateAProjectThenLinkIndexesAndDocuments" xml:space="preserve">
+    <value>No projects yet. Create a project, then link indexes and documents.</value>
+  </data>
+  <data name="ExpandOrCollapse" xml:space="preserve">
+    <value>Expand or collapse </value>
+  </data>
+  <data name="ManageLink" xml:space="preserve">
+    <value>Manage link </value>
+  </data>
+  <data name="OpeningLinkedDocument" xml:space="preserve">
+    <value>Opening linked document…</value>
+  </data>
+  <data name="NewProjectTitle" xml:space="preserve">
+    <value>New project</value>
+  </data>
+  <data name="ProjectName" xml:space="preserve">
+    <value>Project name</value>
+  </data>
+  <data name="CreateProject" xml:space="preserve">
+    <value>Create project</value>
+  </data>
+  <data name="NameTheProjectForThisDocument" xml:space="preserve">
+    <value>Name the project for this document.</value>
+  </data>
+  <data name="RenameLink" xml:space="preserve">
+    <value>Rename link</value>
+  </data>
+  <data name="LocateIndex" xml:space="preserve">
+    <value>Locate index…</value>
+  </data>
+  <data name="RemoveLink" xml:space="preserve">
+    <value>Remove link</value>
+  </data>
+  <data name="DisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="ThisIndexIsAlreadyLinkedToTheProject" xml:space="preserve">
+    <value>This index is already linked to the project.</value>
+  </data>
+  <data name="RemoveIndexLink" xml:space="preserve">
+    <value>Remove index link</value>
+  </data>
+  <data name="RemoveIndexConfirmation" xml:space="preserve">
+    <value>Remove this index reference and its document links from the project? Stored documents remain unchanged.</value>
+  </data>
+  <data name="RefreshingLinks" xml:space="preserve">
+    <value>Refreshing links…</value>
+  </data>
+  <data name="SettingsCouldNotBeLoaded" xml:space="preserve">
+    <value>Settings could not be loaded: </value>
+  </data>
+  <data name="CheckingProjectLinks" xml:space="preserve">
+    <value>Checking project links…</value>
+  </data>
+  <data name="OperationCanceled" xml:space="preserve">
+    <value>Operation canceled.</value>
+  </data>
+  <data name="IndexUnavailableCloseOtherApplicationsUsingItAndRetry" xml:space="preserve">
+    <value>Index unavailable. Close other applications using it and retry. </value>
+  </data>
+  <data name="OpenAWsSchemaFileToBegin" xml:space="preserve">
+    <value>Open a .ws schema file to begin.</value>
+  </data>
+  <data name="OpeningIndex" xml:space="preserve">
+    <value>Opening index…</value>
+  </data>
+  <data name="QueryNotExecutedPreviousResultsRemainDisplayed" xml:space="preserve">
+    <value>Query not executed. Previous results remain displayed.</value>
+  </data>
+  <data name="LimitedTo10000RowsRefineWQLOrUseSkipTake" xml:space="preserve">
+    <value> Limited to 10,000 rows. Refine WQL or use skip / take.</value>
+  </data>
+  <data name="HistoryCouldNotBeSaved" xml:space="preserve">
+    <value> History could not be saved: </value>
+  </data>
+  <data name="OpenAnIndexToBrowseItsDocuments" xml:space="preserve">
+    <value>Open an index to browse its documents.</value>
+  </data>
+  <data name="EditingEnabledExclusiveAccess" xml:space="preserve">
+    <value>Editing enabled · exclusive access</value>
+  </data>
+  <data name="ReadSnapshot" xml:space="preserve">
+    <value>Read snapshot</value>
+  </data>
+  <data name="FinishEditing" xml:space="preserve">
+    <value>Finish editing</value>
+  </data>
+  <data name="NoRowsToDisplay" xml:space="preserve">
+    <value>No rows to display</value>
+  </data>
+  <data name="TermsEmptyDescription" xml:space="preserve">
+    <value>Select an indexed field to inspect its terms and document postings.</value>
+  </data>
+  <data name="TryAnotherQueryOrClearTheLoadedRowFilter" xml:space="preserve">
+    <value>Try another query or clear the loaded-row filter.</value>
+  </data>
+  <data name="SortLoadedRowsBy" xml:space="preserve">
+    <value>Sort loaded rows by </value>
+  </data>
+  <data name="SelectRow" xml:space="preserve">
+    <value>Select row </value>
+  </data>
+  <data name="First10000" xml:space="preserve">
+    <value> · first 10,000</value>
+  </data>
+  <data name="Selected" xml:space="preserve">
+    <value>Selected: </value>
+  </data>
+  <data name="ChooseAnIndexSchema" xml:space="preserve">
+    <value>Choose an index schema</value>
+  </data>
+  <data name="EnterAProjectName" xml:space="preserve">
+    <value>Enter a project name.</value>
+  </data>
+  <data name="ChooseAnExistingDiscoveryFolderOrLeaveItBlank" xml:space="preserve">
+    <value>Choose an existing discovery folder or leave it blank.</value>
+  </data>
+  <data name="ProjectSavedLinksAreAvailableInTheIndexExplorerTree" xml:space="preserve">
+    <value>Project saved. Links are available in the Index-Explorer tree.</value>
+  </data>
+  <data name="RemoveProjectConfirmation" xml:space="preserve">
+    <value>Remove this project shortcut? Its index files will remain untouched.</value>
+  </data>
+  <data name="RemoveShortcut" xml:space="preserve">
+    <value>Remove shortcut</value>
+  </data>
+  <data name="ProjectShortcutRemoved" xml:space="preserve">
+    <value>Project shortcut removed.</value>
+  </data>
+  <data name="Locate" xml:space="preserve">
+    <value>Locate…</value>
+  </data>
+  <data name="ThisIndexIsAlreadyLinked" xml:space="preserve">
+    <value>This index is already linked.</value>
+  </data>
+  <data name="Unlink" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="UnlinkIndexConfirmation" xml:space="preserve">
+    <value>Remove this reference and its document links? Index files remain unchanged.</value>
+  </data>
+  <data name="NoIndexesLinkedAddASchemaFileToGetStarted" xml:space="preserve">
+    <value>No indexes linked. Add a schema file to get started.</value>
+  </data>
+  <data name="LinkIndexSchema" xml:space="preserve">
+    <value>Link index schema</value>
+  </data>
+  <data name="UnsavedProjectProperties" xml:space="preserve">
+    <value>Unsaved project properties</value>
+  </data>
+  <data name="DiscardTheUnsavedProjectNameOrFolderChanges" xml:space="preserve">
+    <value>Discard the unsaved project name or folder changes?</value>
+  </data>
+  <data name="TheSchemaTypeDoesNotMatchItsFileName" xml:space="preserve">
+    <value>The schema type does not match its file name.</value>
+  </data>
+  <data name="TheDocumentStoreWdsIsMissing" xml:space="preserve">
+    <value>The document store (.wds) is missing.</value>
+  </data>
+  <data name="EnableEditingBeforeChangingDocuments" xml:space="preserve">
+    <value>Enable editing before changing documents.</value>
+  </data>
+  <data name="SchemaMismatchError" xml:space="preserve">
+    <value>Editing requires an exact schema match. Open this index with its original application to migrate it first.</value>
+  </data>
+  <data name="ADocumentObjectIsRequired" xml:space="preserve">
+    <value>A document object is required.</value>
+  </data>
+  <data name="IdMustNotBeEmpty" xml:space="preserve">
+    <value>Id must not be empty.</value>
+  </data>
+  <data name="AnExistingDocumentSIdCannotBeChanged" xml:space="preserve">
+    <value>An existing document's Id cannot be changed.</value>
+  </data>
+  <data name="TheDocumentNoLongerExistsRefreshTheIndex" xml:space="preserve">
+    <value>The document no longer exists. Refresh the index.</value>
+  </data>
+  <data name="ADocumentWithThisIdAlreadyExists" xml:space="preserve">
+    <value>A document with this Id already exists.</value>
+  </data>
+  <data name="AJSONObjectIsRequired" xml:space="preserve">
+    <value>A JSON object is required.</value>
+  </data>
+  <data name="DuplicateJSONPropertiesAreNotAllowed" xml:space="preserve">
+    <value>Duplicate JSON properties are not allowed.</value>
+  </data>
+  <data name="TheDocumentNoLongerExists" xml:space="preserve">
+    <value>The document no longer exists.</value>
+  </data>
+  <data name="TheSchemaMustContainTypeAndFields" xml:space="preserve">
+    <value>The schema must contain Type and Fields.</value>
+  </data>
+  <data name="TheSchemaMustContainAGuidFieldNamedId" xml:space="preserve">
+    <value>The schema must contain a Guid field named Id.</value>
+  </data>
+  <data name="ADocumentIdentifierIsRequired" xml:space="preserve">
+    <value>A document identifier is required.</value>
+  </data>
+  <data name="InvalidField" xml:space="preserve">
+    <value>{0}: enter a valid {1} value.</value>
+  </data>
+  <data name="QueryError" xml:space="preserve">
+    <value>Position {0}: {1}</value>
+  </data>
+  <data name="TermCount" xml:space="preserve">
+    <value>{0} in {1}.</value>
+  </data>
+  <data name="ExportComplete" xml:space="preserve">
+    <value>Exported {0:N0} rows to {1}.</value>
+  </data>
+  <data name="ConfirmDelete" xml:space="preserve">
+    <value>Permanently delete document {0}? This cannot be undone.</value>
+  </data>
+  <data name="DocumentLinked" xml:space="preserve">
+    <value>Document linked to {0}.</value>
+  </data>
+  <data name="LocateFile" xml:space="preserve">
+    <value>Locate {0}</value>
+  </data>
+  <data name="QueryResult" xml:space="preserve">
+    <value>{0} in {1:N0} ms.</value>
+  </data>
+  <data name="IndexSummary" xml:space="preserve">
+    <value>{0} · {1} · {2}</value>
+  </data>
+  <data name="DocumentLinks" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="RequiredProperty" xml:space="preserve">
+    <value>The property '{0}' is required. Use null explicitly if appropriate.</value>
+  </data>
+  <data name="InvalidSchemaField" xml:space="preserve">
+    <value>Invalid or duplicate field: {0}.</value>
+  </data>
+  <data name="ConflictingPaths" xml:space="preserve">
+    <value>Conflicting schema paths at {0}.</value>
+  </data>
+  <data name="UnsupportedType" xml:space="preserve">
+    <value>The schema type '{0}' cannot be reconstructed without the original model assembly.</value>
+  </data>
+  <data name="WqlHelpBody" xml:space="preserve">
+    <value>Blank query: all documents
+
+{0} ~ 'serv*'
+{0} contains 'server'
+{0} = 'O''Brien'
+{0} is null
+
+Combine conditions with and, or, not and parentheses.
+
+order by {0} asc
+skip 50 take 50
+
+Use suggestions at the caret. Run query updates the table. Heading sorts and table filters apply to the loaded result, up to 10,000 documents. Export includes all filtered pages of that result.
+
+Select the language used when the index was created. Enable editing to create, update or delete documents.</value>
+  </data>
+  <data name="DocumentsCountOne" xml:space="preserve">
+    <value>{0:N0} document</value>
+  </data>
+  <data name="DocumentsCountMany" xml:space="preserve">
+    <value>{0:N0} documents</value>
+  </data>
+  <data name="TermsCountOne" xml:space="preserve">
+    <value>{0:N0} term</value>
+  </data>
+  <data name="TermsCountMany" xml:space="preserve">
+    <value>{0:N0} terms</value>
+  </data>
+  <data name="SchemaCountOne" xml:space="preserve">
+    <value>{0:N0} field</value>
+  </data>
+  <data name="SchemaCountMany" xml:space="preserve">
+    <value>{0:N0} fields</value>
+  </data>
+  <data name="LinksCountOne" xml:space="preserve">
+    <value>{0:N0} document link</value>
+  </data>
+  <data name="LinksCountMany" xml:space="preserve">
+    <value>{0:N0} document links</value>
+  </data>
+  <data name="ColumnName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ColumnType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="ColumnIgnore" xml:space="preserve">
+    <value>Not indexed</value>
+  </data>
+  <data name="ColumnValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="ColumnFrequency" xml:space="preserve">
+    <value>Frequency</value>
+  </data>
+  <data name="ColumnDocuments" xml:space="preserve">
+    <value>Documents</value>
+  </data>
+  <data name="webexpress.webindex:wql.attribute_unknown" xml:space="preserve">
+    <value>Unknown field.</value>
+  </data>
+  <data name="webexpress.webindex:wql.condition_unknown" xml:space="preserve">
+    <value>Unknown condition.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_binary_or_set_condition" xml:space="preserve">
+    <value>Expected a comparison or set condition.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_close_parenthesis" xml:space="preserve">
+    <value>Expected a closing parenthesis.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_distance" xml:space="preserve">
+    <value>Expected a distance value.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_function" xml:space="preserve">
+    <value>Expected a function.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_logicaloperator" xml:space="preserve">
+    <value>Expected 'and' or 'or'.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_operator" xml:space="preserve">
+    <value>Expected an operator.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_similarity" xml:space="preserve">
+    <value>Expected a similarity value.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_skip_or_take" xml:space="preserve">
+    <value>Expected skip or take.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_terminated_string_token" xml:space="preserve">
+    <value>The quoted text is missing its closing quote.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_token" xml:space="preserve">
+    <value>Expected another query token.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_token_matching" xml:space="preserve">
+    <value>This token does not match the expected syntax.</value>
+  </data>
+  <data name="webexpress.webindex:wql.expected_value" xml:space="preserve">
+    <value>Expected a value.</value>
+  </data>
+  <data name="webexpress.webindex:wql.function_arity" xml:space="preserve">
+    <value>The function has an incorrect number of arguments.</value>
+  </data>
+  <data name="webexpress.webindex:wql.function_unknown" xml:space="preserve">
+    <value>Unknown function.</value>
+  </data>
+  <data name="webexpress.webindex:wql.invalid_distance" xml:space="preserve">
+    <value>Invalid distance value.</value>
+  </data>
+  <data name="webexpress.webindex:wql.invalid_is_value" xml:space="preserve">
+    <value>Invalid value after is.</value>
+  </data>
+  <data name="webexpress.webindex:wql.invalid_similarity" xml:space="preserve">
+    <value>Invalid similarity value.</value>
+  </data>
+  <data name="webexpress.webindex:wql.literal_not_convertible" xml:space="preserve">
+    <value>The value does not match the field type.</value>
+  </data>
+  <data name="webexpress.webindex:wql.option_not_applicable" xml:space="preserve">
+    <value>This option cannot be used here.</value>
+  </data>
+  <data name="webexpress.webindex:wql.parse_failed" xml:space="preserve">
+    <value>The WQL query could not be parsed.</value>
+  </data>
+  <data name="webexpress.webindex:wql.parse.exception" xml:space="preserve">
+    <value>Invalid query value or syntax.</value>
+  </data>
+  <data name="webexpress.webindex:wql.text_required" xml:space="preserve">
+    <value>This operator requires a text field.</value>
+  </data>
+  <data name="webexpress.webindex:wql.unexpected_token" xml:space="preserve">
+    <value>Unexpected query token.</value>
+  </data>
+  <data name="IncludeSampleData" xml:space="preserve"><value>Include sample data</value></data>
+</root>

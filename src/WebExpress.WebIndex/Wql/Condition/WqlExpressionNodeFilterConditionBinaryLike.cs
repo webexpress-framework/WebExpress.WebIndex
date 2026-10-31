@@ -1,87 +1,98 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 
 namespace WebExpress.WebIndex.Wql.Condition
 {
     /// <summary>
-    /// Represents a binary 'LIKE' condition in a WQL expression.
+    /// The WQL condition for a word search (<c>~</c>): matches items whose text attribute
+    /// contains every given word, anywhere and in any order. The words may carry wildcards,
+    /// a similarity searches fuzzily and a distance requires each word to stand near the
+    /// previous one.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
     public class WqlExpressionNodeFilterConditionBinaryLike<TIndexItem> : WqlExpressionNodeFilterConditionBinary<TIndexItem>
         where TIndexItem : IIndexItem
     {
         /// <summary>
+        /// Returns true, since the word search applies to text only.
+        /// </summary>
+        protected internal override bool RequiresText => true;
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="op">The operator.</param>
         public WqlExpressionNodeFilterConditionBinaryLike()
             : base("~")
         {
         }
 
-        /// <summary> 
-        /// Applies the filter condition to the index using the specified attribute 
-        /// and returns the matching data identifiers. 
-        /// </summary> 
-        /// <param name="indexDocument">The index document.</param>
-        /// <returns> 
-        /// A sequence of data identifiers that satisfy the filter condition. 
-        /// </returns>
-        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
+        /// <summary>
+        /// Initializes a new instance of the class with a different operator, for the negated
+        /// word search.
+        /// </summary>
+        /// <param name="token">The operator.</param>
+        protected WqlExpressionNodeFilterConditionBinaryLike(string token)
+            : base(token)
         {
-            // get attribute by name
-            var attribute = indexDocument.Fields
-                .FirstOrDefault(x => x.Name.Equals(Attribute.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (attribute == null || Parameter == null)
-            {
-                return [];
-            }
-
-            // get the reverse index for the attribute
-            var reverseIndex = indexDocument.GetReverseIndex(attribute);
-
-            // get value as string
-            var value = Parameter.GetValue()?.ToString();
-
-            // retrieve matching guids using fuzzy/default search
-            return reverseIndex?.Retrieve(value, new IndexRetrieveOptions
-            {
-                Method = IndexRetrieveMethod.Default,
-                Distance = Options.Distance ?? 0
-            }) ?? [];
         }
 
         /// <summary>
-        /// Builds a LINQ expression representing a string-based "LIKE" comparison between 
-        /// the attribute expression and the parameter
-        /// expression.
+        /// Applies the filter condition to the index using the specified attribute
+        /// and returns the matching data identifiers.
+        /// </summary>
+        /// <param name="indexDocument">The index document.</param>
+        /// <returns>
+        /// A sequence of data identifiers that satisfy the filter condition.
+        /// </returns>
+        public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
+        {
+            return TryRetrieveMatches(indexDocument, out var ids) ? ids : Scan(indexDocument);
+        }
+
+        /// <summary>
+        /// Retrieves the items the word search finds, if the term index can answer it.
+        /// </summary>
+        /// <param name="indexDocument">The index document.</param>
+        /// <param name="ids">The identifiers of the items containing the words.</param>
+        /// <returns>True if the index answered, false if the condition has to scan.</returns>
+        protected bool TryRetrieveMatches(IIndexDocument<TIndexItem> indexDocument, out IEnumerable<Guid> ids)
+        {
+            ids = null;
+
+            return Parameter is not null && Parameter.IsConstant &&
+                TryRetrieveWords(indexDocument, Parameter.GetValue(), Distance, Similarity, out ids);
+        }
+
+        /// <summary>
+        /// Builds the word search over the left-hand side.
         /// </summary>
         /// <param name="param">
         /// The parameter expression representing the index item in the generated
-        /// expression tree (e.g., <c>x</c> in <c>x => x.Property.Contains(value)</c>).
+        /// expression tree.
         /// </param>
-        /// <returns>
-        /// A method call expression on the attribute value using the parameter value 
-        /// as the argument.
-        /// </returns>
+        /// <returns>A boolean expression.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown when either <c>Attribute</c> or <c>Parameter</c> is <c>null</c>.
         /// </exception>
         public override Expression ToExpression(ParameterExpression param)
         {
-            ArgumentNullException.ThrowIfNull(Attribute);
+            if (Function is null)
+            {
+                ArgumentNullException.ThrowIfNull(Attribute);
+            }
+
             ArgumentNullException.ThrowIfNull(Parameter);
 
-            Expression left = Attribute.ToExpression(param);
-            Expression right = Parameter.ToExpression(param);
-
-            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), [typeof(string), typeof(StringComparison)]);
-            var comparison = Expression.Constant(StringComparison.OrdinalIgnoreCase);
-
-            return Expression.Call(left, containsMethod, right, comparison);
+            return WqlExpressionBuilder.MatchText
+            (
+                LeftToExpression(param),
+                Parameter.ToOperand(param, typeof(string), Culture),
+                WqlTextMatchMode.Words,
+                Distance,
+                Similarity,
+                Culture
+            );
         }
     }
 }

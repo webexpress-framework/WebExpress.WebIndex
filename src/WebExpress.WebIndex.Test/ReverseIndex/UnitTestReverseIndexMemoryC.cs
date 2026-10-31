@@ -10,7 +10,6 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
     /// </summary>
     /// <param name="fixture">The log.</param>
     /// <param name="output">The test context.</param>
-    [Collection("NonParallelTests")]
     public class UnitTestReverseIndexMemoryC(UnitTestIndexFixtureIndexC fixture, ITestOutputHelper output) : UnitTestReverseIndex<UnitTestIndexFixtureIndexC>(fixture, output)
     {
         /// <summary>

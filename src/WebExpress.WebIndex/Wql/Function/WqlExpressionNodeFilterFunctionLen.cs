@@ -1,55 +1,38 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
     /// <summary>
     /// WQL function that returns the length of a string parameter.
-    /// Usage: <c>attribute = len('value')</c> returns 5.
+    /// Usage: <c>attribute = len('value')</c> returns 5, <c>len(Name) &gt; 3</c> compares the
+    /// length of an attribute. A null value has the length 0.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
-    public class WqlExpressionNodeFilterFunctionLen<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
+    public class WqlExpressionNodeFilterFunctionLen<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        private static readonly System.Reflection.MethodInfo EvaluateMethod = typeof(WqlExpressionNodeFilterFunctionLen<TIndexItem>)
-            .GetMethod(nameof(Evaluate), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?? throw new InvalidOperationException("Failed to resolve len() runtime evaluator.");
+        /// <summary>
+        /// Returns the type of the computed value.
+        /// </summary>
+        public override Type ReturnType => typeof(double);
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public WqlExpressionNodeFilterFunctionLen()
-            : base("len")
+            : base("len", 1, 1)
         {
         }
 
         /// <summary>
-        /// Executes the function.
+        /// Computes the length of the text.
         /// </summary>
-        /// <returns>The length of the string parameter, or 0 if null.</returns>
-        public override object Execute()
+        /// <param name="arguments">The text.</param>
+        /// <returns>The length as a double value.</returns>
+        protected override object Evaluate(IReadOnlyList<object> arguments)
         {
-            var parameters = Parameters?.Select(x => x.GetValue());
-            var param = parameters?.FirstOrDefault();
-
-            return (double)(param?.ToString()?.Length ?? 0);
-        }
-
-        /// <summary>
-        /// Builds a LINQ expression that returns the length of the first parameter value.
-        /// </summary>
-        /// <param name="param">The parameter expression representing the current index item.</param>
-        /// <returns>An expression that evaluates the string length at query evaluation time.</returns>
-        public override Expression ToExpression(ParameterExpression param)
-        {
-            var valueExpression = Parameters?.FirstOrDefault()?.ToExpression(param) ?? Expression.Constant(null);
-            return Expression.Call(EvaluateMethod, Expression.Convert(valueExpression, typeof(object)));
-        }
-
-        private static double Evaluate(object value)
-        {
-            return (double)(value?.ToString()?.Length ?? 0);
+            return (double)(ToText(Argument(arguments, 0))?.Length ?? 0);
         }
     }
 }

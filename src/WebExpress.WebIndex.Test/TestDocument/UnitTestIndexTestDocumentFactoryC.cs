@@ -24,8 +24,12 @@
         /// </returns>
         public static IEnumerable<UnitTestIndexTestDocumentC> GenerateTestData(int itemCount, int wordCount, int vocabulary, int wordLength)
         {
+            // a locally owned, seeded generator makes the data reproducible across runs and is safe
+            // under parallel test execution, unlike the process-wide shared random instance
+            var random = new Random(10);
+
             // generate a vocabulary with the specified size and word length
-            var set = GenerateVocabulary(vocabulary, 3, wordLength).ToList(); // convert to list for efficient indexing
+            var set = GenerateVocabulary(random, vocabulary, 3, wordLength).ToList(); // convert to list for efficient indexing
             if (set.Count == 0)
             {
                 throw new ArgumentException("Vocabulary must contain at least one word.", nameof(vocabulary));
@@ -34,8 +38,6 @@
             // check bounds for generation
             if (itemCount <= 0) throw new ArgumentOutOfRangeException(nameof(itemCount), "Item count must be greater than zero.");
             if (wordCount <= 0) throw new ArgumentOutOfRangeException(nameof(wordCount), "Word count must be greater than zero.");
-
-            var random = new Random();
 
             for (int i = 0; i < itemCount; i++)
             {

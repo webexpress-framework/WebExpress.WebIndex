@@ -124,11 +124,14 @@ namespace WebExpress.WebIndex.Test.WQL
 
             // act
             var expr = attr.ToExpression(param);
+            var compiled = Expression.Lambda<Func<UnitTestIndexTestDocumentB, string>>(expr, param).Compile();
 
-            // validation
+            // validation - a missing address yields null instead of throwing
             Assert.NotNull(expr);
-            Assert.True(expr is MemberExpression);
+            Assert.Equal(ExpressionType.Conditional, expr.NodeType);
             Assert.Equal(typeof(string), expr.Type);
+            Assert.Null(compiled(new UnitTestIndexTestDocumentB()));
+            Assert.Equal("Berlin", compiled(new UnitTestIndexTestDocumentB { Address = new() { City = "Berlin" } }));
         }
 
         /// <summary>

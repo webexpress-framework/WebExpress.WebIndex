@@ -8,9 +8,17 @@ using WebExpress.WebIndex.WebAttribute;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Represents a numeric value stored in a binary search tree. Each node also references a posting tree
-    /// which contains frequency and positional information per document.
+    /// Represents a distinct numeric value of a field as a node of a binary search tree ordered by
+    /// value. The node counts the documents that hold the value and references the root of a posting
+    /// tree of their ids (<see cref="IndexStorageSegmentNumericPostingNode"/>).
     /// </summary>
+    /// <remarks>
+    /// Numeric postings carry no positions: a field holds a single number, so neither the value node
+    /// nor its postings record where in a document it occurs. The record on disk is the value
+    /// (16 bytes), the addresses of the left and the right child (8 bytes each), the frequency
+    /// (4 bytes) and the address of the posting root (8 bytes). The height used to balance the value
+    /// tree is not part of the record; a node read back from disk starts with the height 1.
+    /// </remarks>
     /// <param name="context">The reference to the context of the index.</param>
     /// <param name="addr">The address of the segment.</param>
     [SegmentCached]
@@ -39,12 +47,12 @@ namespace WebExpress.WebIndex.Storage
         public ulong RightAddr { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of times the value is used (postings).
+        /// Gets or sets the number of documents that hold the value, which is the number of postings.
         /// </summary>
-        public uint Fequency { get; set; }
+        public uint Frequency { get; set; }
 
         /// <summary>
-        /// Gets the address of the first posting element of a sorted list or 0 if there is no element.
+        /// Gets the address of the root of the posting tree or 0 if no document holds the value.
         /// </summary>
         public ulong PostingAddr { get; private set; }
 
@@ -217,21 +225,27 @@ namespace WebExpress.WebIndex.Storage
                         DocumentID = id
                     };
 
-                    Fequency++;
+                    Frequency++;
 
                     Context.IndexFile.Write(this);
                     Context.IndexFile.Write(item);
                 }
                 else
                 {
-                    if (Posting.Insert(id, out IndexStorageSegmentNumericPostingNode node))
-                    {
-                        Fequency++;
+                    // the tree balances itself on the way up and may come back with another
+                    // root, which is then the one this value has to point at
+                    var root = Posting.Insert(id, out item, out var inserted);
 
-                        Context.IndexFile.Write(this);
+                    if (inserted)
+                    {
+                        Frequency++;
                     }
 
-                    item = node;
+                    if (inserted || root.Addr != PostingAddr)
+                    {
+                        PostingAddr = root.Addr;
+                        Context.IndexFile.Write(this);
+                    }
                 }
             }
 
@@ -257,78 +271,17 @@ namespace WebExpress.WebIndex.Storage
                     return false;
                 }
 
-                var root = Posting;
+                // the tree rebalances after the removal; the root it reports is the one to
+                // point at, and none at all once the last posting is gone
+                var root = Posting.Remove(id, out var removed);
 
-                if (id.CompareTo(root.DocumentID) < 0)
+                if (!removed)
                 {
-                    if (root.Left?.Remove(id, root, IndexStorageBinaryTreeDirection.Left) ?? false)
-                    {
-                        Fequency--;
-                        Context.IndexFile.Write(this);
-                        return true;
-                    }
-
-                    return false;
-                }
-                else if (id.CompareTo(root.DocumentID) > 0)
-                {
-                    if (root.Right?.Remove(id, root, IndexStorageBinaryTreeDirection.Right) ?? false)
-                    {
-                        Fequency--;
-                        Context.IndexFile.Write(this);
-                        return true;
-                    }
-
                     return false;
                 }
 
-                // node with only one child or no child
-                if (root.LeftAddr == 0 || root.RightAddr == 0)
-                {
-                    PostingAddr = root.LeftAddr != 0 ? root.LeftAddr : root.RightAddr;
-
-                    Context.Allocator.Free(root);
-
-                    Fequency--;
-
-                    Context.IndexFile.Write(this);
-
-                    return true;
-                }
-
-                // node with two children: replace root with inorder successor (leftmost of right subtree)
-                var rightRoot = root.Right;
-                var leftmostPack = rightRoot.LeftmostChild;
-                var successor = leftmostPack.Leftmost as IndexStorageSegmentNumericPostingNode;
-
-                var oldLeft = root.LeftAddr;
-                var oldRight = root.RightAddr;
-
-                if (leftmostPack.Parent is IndexStorageSegmentNumericPostingNode successorParent)
-                {
-                    // detach successor: parent.left = successor.right
-                    successorParent.LeftAddr = successor.RightAddr;
-                    Context.IndexFile.Write(successorParent);
-                }
-
-                // transplant successor in place of root
-                successor.LeftAddr = oldLeft;
-
-                if (successor.Addr != oldRight)
-                {
-                    // if successor is not the immediate right child, hook up old right subtree
-                    successor.RightAddr = oldRight;
-                }
-
-                Context.IndexFile.Write(successor);
-
-                // update head to new root
-                PostingAddr = successor.Addr;
-
-                Context.Allocator.Free(root);
-
-                Fequency--;
-
+                PostingAddr = root?.Addr ?? 0;
+                Frequency--;
                 Context.IndexFile.Write(this);
 
                 return true;
@@ -529,7 +482,7 @@ namespace WebExpress.WebIndex.Storage
             Value = reader.ReadDecimal();
             LeftAddr = reader.ReadUInt64();
             RightAddr = reader.ReadUInt64();
-            Fequency = reader.ReadUInt32();
+            Frequency = reader.ReadUInt32();
             PostingAddr = reader.ReadUInt64();
         }
 
@@ -542,7 +495,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write(Value);
             writer.Write(LeftAddr);
             writer.Write(RightAddr);
-            writer.Write(Fequency);
+            writer.Write(Frequency);
             writer.Write(PostingAddr);
         }
 
@@ -565,14 +518,20 @@ namespace WebExpress.WebIndex.Storage
             var newRight = Left;
             var rightAddr1 = Left.RightAddr;
             var postingAddr = PostingAddr;
+            var frequency = Frequency;
 
+            // the rotation swaps the payload of the two nodes so the subtree keeps its root
+            // address; the frequency is part of the payload, it counts the postings of the
+            // value and has to travel with it
             Value = newRight.Value;
             PostingAddr = newRight.PostingAddr;
+            Frequency = newRight.Frequency;
             LeftAddr = newRight.LeftAddr;
             RightAddr = newRight.Addr;
 
             newRight.Value = value;
             newRight.PostingAddr = postingAddr;
+            newRight.Frequency = frequency;
             newRight.LeftAddr = rightAddr1;
             newRight.RightAddr = rightAddr;
 
@@ -590,14 +549,18 @@ namespace WebExpress.WebIndex.Storage
             var newLeft = Right;
             var leftAddr1 = newLeft.LeftAddr;
             var postingAddr = PostingAddr;
+            var frequency = Frequency;
 
+            // the frequency travels with the value, see RotateRight
             Value = newLeft.Value;
             PostingAddr = newLeft.PostingAddr;
+            Frequency = newLeft.Frequency;
             LeftAddr = newLeft.Addr;
             RightAddr = newLeft.RightAddr;
 
             newLeft.Value = value;
             newLeft.PostingAddr = postingAddr;
+            newLeft.Frequency = frequency;
             newLeft.LeftAddr = leftAddr;
             newLeft.RightAddr = leftAddr1;
 

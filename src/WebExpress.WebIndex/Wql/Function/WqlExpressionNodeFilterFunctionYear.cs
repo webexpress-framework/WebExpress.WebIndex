@@ -1,67 +1,46 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
     /// <summary>
     /// WQL function that returns the year of the current date, optionally offset.
-    /// Usage: <c>attribute = year()</c> or <c>attribute = year(-1)</c>.
+    /// Usage: <c>attribute = year()</c> or <c>attribute = year(-1)</c>. A missing or
+    /// non-numeric offset counts as no shift.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
-    public class WqlExpressionNodeFilterFunctionYear<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
+    public class WqlExpressionNodeFilterFunctionYear<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
         where TIndexItem : IIndexItem
     {
+        /// <summary>
+        /// Returns the type of the computed value.
+        /// </summary>
+        public override Type ReturnType => typeof(double);
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public WqlExpressionNodeFilterFunctionYear()
-            : base("year")
+            : base("year", 0, 1)
         {
         }
 
         /// <summary>
-        /// Executes the function.
+        /// Computes the year of the current date, shifted by the offset in years.
         /// </summary>
+        /// <param name="arguments">The optional offset in years.</param>
         /// <returns>The year as a double value.</returns>
-        public override object Execute()
+        protected override object Evaluate(IReadOnlyList<object> arguments)
         {
-            var parameters = Parameters?.Select(x => x.GetValue());
-            var param = parameters?.FirstOrDefault();
-
             var year = DateTime.Now.Year;
+            var offset = ToNumber(Argument(arguments, 0));
 
-            if (param is not null)
+            if (offset.HasValue)
             {
-                year += Convert.ToInt32(param);
+                year += Convert.ToInt32(offset.Value);
             }
 
             return (double)year;
-        }
-
-        /// <summary>
-        /// Builds a LINQ expression that returns the current year at query evaluation time.
-        /// </summary>
-        /// <param name="param">The parameter expression (unused for this function).</param>
-        /// <returns>An expression that evaluates the current year, optionally offset by years.</returns>
-        public override Expression ToExpression(ParameterExpression param)
-        {
-            var nowProperty = typeof(DateTime).GetProperty(nameof(DateTime.Now))
-                ?? throw new InvalidOperationException("Failed to resolve DateTime.Now property during year() expression tree construction.");
-            var yearProperty = typeof(DateTime).GetProperty(nameof(DateTime.Year))
-                ?? throw new InvalidOperationException("Failed to resolve DateTime.Year property during year() expression tree construction.");
-            var addYearsMethod = typeof(DateTime).GetMethod(nameof(DateTime.AddYears), [typeof(int)])
-                ?? throw new InvalidOperationException("Failed to resolve DateTime.AddYears method during year() expression tree construction.");
-
-            Expression dateExpression = Expression.Property(null, nowProperty);
-            var offset = Parameters?.Select(x => x.GetValue()).FirstOrDefault();
-
-            if (offset is not null)
-            {
-                dateExpression = Expression.Call(dateExpression, addYearsMethod, Expression.Constant(Convert.ToInt32(offset)));
-            }
-
-            return Expression.Convert(Expression.Property(dateExpression, yearProperty), typeof(double));
         }
     }
 }

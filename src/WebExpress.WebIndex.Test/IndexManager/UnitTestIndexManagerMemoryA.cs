@@ -7,7 +7,6 @@ namespace WebExpress.WebIndex.Test.IndexManager
     /// <summary>
     /// Test class for testing the memory-based index manager.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexManagerMemoryA : UnitTestIndexManager<UnitTestIndexFixtureIndexA>
     {
         /// <summary>
@@ -35,6 +34,38 @@ namespace WebExpress.WebIndex.Test.IndexManager
             Assert.NotNull(IndexManager.GetIndexDocument<UnitTestIndexTestDocumentA>());
 
             // postconditions
+            Postconditions();
+        }
+
+        /// <summary>
+        /// Tests that every single-item change is reported with its kind and item, so a host
+        /// can replay it on another copy of the index, while a bulk re-index reports nothing.
+        /// </summary>
+        [Fact]
+        public async Task ChangedReportsMutations()
+        {
+            // arrange
+            Preconditions();
+            IndexManager.Create<UnitTestIndexTestDocumentA>(CultureInfo.GetCultureInfo("en"), IndexType.Memory);
+            var changes = new List<IndexChangedEventArgs>();
+            IndexManager.Changed += (_, e) => changes.Add(e);
+            var item = Fixture.TestData.First();
+
+            // act
+            IndexManager.ReIndex(Fixture.TestData.Skip(1));
+            IndexManager.Insert(item);
+            IndexManager.Update(item);
+            await IndexManager.DeleteAsync(item);
+            IndexManager.Delete<UnitTestIndexTestDocumentA>(null);
+            IndexManager.Clear<UnitTestIndexTestDocumentA>();
+
+            // validation
+            Assert.Equal([IndexChangeKind.Insert, IndexChangeKind.Update, IndexChangeKind.Delete, IndexChangeKind.Clear], changes.Select(x => x.Kind));
+            Assert.All(changes, x => Assert.Equal(typeof(UnitTestIndexTestDocumentA), x.ItemType));
+            Assert.Same(item, changes[0].Item);
+            Assert.Null(changes[3].Item);
+            Assert.Contains(typeof(UnitTestIndexTestDocumentA), IndexManager.DocumentTypes);
+
             Postconditions();
         }
 

@@ -54,22 +54,27 @@ namespace WebExpress.WebIndex.Test.Token
         /// <summary>
         /// Tests the analysis function of an supported language.
         /// </summary>
+        /// <param name="culture">The language or fallback culture selecting the analysis rules.</param>
+        /// <param name="ressource">The embedded sample text used to verify the complete pipeline.</param>
+        /// <param name="count">The expected token count after applying the shipped language resources.</param>
+        /// <param name="stopWords">The function words that must not survive analysis.</param>
         [Theory]
-        [InlineData("en", "JourneyThroughTheUniverse.en", 250)]
-        [InlineData("en", "InterstellarConversations.en", 169)]
-        [InlineData("de", "BotanischeBindungenMicrosReiseZuVerdantia.de", 392)]
-        [InlineData("de-DE", "BotanischeBindungenMicrosReiseZuVerdantia.de", 392)]
-        [InlineData("fr", "BotanischeBindungenMicrosReiseZuVerdantia.de", 716)]
-        public void Ressource(string culture, string ressource, int count)
+        [InlineData("en", "JourneyThroughTheUniverse.en", 247, "it", "or", "didn", "also")]
+        [InlineData("en", "InterstellarConversations.en", 169, "it", "or")]
+        [InlineData("de", "BotanischeBindungenMicrosReiseZuVerdantia.de", 379, "ab", "trotz", "bei", "da", "wenn", "obwohl")]
+        [InlineData("de-DE", "BotanischeBindungenMicrosReiseZuVerdantia.de", 379, "ab", "trotz", "bei", "da", "wenn", "obwohl")]
+        [InlineData("fr", "BotanischeBindungenMicrosReiseZuVerdantia.de", 715, "also")]
+        public void Ressource(string culture, string ressource, int count, params string[] stopWords)
         {
             // arrange
             var input = Fixture.GetRessource(ressource);
 
             // act
-            var tokens = Fixture.TokenAnalyzer.Analyze(input, CultureInfo.GetCultureInfo(culture));
+            var tokens = Fixture.TokenAnalyzer.Analyze(input, CultureInfo.GetCultureInfo(culture)).ToArray();
 
-            Assert.Equal(count, tokens.Count());
-            Assert.DoesNotContain(tokens.Select(x => x.Value), new object[] { "it", "or" });
+            // validation
+            Assert.Equal(count, tokens.Length);
+            Assert.DoesNotContain(tokens, token => token.Value is string value && stopWords.Contains(value));
         }
     }
 }

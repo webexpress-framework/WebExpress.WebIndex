@@ -7,7 +7,6 @@ namespace WebExpress.WebIndex.Test.DocumentStore
     /// <summary>
     /// Test class for testing the storage-based document store.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestDocumentStoreStorageC : UnitTestDocumentStore<UnitTestIndexFixtureIndexC>
     {
         /// <summary>

@@ -67,8 +67,11 @@ namespace WebExpress.WebIndex.Wql
         /// </summary>
         /// <param name="indexDocument">The index document.</param>
         /// <returns>The data from the index.</returns>
+        /// <exception cref="InvalidOperationException">The statement contains errors.</exception>
         public IQueryable<TIndexItem> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
+            ThrowIfErroneous();
+
             var filtered = Enumerable.Empty<TIndexItem>().AsQueryable();
 
             if (Filter is not null)
@@ -99,8 +102,27 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>
         /// An query that represents a query for retrieving indexed items.
         /// </returns>
+        /// <exception cref="InvalidOperationException">The statement contains errors.</exception>
         public IQuery<TIndexItem> ToQuery()
         {
+            return ToQuery(WqlQueryMode.Exact);
+        }
+
+        /// <summary>
+        /// Converts the current wql statement to a query for a specific kind of query provider.
+        /// </summary>
+        /// <param name="mode">
+        /// <see cref="WqlQueryMode.Translatable"/> for providers such as a database that cannot
+        /// run the text matcher of the index.
+        /// </param>
+        /// <returns>
+        /// An query that represents a query for retrieving indexed items.
+        /// </returns>
+        /// <exception cref="InvalidOperationException">The statement contains errors.</exception>
+        public IQuery<TIndexItem> ToQuery(WqlQueryMode mode)
+        {
+            ThrowIfErroneous();
+
             var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             // filter
@@ -111,6 +133,11 @@ namespace WebExpress.WebIndex.Wql
 
                 // build the expression tree for the filter condition 
                 var body = Filter.ToExpression(param);
+
+                if (mode == WqlQueryMode.Translatable)
+                {
+                    body = WqlExpressionBuilder.ToTranslatable(body);
+                }
 
                 // wrap into a lambda: x => <body> 
                 var lambda = Expression.Lambda<Func<TIndexItem, bool>>(body, param);
@@ -155,25 +182,49 @@ namespace WebExpress.WebIndex.Wql
 
             if (Partitioning is not null)
             {
-                int take = -1;
-                int skip = -1;
-
-                foreach (var function in Partitioning.PartitioningFunctions)
-                {
-                    if (function.Operator == WqlExpressionNodePartitioningOperator.Take)
-                    {
-                        take = function.Value;
-                    }
-                    else if (function.Operator == WqlExpressionNodePartitioningOperator.Skip)
-                    {
-                        skip = function.Value;
-                    }
-                }
-
-                query = query.WithPaging(take, skip);
+                query = FoldPartitioning(query);
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Transfers the skip and take functions to the query as one offset and an optional
+        /// limit. The functions are folded in the order they are written, through the same
+        /// <see cref="WqlExpressionNodePartitioning{TIndexItem}.Window"/> that the reverse
+        /// index path applies, so both execution paths cut out the same items.
+        /// </summary>
+        /// <param name="query">The query to page.</param>
+        /// <returns>The query with offset and limit applied.</returns>
+        private IQuery<TIndexItem> FoldPartitioning(IQuery<TIndexItem> query)
+        {
+            var (skip, take) = Partitioning.Window;
+
+            if (skip > 0)
+            {
+                query = query.WithSkip(skip);
+            }
+
+            if (take.HasValue)
+            {
+                query = query.WithTake(take.Value);
+            }
+
+            return query;
+        }
+
+        /// <summary>
+        /// Rejects the execution of a statement that contains errors. Such a statement is
+        /// incomplete, and running what was understood of it would answer another question
+        /// than the one asked.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The statement contains errors.</exception>
+        private void ThrowIfErroneous()
+        {
+            if (HasErrors)
+            {
+                throw new InvalidOperationException($"The WQL statement '{Raw}' contains errors and cannot be executed: {Error.Message}");
+            }
         }
 
         /// <summary>

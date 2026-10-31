@@ -1,7 +1,8 @@
 ﻿namespace WebExpress.WebIndex.Wql
 {
     /// <summary>
-    /// Represents a token of the wql syntax.
+    /// The standard <see cref="IWqlToken"/>: one syntactic unit of a WQL query (a word, operator,
+    /// or value) with its position and length in the raw query string.
     /// </summary>
     public class WqlToken : IWqlToken
     {

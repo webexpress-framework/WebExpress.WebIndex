@@ -7,7 +7,6 @@ namespace WebExpress.WebIndex.Test.IndexManager
     /// <summary>
     /// Test class for testing the memory-based index manager for unicode.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexManagerMemoryF : UnitTestIndexManager<UnitTestIndexFixtureIndexF>
     {
         /// <summary>

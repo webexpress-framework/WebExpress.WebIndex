@@ -17,8 +17,9 @@ namespace WebExpress.WebIndex.Storage
     {
         // file format constants
         private const string _extension = "wrn";
-        // increment this when the on-disk format changes
-        private const int _version = 1;
+        // increment this when the on-disk format changes; version 2: posting nodes carry the
+        // height of their AVL subtree (one byte more per node)
+        private const byte _version = 2;
 
         /// <summary>
         /// Gets the on-disk numeric tree.
@@ -53,27 +54,30 @@ namespace WebExpress.WebIndex.Storage
             var safeField = SanitizeFileName(Field?.Name ?? "field");
             FileName = Path.Combine(Context.IndexDirectory, $"{typeof(TIndexItem).Name}.{safeField}.{_extension}");
 
+            DiscardOutdatedFile(_extension, _version);
+
             var exists = File.Exists(FileName);
 
             // reuse a single storage context for all segments
             IndexFile = new IndexStorageFile(FileName);
             var storageContext = new IndexStorageContext(this);
 
-            Header = new IndexStorageSegmentHeader(storageContext)
+            IndexFile.Initialize(() =>
             {
-                Identifier = _extension,
-                Version = _version
-            };
-            Allocator = new IndexStorageSegmentAllocatorReverseIndex(storageContext);
-            Statistic = new IndexStorageSegmentStatistic(storageContext);
-            Numeric = new IndexStorageSegmentNumeric(storageContext);
+                Header = new IndexStorageSegmentHeader(storageContext)
+                {
+                    Identifier = _extension,
+                    Version = _version
+                };
+                Allocator = new IndexStorageSegmentAllocatorReverseIndex(storageContext);
+                Statistic = new IndexStorageSegmentStatistic(storageContext);
+                Numeric = new IndexStorageSegmentNumeric(storageContext);
 
-            Header.Initialization(exists);
-            Statistic.Initialization(exists);
-            Numeric.Initialization(exists);
-            Allocator.Initialization(exists);
-
-            IndexFile.Flush();
+                Header.Initialization(exists);
+                Statistic.Initialization(exists);
+                Numeric.Initialization(exists);
+                Allocator.Initialization(exists);
+            });
         }
 
         /// <summary>
@@ -87,7 +91,7 @@ namespace WebExpress.WebIndex.Storage
                 return;
             }
 
-            var value = Field.GetPropertyValue(item)?.ToString();
+            var value = Convert.ToString(Field.GetPropertyValue(item), Culture);
             var terms = Context.TokenAnalyzer.Analyze(value, Culture);
 
             Add(item, terms);
@@ -132,7 +136,7 @@ namespace WebExpress.WebIndex.Storage
             }
 
             var value = Field.GetPropertyValue(item);
-            var terms = Context.TokenAnalyzer.Analyze(value?.ToString(), Culture);
+            var terms = Context.TokenAnalyzer.Analyze(Convert.ToString(value, Culture), Culture);
 
             Delete(item, terms);
         }

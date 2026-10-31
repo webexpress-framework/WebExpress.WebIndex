@@ -5,7 +5,9 @@ using System.Text;
 namespace WebExpress.WebIndex.Storage
 {
     /// <summary>
-    /// Represents the header segment of the index storage.
+    /// The header at the very start of an on-disk index file. It stores the magic identifier
+    /// (three ASCII characters) and the file version, so the file can be recognized and its format
+    /// checked when the index is opened.
     /// </summary>
     public class IndexStorageSegmentHeader : IndexStorageSegment
     {
@@ -136,6 +138,34 @@ namespace WebExpress.WebIndex.Storage
 
             writer.Write(idBytes);
             writer.Write(Version);
+        }
+
+        /// <summary>
+        /// Reads the format version of an existing index file without opening it as an index.
+        /// The header is the first segment of every index file, so its bytes start the file.
+        /// </summary>
+        /// <param name="fileName">The path of the index file.</param>
+        /// <param name="identifier">The identifier the file is expected to carry.</param>
+        /// <returns>
+        /// The stored version, or null when the file is too short or carries another identifier -
+        /// such a file is no index of the expected kind, and only opening it reports why.
+        /// </returns>
+        public static byte? ReadVersion(string fileName, string identifier)
+        {
+            using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var buffer = new byte[SegmentSize];
+
+            if (stream.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false) < buffer.Length)
+            {
+                return null;
+            }
+
+            if (!string.Equals(Encoding.ASCII.GetString(buffer, 0, 3), identifier, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return buffer[3];
         }
 
         /// <summary>

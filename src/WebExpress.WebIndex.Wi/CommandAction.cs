@@ -166,7 +166,7 @@
                 CommandAction.OpenIndexField => "'attribute'",
                 CommandAction.CreateIndexFile => "'name'",
                 CommandAction.Export => "'file'",
-                CommandAction.Import => "'file'",
+                CommandAction.Import => "'file' [--replace]",
                 CommandAction.Insert => "'field1, field2, ...'",
                 CommandAction.Update => "'id' 'field1, field2, ...'",
                 CommandAction.Delete => "'id'",

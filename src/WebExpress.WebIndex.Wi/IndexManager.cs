@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Linq;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebIndex.Wi
@@ -12,8 +11,10 @@ namespace WebExpress.WebIndex.Wi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public IndexManager()
+        /// <param name="context">The storage location and indexing configuration.</param>
+        public IndexManager(IIndexContext context)
         {
+            Initialization(context);
         }
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace WebExpress.WebIndex.Wi
         }
 
         /// <summary>
-        /// Adds a item to the index.
+        /// Adds an item to the index.
         /// </summary>
         /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
         /// <param name="item">The data to be added to the index.</param>
@@ -67,6 +68,34 @@ namespace WebExpress.WebIndex.Wi
             var specificMethod = genericMethod.MakeGenericMethod(dataType);
 
             specificMethod.Invoke(this, [item]);
+        }
+
+        /// <summary>
+        /// Updates an item of the index.
+        /// </summary>
+        /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
+        /// <param name="item">The data to be updated in the index.</param>
+        public void Update(Type dataType, object item)
+        {
+            var genericMethod = typeof(IndexManager).GetMethods()
+                .Where(m => m.Name == "Update" && m.IsGenericMethodDefinition)
+                .First();
+            var specificMethod = genericMethod.MakeGenericMethod(dataType);
+
+            specificMethod.Invoke(this, [item]);
+        }
+
+        /// <summary>
+        /// Removes an item from the index.
+        /// </summary>
+        /// <param name="dataType">The data type. This must have the IIndexItem interface.</param>
+        /// <param name="id">The id of the item to remove.</param>
+        public void Delete(Type dataType, Guid id)
+        {
+            var genericMethod = typeof(IndexManager).GetMethod("Delete", 1, [typeof(Guid)]);
+            var specificMethod = genericMethod.MakeGenericMethod(dataType);
+
+            specificMethod.Invoke(this, [id]);
         }
 
         /// <summary>

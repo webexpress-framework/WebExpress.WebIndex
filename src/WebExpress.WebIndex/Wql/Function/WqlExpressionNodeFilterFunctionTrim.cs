@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 
 namespace WebExpress.WebIndex.Wql.Function
 {
@@ -9,49 +8,30 @@ namespace WebExpress.WebIndex.Wql.Function
     /// Usage: <c>attribute = trim('  value  ')</c> returns "value".
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the index item.</typeparam>
-    public class WqlExpressionNodeFilterFunctionTrim<TIndexItem> : WqlExpressionNodeFilterFunction<TIndexItem>
+    public class WqlExpressionNodeFilterFunctionTrim<TIndexItem> : WqlExpressionNodeFilterFunctionScalar<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        private static readonly System.Reflection.MethodInfo EvaluateMethod = typeof(WqlExpressionNodeFilterFunctionTrim<TIndexItem>)
-            .GetMethod(nameof(Evaluate), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            ?? throw new InvalidOperationException("Failed to resolve trim() runtime evaluator.");
+        /// <summary>
+        /// Returns the type of the computed value.
+        /// </summary>
+        public override Type ReturnType => typeof(string);
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public WqlExpressionNodeFilterFunctionTrim()
-            : base("trim")
+            : base("trim", 1, 1)
         {
         }
 
         /// <summary>
-        /// Executes the function.
+        /// Removes leading and trailing whitespace from the text.
         /// </summary>
-        /// <returns>The trimmed string value.</returns>
-        public override object Execute()
+        /// <param name="arguments">The text.</param>
+        /// <returns>The trimmed text, or null for a null value.</returns>
+        protected override object Evaluate(IReadOnlyList<object> arguments)
         {
-            var parameters = Parameters?.Select(x => x.GetValue());
-            var param = parameters?.FirstOrDefault();
-
-            return param?.ToString()?.Trim();
+            return ToText(Argument(arguments, 0))?.Trim();
         }
-
-        /// <summary>
-        /// Builds a LINQ expression that returns the trimmed first parameter value.
-        /// </summary>
-        /// <param name="param">The parameter expression representing the current index item.</param>
-        /// <returns>An expression that trims the first parameter value at query evaluation time.</returns>
-        public override Expression ToExpression(ParameterExpression param)
-        {
-            var valueExpression = Parameters?.FirstOrDefault()?.ToExpression(param) ?? Expression.Constant(null);
-            return Expression.Call(EvaluateMethod, Expression.Convert(valueExpression, typeof(object)));
-        }
-
-#nullable enable
-        private static string? Evaluate(object value)
-        {
-            return value?.ToString()?.Trim();
-        }
-#nullable restore
     }
 }
