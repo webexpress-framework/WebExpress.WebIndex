@@ -10,6 +10,7 @@ using WebExpress.WebIndex.Term;
 using WebExpress.WebIndex.Term.Pipeline;
 using WebExpress.WebIndex.Wql;
 using WebExpress.WebIndex.Wql.Function;
+using WebExpress.WebIndex.Wql.Predicate;
 
 [assembly: InternalsVisibleTo("WebExpress.WebIndex.Test")]
 
@@ -23,6 +24,7 @@ namespace WebExpress.WebIndex
     public abstract class IndexManager : IDisposable
     {
         private readonly HashSet<Type> _wqlFunctions = [];
+        private readonly Dictionary<(Type Item, string Name), object> _wqlPredicates = [];
         private readonly Dictionary<Type, IIndexDocument> _documents = [];
         private readonly Lock _syncDocs = new();
         private readonly Lock _syncWql = new();
@@ -158,6 +160,70 @@ namespace WebExpress.WebIndex
             {
                 _wqlFunctions.Add(typeof(TFunction));
             }
+        }
+
+        /// <summary>
+        /// Registers a WQL predicate for the statements over one item type: a function that stands
+        /// for a whole condition, such as within("SD-12"), and may bind state computed ahead. A
+        /// predicate of a name that is taken replaces the old one.
+        /// </summary>
+        /// <typeparam name="TIndexItem">The item type the predicate filters.</typeparam>
+        /// <param name="predicate">The predicate.</param>
+        public void RegisterWqlPredicate<TIndexItem>(IWqlPredicate<TIndexItem> predicate)
+            where TIndexItem : IIndexItem
+        {
+            ArgumentNullException.ThrowIfNull(predicate);
+            ArgumentException.ThrowIfNullOrWhiteSpace(predicate.Name);
+
+            lock (_syncWql)
+            {
+                _wqlPredicates[(typeof(TIndexItem), predicate.Name.ToLowerInvariant())] = predicate;
+            }
+        }
+
+        /// <summary>
+        /// Unregisters a WQL predicate of an item type.
+        /// </summary>
+        /// <typeparam name="TIndexItem">The item type the predicate filters.</typeparam>
+        /// <param name="name">The name of the predicate.</param>
+        public void RemoveWqlPredicate<TIndexItem>(string name)
+            where TIndexItem : IIndexItem
+        {
+            lock (_syncWql)
+            {
+                _wqlPredicates.Remove((typeof(TIndexItem), name?.ToLowerInvariant() ?? ""));
+            }
+        }
+
+        /// <summary>
+        /// Creates a parser that knows the registered functions and the predicates of the item type,
+        /// so a statement given as text may use them.
+        /// </summary>
+        /// <typeparam name="TIndexItem">The item type of the statement.</typeparam>
+        /// <returns>The parser.</returns>
+        public WqlParser<TIndexItem> CreateWqlParser<TIndexItem>()
+            where TIndexItem : IIndexItem
+        {
+            var parser = new WqlParser<TIndexItem>();
+            var register = typeof(WqlParser<TIndexItem>).GetMethod(nameof(WqlParser<TIndexItem>.RegisterFunction));
+
+            foreach (var function in WqlFunctions)
+            {
+                register.MakeGenericMethod(function).Invoke(parser, null);
+            }
+
+            IWqlPredicate<TIndexItem>[] predicates;
+            lock (_syncWql)
+            {
+                predicates = [.. _wqlPredicates.Where(x => x.Key.Item == typeof(TIndexItem)).Select(x => (IWqlPredicate<TIndexItem>)x.Value)];
+            }
+
+            foreach (var predicate in predicates)
+            {
+                parser.RegisterPredicate(predicate);
+            }
+
+            return parser;
         }
 
         /// <summary>
@@ -624,21 +690,7 @@ namespace WebExpress.WebIndex
                 return Enumerable.Empty<TIndexItem>().AsQueryable();
             }
 
-            var parser = new WqlParser<TIndexItem>();
-
-            foreach (var function in WqlFunctions)
-            {
-                var method = typeof(WqlParser<TIndexItem>).GetMethod("RegisterFunction");
-                if (method is null)
-                {
-                    continue;
-                }
-
-                var generic = method.MakeGenericMethod(function);
-                generic.Invoke(parser, null);
-            }
-
-            var statement = parser.Parse(wql);
+            var statement = CreateWqlParser<TIndexItem>().Parse(wql);
 
             return Retrieve(statement);
         }
@@ -701,21 +753,7 @@ namespace WebExpress.WebIndex
 
             return await Task.Run(() =>
             {
-                var parser = new WqlParser<TIndexItem>();
-
-                foreach (var function in WqlFunctions)
-                {
-                    var method = typeof(WqlParser<TIndexItem>).GetMethod("RegisterFunction");
-                    if (method is null)
-                    {
-                        continue;
-                    }
-
-                    var generic = method.MakeGenericMethod(function);
-                    generic.Invoke(parser, null);
-                }
-
-                var statement = parser.Parse(wql);
+                var statement = CreateWqlParser<TIndexItem>().Parse(wql);
 
                 return RetrieveAsync(statement);
             })

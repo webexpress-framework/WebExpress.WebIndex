@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using WebExpress.WebIndex.Wql.Condition;
 using WebExpress.WebIndex.Wql.Function;
+using WebExpress.WebIndex.Wql.Predicate;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -83,6 +84,11 @@ namespace WebExpress.WebIndex.Wql
         /// Returns registered functions keyed by their name.
         /// </summary>
         private IDictionary<string, Type> Functions { get; set; } = new SortedDictionary<string, Type>(new WqlParserLengthComparer());
+
+        /// <summary>
+        /// Returns the registered predicates by name.
+        /// </summary>
+        private Dictionary<string, IWqlPredicate<TIndexItem>> Predicates { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Returns the culture used for parsing numeric values.
@@ -427,10 +433,89 @@ namespace WebExpress.WebIndex.Wql
                 return filter;
             }
 
+            // a predicate is a whole condition: it is followed by no operator and no value
+            if (PeekFunctionCall(tokenQueue) && Predicates.TryGetValue(tokenQueue.Peek().Value ?? "", out var predicate))
+            {
+                return new WqlExpressionNodeFilter<TIndexItem>
+                {
+                    Condition = ParsePredicate(predicate, tokenQueue, ilaQueue, FilterFollowers(deep))
+                };
+            }
+
             return new WqlExpressionNodeFilter<TIndexItem>
             {
                 Condition = ParseCondition(tokenQueue, ilaQueue, errors, FilterFollowers(deep))
             };
+        }
+
+        /// <summary>
+        /// Parses the call of a predicate and binds it to its arguments.
+        /// </summary>
+        /// <param name="predicate">The called predicate.</param>
+        /// <param name="tokenQueue">The token queue.</param>
+        /// <param name="ilaQueue">The lookahead token queue.</param>
+        /// <param name="followers">The token types that may follow the completed call.</param>
+        /// <returns>The condition the call stands for.</returns>
+        private WqlExpressionNodeFilterConditionPredicate<TIndexItem> ParsePredicate(IWqlPredicate<TIndexItem> predicate, Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers)
+        {
+            var nameToken = ReadToken(tokenQueue);
+            var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
+
+            ilaQueue.Enqueue(new WqlLookaheadToken(nameToken, WqlExpressionType.Function)
+            {
+                ExpectedNextTokens = [WqlExpressionType.OpenParenthesis]
+            });
+
+            var openToken = ReadToken(tokenQueue, "(");
+            ilaQueue.Enqueue(new WqlLookaheadToken(openToken, WqlExpressionType.OpenParenthesis)
+            {
+                ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Quotation, WqlExpressionType.CloseParenthesis]
+            });
+
+            if (!PeekToken(tokenQueue, ")"))
+            {
+                parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
+
+                while (PeekToken(tokenQueue, ","))
+                {
+                    var separatorToken = ReadToken(tokenQueue, ",");
+                    ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
+                    {
+                        ExpectedNextTokens = [WqlExpressionType.Parameter]
+                    });
+
+                    parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
+                }
+            }
+
+            var closeToken = ReadToken(tokenQueue, ")")
+                ?? throw new WqlParseException("webexpress.webindex:wql.expected_close_parenthesis", nameToken);
+
+            ilaQueue.Enqueue(new WqlLookaheadToken(closeToken, WqlExpressionType.CloseParenthesis)
+            {
+                ExpectedNextTokens = followers
+            });
+
+            // the condition is bound once, at parse time, so an argument has to be known by then
+            if (parameters.Any(x => !x.IsConstant))
+            {
+                throw new WqlParseException("webexpress.webindex:wql.predicate_argument", nameToken);
+            }
+
+            var arguments = parameters.Select(x => x.GetValue()).ToArray();
+            System.Linq.Expressions.Expression<Func<TIndexItem, bool>> condition;
+
+            try
+            {
+                condition = predicate.Bind(arguments);
+            }
+            catch (Exception)
+            {
+                throw new WqlParseException("webexpress.webindex:wql.predicate_failed", nameToken);
+            }
+
+            return new WqlExpressionNodeFilterConditionPredicate<TIndexItem>(predicate.Name.ToLowerInvariant(), arguments, condition
+                ?? throw new WqlParseException("webexpress.webindex:wql.predicate_failed", nameToken));
         }
 
         /// <summary>
@@ -1952,6 +2037,29 @@ namespace WebExpress.WebIndex.Wql
         public void RemoveCondition(string op)
         {
             Conditions.Remove(op);
+        }
+
+        /// <summary>
+        /// Registers a predicate: a function that stands for a whole condition and may bind
+        /// state computed ahead. A predicate of a name that is taken replaces the old one, so a
+        /// predicate whose state changed is registered again.
+        /// </summary>
+        /// <param name="predicate">The predicate.</param>
+        public void RegisterPredicate(IWqlPredicate<TIndexItem> predicate)
+        {
+            ArgumentNullException.ThrowIfNull(predicate);
+            ArgumentException.ThrowIfNullOrWhiteSpace(predicate.Name);
+
+            Predicates[predicate.Name] = predicate;
+        }
+
+        /// <summary>
+        /// Removes a registered predicate by name.
+        /// </summary>
+        /// <param name="name">The predicate name.</param>
+        public void RemovePredicate(string name)
+        {
+            Predicates.Remove(name ?? "");
         }
 
         /// <summary>
