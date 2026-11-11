@@ -26,3 +26,5 @@ wql.option_not_applicable=Ähnlichkeit und Distanz gelten nur für Textsuchen.
 wql.text_required=Der Operator gilt nur für Textattribute.
 wql.invalid_is_value=Auf is und is not darf nur null folgen, bei booleschen Attributen auch true und false.
 wql.function_arity=Die Funktion wird mit einer unzulässigen Anzahl von Argumenten aufgerufen.
+wql.predicate_argument=Die Argumente der Funktion müssen Werte sein.
+wql.predicate_failed=Die Funktion kennt ihre Argumente nicht.

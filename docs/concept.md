@@ -1369,3 +1369,31 @@ public class WqlExpressionNodeFilterFunctionInitials<TIndexItem> : WqlExpression
 Functions written against the original contract, which implement `Execute` and `ToExpression` of 
 `WqlExpressionNodeFilterFunction<TIndexItem>` themselves, keep working and accept any number of 
 arguments. A function is registered in the `IndexManager`.
+
+### Predicate functions
+A scalar function computes a value that a condition compares. Set membership, such as "below this page" or
+"in this sprint", is no comparison of a value, so a predicate function stands for a whole condition:
+`within("SD-12")`, `within("SD-12") and state = 'open'`, `not within("SD-12")`. A predicate is
+registered as an instance, because it may bind state computed ahead, such as a set of ids or a key range, and
+it is bound once per parse with the values of its arguments, which have to be constants:
+
+```csharp
+var parser = new WqlParser<Issue>();
+parser.RegisterPredicate(new WqlPredicate<Issue>("within", arguments =>
+{
+    var ids = Hierarchy.Below((string)arguments[0]).ToList();
+
+    return x => ids.Contains(x.Id);
+}));
+```
+
+A class implements `IWqlPredicate<TIndexItem>` instead, with `Name` and `Bind(arguments)`. The
+bound expression runs in memory, in the index path (item by item) and, for a translatable query, in a
+database query provider. A predicate meant for all three keeps to what the provider can translate, such
+as the `Contains` of a list of ids. A call whose arguments the predicate cannot bind (it throws) or
+that passes an attribute is a parse error. Registering a name again replaces the predicate,
+`RemovePredicate(name)` removes it. A REST endpoint of WebApp reads the WQL of its clients with the parser
+from `CreateWqlParser()`, so it registers its predicates in an override of that method. A statement the
+`IndexManager` reads as text knows the predicates registered with
+`IndexManager.RegisterWqlPredicate<TIndexItem>(predicate)`, and `CreateWqlParser<TIndexItem>()` of the
+manager returns a parser with them and the registered functions.
