@@ -327,9 +327,35 @@ namespace WebExpress.WebIndex.Test.WQL
             var without = new WqlParser<UnitTestIndexTestDocumentA>().Analyze(wql);
 
             // validation
-            Assert.Contains(WqlExpressionType.Function, with.ExpectedNextTokens);
-            Assert.DoesNotContain(WqlExpressionType.Function, without.ExpectedNextTokens);
+            Assert.Contains(WqlExpressionType.Predicate, with.ExpectedNextTokens);
+            Assert.DoesNotContain(WqlExpressionType.Function, with.ExpectedNextTokens);
+            Assert.DoesNotContain(WqlExpressionType.Predicate, without.ExpectedNextTokens);
             Assert.Equal(["within"], Parser().PredicateNames);
+        }
+
+        /// <summary>
+        /// Tests that a predicate call is told from a scalar function call by its token type, so a
+        /// prompt offers each only where it may stand: a predicate where a condition starts, a
+        /// function where a value does, and neither among the constant arguments of a predicate.
+        /// </summary>
+        /// <param name="wql">The statement typed so far.</param>
+        /// <param name="type">The type of the last call name.</param>
+        /// <param name="expected">The token types expected after the statement.</param>
+        [Theory]
+        [InlineData("within('SD-12', ", WqlExpressionType.Predicate, new[] { WqlExpressionType.Parameter })]
+        [InlineData("text ~ concat(text, ", WqlExpressionType.Function, new[] { WqlExpressionType.Parameter, WqlExpressionType.Function })]
+        [InlineData("text ~ 'Bob' order by", null, new[] { WqlExpressionType.Attribute })]
+        public void LookaheadTellsPredicatesFromFunctions(string wql, WqlExpressionType? type, WqlExpressionType[] expected)
+        {
+            // act
+            var lookahead = Parser().Analyze(wql);
+            var call = lookahead.Items.LastOrDefault(x => x.ExpressionType is WqlExpressionType.Predicate or WqlExpressionType.Function);
+
+            // validation
+            Assert.Equal(type, call?.ExpressionType);
+            Assert.Equal(expected, lookahead.ExpectedNextTokens);
+            Assert.Contains("now", Parser().FunctionNames);
+            Assert.DoesNotContain("within", Parser().FunctionNames);
         }
     }
 }

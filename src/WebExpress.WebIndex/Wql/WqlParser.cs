@@ -97,11 +97,17 @@ namespace WebExpress.WebIndex.Wql
         public IEnumerable<string> PredicateNames => Predicates.Keys;
 
         /// <summary>
-        /// Returns the token types a condition may start with. A predicate call is offered as a
-        /// function only where one is registered, so a parser without predicates prompts as before.
+        /// Returns the names of the registered scalar functions, which a prompt offers where a
+        /// value may stand.
+        /// </summary>
+        public IEnumerable<string> FunctionNames => Functions.Keys;
+
+        /// <summary>
+        /// Returns the token types a condition may start with. A predicate call is offered only
+        /// where one is registered, so a parser without predicates prompts as before.
         /// </summary>
         private WqlExpressionType[] ConditionStarts => Predicates.Count > 0
-            ? [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis, WqlExpressionType.Function]
+            ? [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis, WqlExpressionType.Predicate]
             : [WqlExpressionType.Attribute, WqlExpressionType.OpenParenthesis];
 
         /// <summary>
@@ -477,12 +483,12 @@ namespace WebExpress.WebIndex.Wql
         {
             var nameToken = ReadToken(tokenQueue);
 
-            ilaQueue.Enqueue(new WqlLookaheadToken(nameToken, WqlExpressionType.Function)
+            ilaQueue.Enqueue(new WqlLookaheadToken(nameToken, WqlExpressionType.Predicate)
             {
                 ExpectedNextTokens = [WqlExpressionType.OpenParenthesis]
             });
 
-            var parameters = ParseArguments(tokenQueue, ilaQueue, followers);
+            var parameters = ParseArguments(tokenQueue, ilaQueue, followers, false);
 
             // the condition is bound once, at parse time, so an argument has to be known by then
             if (parameters.Any(x => !x.IsConstant))
@@ -554,8 +560,12 @@ namespace WebExpress.WebIndex.Wql
         /// <param name="tokenQueue">The token queue.</param>
         /// <param name="ilaQueue">The lookahead token queue.</param>
         /// <param name="followers">The token types that may follow the completed call.</param>
+        /// <param name="callable">
+        /// Whether an argument may be a function call. The arguments of a predicate are bound once,
+        /// at parse time, so they have to be constants and no call is offered among them.
+        /// </param>
         /// <returns>The arguments.</returns>
-        private List<WqlExpressionNodeParameter<TIndexItem>> ParseArguments(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers)
+        private List<WqlExpressionNodeParameter<TIndexItem>> ParseArguments(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue, WqlExpressionType[] followers, bool callable)
         {
             var parameters = new List<WqlExpressionNodeParameter<TIndexItem>>();
             var openToken = ReadToken(tokenQueue, "(");
@@ -575,7 +585,9 @@ namespace WebExpress.WebIndex.Wql
 
                     ilaQueue.Enqueue(new WqlLookaheadToken(separatorToken, WqlExpressionType.Separator)
                     {
-                        ExpectedNextTokens = [WqlExpressionType.Parameter, WqlExpressionType.Function]
+                        ExpectedNextTokens = callable
+                            ? [WqlExpressionType.Parameter, WqlExpressionType.Function]
+                            : [WqlExpressionType.Parameter]
                     });
 
                     parameters.Add(ParseParameter(tokenQueue, ilaQueue, true, ListFollowers));
@@ -1212,7 +1224,7 @@ namespace WebExpress.WebIndex.Wql
                 }
 
                 instance.Token = nameToken;
-                instance.Parameters = ParseArguments(tokenQueue, ilaQueue, followers);
+                instance.Parameters = ParseArguments(tokenQueue, ilaQueue, followers, true);
 
                 return instance;
             }

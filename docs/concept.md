@@ -1414,8 +1414,9 @@ A statement prints a call as written, `within('SD-12')`, in a form the parser re
 predicate has the form of an attribute name and may not be the name of a scalar function, which the
 predicate would hide; registering such a name throws, and so does registering a function under the
 name of a predicate. Registering a predicate name again replaces the predicate, `RemovePredicate(name)`
-removes it. The lookahead offers a predicate where a condition may start, and the names are listed by
-`PredicateNames`.
+removes it. The lookahead offers a predicate where a condition may start, as an expression of type
+`WqlExpressionType.Predicate`; a scalar function is of type `Function` and is offered where a value may
+stand. The names are listed by `PredicateNames` and `FunctionNames`.
 
 A statement the `IndexManager` reads as text knows the predicates registered with
 `IndexManager.RegisterWqlPredicate<TIndexItem>(predicate)`, and `CreateWqlParser<TIndexItem>()` of the
