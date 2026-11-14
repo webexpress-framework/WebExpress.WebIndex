@@ -100,7 +100,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentD>(CultureInfo.GetCultureInfo("en"), IndexType.Storage);
             IndexManager.ReIndex(Fixture.TestData);
 
-            var before = IndexManager.Retrieve<UnitTestIndexTestDocumentD>($"firstname = '{randomItem.FirstName}'");
+            var before = IndexManager.Retrieve<UnitTestIndexTestDocumentD>($"firstname = '{randomItem.FirstName}'").ToList();
             Assert.NotNull(before);
             Assert.True(before.Any());
 

@@ -109,7 +109,7 @@ namespace WebExpress.WebIndex.Test.IndexManager
             IndexManager.Create<UnitTestIndexTestDocumentC>(CultureInfo.GetCultureInfo("en"), IndexType.Storage);
             IndexManager.ReIndex(Fixture.TestData);
 
-            var before = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text.Split(' ').FirstOrDefault()}'");
+            var before = IndexManager.Retrieve<UnitTestIndexTestDocumentC>($"text = '{randomItem.Text.Split(' ').FirstOrDefault()}'").ToList();
             Assert.NotNull(before);
             Assert.NotEmpty(before);
 

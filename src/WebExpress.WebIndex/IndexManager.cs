@@ -25,6 +25,11 @@ namespace WebExpress.WebIndex
     {
         private readonly HashSet<Type> _wqlFunctions = [];
         private readonly Dictionary<(Type Item, string Name), object> _wqlPredicates = [];
+
+        // per item type the registrations a new parser receives, built once from the registered
+        // functions and predicates and dropped when one of them changes, so a parse pays no
+        // reflection; holds Action<WqlParser<TIndexItem>> of the key's item type
+        private readonly Dictionary<Type, Delegate> _wqlParserSetups = [];
         private readonly Dictionary<Type, IIndexDocument> _documents = [];
         private readonly Lock _syncDocs = new();
         private readonly Lock _syncWql = new();
@@ -156,9 +161,18 @@ namespace WebExpress.WebIndex
         public void RegisterWqlFunction<TFunction>()
             where TFunction : IWqlExpressionNodeFilterFunction, new()
         {
+            var name = new TFunction().Name?.ToLowerInvariant();
+
             lock (_syncWql)
             {
+                // a predicate of the name would hide the function from every condition
+                if (_wqlPredicates.Keys.Any(x => x.Name == name))
+                {
+                    throw new InvalidOperationException($"The WQL function '{name}' cannot be registered because a predicate of that name exists.");
+                }
+
                 _wqlFunctions.Add(typeof(TFunction));
+                _wqlParserSetups.Clear();
             }
         }
 
@@ -169,15 +183,21 @@ namespace WebExpress.WebIndex
         /// </summary>
         /// <typeparam name="TIndexItem">The item type the predicate filters.</typeparam>
         /// <param name="predicate">The predicate.</param>
+        /// <exception cref="ArgumentException">The name cannot be called, or a function carries it.</exception>
         public void RegisterWqlPredicate<TIndexItem>(IWqlPredicate<TIndexItem> predicate)
             where TIndexItem : IIndexItem
         {
             ArgumentNullException.ThrowIfNull(predicate);
             ArgumentException.ThrowIfNullOrWhiteSpace(predicate.Name);
 
+            // the parser knows the rules for a name and the functions it would collide with, the
+            // built-in ones included; a refused predicate fails here rather than on every parse
+            CreateWqlParser<TIndexItem>().RegisterPredicate(predicate);
+
             lock (_syncWql)
             {
                 _wqlPredicates[(typeof(TIndexItem), predicate.Name.ToLowerInvariant())] = predicate;
+                _wqlParserSetups.Remove(typeof(TIndexItem));
             }
         }
 
@@ -192,6 +212,7 @@ namespace WebExpress.WebIndex
             lock (_syncWql)
             {
                 _wqlPredicates.Remove((typeof(TIndexItem), name?.ToLowerInvariant() ?? ""));
+                _wqlParserSetups.Remove(typeof(TIndexItem));
             }
         }
 
@@ -204,26 +225,56 @@ namespace WebExpress.WebIndex
         public WqlParser<TIndexItem> CreateWqlParser<TIndexItem>()
             where TIndexItem : IIndexItem
         {
-            var parser = new WqlParser<TIndexItem>();
-            var register = typeof(WqlParser<TIndexItem>).GetMethod(nameof(WqlParser<TIndexItem>.RegisterFunction));
+            Action<WqlParser<TIndexItem>> setup;
 
-            foreach (var function in WqlFunctions)
-            {
-                register.MakeGenericMethod(function).Invoke(parser, null);
-            }
-
-            IWqlPredicate<TIndexItem>[] predicates;
             lock (_syncWql)
             {
-                predicates = [.. _wqlPredicates.Where(x => x.Key.Item == typeof(TIndexItem)).Select(x => (IWqlPredicate<TIndexItem>)x.Value)];
+                if (!_wqlParserSetups.TryGetValue(typeof(TIndexItem), out var cached))
+                {
+                    cached = CreateWqlParserSetup<TIndexItem>();
+                    _wqlParserSetups[typeof(TIndexItem)] = cached;
+                }
+
+                setup = (Action<WqlParser<TIndexItem>>)cached;
             }
 
-            foreach (var predicate in predicates)
-            {
-                parser.RegisterPredicate(predicate);
-            }
+            // every caller gets a parser of its own, since a caller may register more on it
+            var parser = new WqlParser<TIndexItem>();
+            setup(parser);
 
             return parser;
+        }
+
+        /// <summary>
+        /// Builds the registrations a new parser of an item type receives. The caller holds the
+        /// lock of the WQL registrations.
+        /// </summary>
+        /// <typeparam name="TIndexItem">The item type of the parser.</typeparam>
+        /// <returns>The registrations.</returns>
+        private Action<WqlParser<TIndexItem>> CreateWqlParserSetup<TIndexItem>()
+            where TIndexItem : IIndexItem
+        {
+            var register = typeof(WqlParser<TIndexItem>).GetMethod(nameof(WqlParser<TIndexItem>.RegisterFunction));
+            var parameter = System.Linq.Expressions.Expression.Parameter(typeof(WqlParser<TIndexItem>));
+            Action<WqlParser<TIndexItem>>[] functions = [.. _wqlFunctions.Select(x => System.Linq.Expressions.Expression.Lambda<Action<WqlParser<TIndexItem>>>
+            (
+                System.Linq.Expressions.Expression.Call(parameter, register.MakeGenericMethod(x)),
+                parameter
+            ).Compile())];
+            IWqlPredicate<TIndexItem>[] predicates = [.. _wqlPredicates.Where(x => x.Key.Item == typeof(TIndexItem)).Select(x => (IWqlPredicate<TIndexItem>)x.Value)];
+
+            return parser =>
+            {
+                foreach (var function in functions)
+                {
+                    function(parser);
+                }
+
+                foreach (var predicate in predicates)
+                {
+                    parser.RegisterPredicate(predicate);
+                }
+            };
         }
 
         /// <summary>
@@ -236,6 +287,7 @@ namespace WebExpress.WebIndex
             lock (_syncWql)
             {
                 _wqlFunctions.Remove(typeof(TFunction));
+                _wqlParserSetups.Clear();
             }
         }
 

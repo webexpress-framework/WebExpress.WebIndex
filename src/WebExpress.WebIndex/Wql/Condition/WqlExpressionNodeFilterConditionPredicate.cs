@@ -14,6 +14,8 @@ namespace WebExpress.WebIndex.Wql.Condition
         where TIndexItem : IIndexItem
     {
         private readonly Expression<Func<TIndexItem, bool>> _condition;
+        private readonly IReadOnlyList<WqlExpressionNodeParameter<TIndexItem>> _parameters;
+        private readonly IReadOnlySet<Guid> _ids;
 
         /// <summary>
         /// Gets the name the predicate was called by.
@@ -21,7 +23,7 @@ namespace WebExpress.WebIndex.Wql.Condition
         public string Name { get; }
 
         /// <summary>
-        /// Gets the argument values of the call.
+        /// Gets the argument values the predicate was bound with.
         /// </summary>
         public IReadOnlyList<object> Arguments { get; }
 
@@ -29,25 +31,29 @@ namespace WebExpress.WebIndex.Wql.Condition
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="name">The name the predicate was called by.</param>
-        /// <param name="arguments">The argument values of the call.</param>
+        /// <param name="parameters">The arguments as written, so the statement prints the call and not its values.</param>
+        /// <param name="arguments">The argument values the predicate was bound with.</param>
         /// <param name="condition">The bound condition.</param>
-        internal WqlExpressionNodeFilterConditionPredicate(string name, IReadOnlyList<object> arguments, Expression<Func<TIndexItem, bool>> condition)
+        /// <param name="ids">The ids the condition holds for, if the predicate names them; the index then answers without a scan.</param>
+        internal WqlExpressionNodeFilterConditionPredicate(string name, IReadOnlyList<WqlExpressionNodeParameter<TIndexItem>> parameters, IReadOnlyList<object> arguments, Expression<Func<TIndexItem, bool>> condition, IReadOnlySet<Guid> ids)
             : base(name, true)
         {
             Name = name;
             Arguments = arguments;
+            _parameters = parameters;
             _condition = condition;
+            _ids = ids;
         }
 
         /// <summary>
-        /// Evaluates the condition against every item of the index; a predicate brings no reverse
-        /// index of its own.
+        /// Returns the matching items. A predicate brings no reverse index of its own, so one
+        /// that does not name its ids is evaluated against every item.
         /// </summary>
         /// <param name="indexDocument">The index document.</param>
         /// <returns>The ids of the matching items.</returns>
         public override IEnumerable<Guid> Apply(IIndexDocument<TIndexItem> indexDocument)
         {
-            return Scan(indexDocument);
+            return _ids ?? Scan(indexDocument);
         }
 
         /// <summary>
@@ -61,20 +67,12 @@ namespace WebExpress.WebIndex.Wql.Condition
         }
 
         /// <summary>
-        /// Returns the call as written.
+        /// Returns the call as written, in the form the parser reads back.
         /// </summary>
         /// <returns>The call.</returns>
         public override string ToString()
         {
-            var arguments = Arguments.Select(x => x switch
-            {
-                null => "null",
-                string text => $"\"{text.Replace("\"", "\\\"")}\"",
-                IFormattable number => number.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
-                _ => x.ToString()
-            });
-
-            return $"{Name}({string.Join(", ", arguments)})";
+            return $"{Name}({string.Join(", ", _parameters.Select(x => x.ToString()))})";
         }
 
         /// <summary>

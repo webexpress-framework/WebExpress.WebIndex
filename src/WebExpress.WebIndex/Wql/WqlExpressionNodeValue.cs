@@ -105,6 +105,12 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The value expression as a string.</returns>
         public override string ToString()
         {
+            // a double prints a large integer rounded, so the number is printed as written
+            if (DecimalValue.HasValue)
+            {
+                return DecimalValue.Value.ToString(Culture);
+            }
+
             return GetValue() switch
             {
                 null => "null",

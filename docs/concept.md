@@ -1390,10 +1390,35 @@ parser.RegisterPredicate(new WqlPredicate<Issue>("within", arguments =>
 A class implements `IWqlPredicate<TIndexItem>` instead, with `Name` and `Bind(arguments)`. The
 bound expression runs in memory, in the index path (item by item) and, for a translatable query, in a
 database query provider. A predicate meant for all three keeps to what the provider can translate, such
-as the `Contains` of a list of ids. A call whose arguments the predicate cannot bind (it throws) or
-that passes an attribute is a parse error. Registering a name again replaces the predicate,
-`RemovePredicate(name)` removes it. A REST endpoint of WebApp reads the WQL of its clients with the parser
-from `CreateWqlParser()`, so it registers its predicates in an override of that method. A statement the
-`IndexManager` reads as text knows the predicates registered with
+as the `Contains` of a list of ids.
+
+A predicate whose condition is a set of ids implements `IWqlIdPredicate<TIndexItem>` with
+`BindIds(arguments)`, or is registered as a `WqlIdPredicate<TIndexItem>`. The index then answers the call
+with the set itself instead of reading and testing every item, and a query receives the `Contains` of
+the ids. Ids that no item carries match nothing:
+
+```csharp
+parser.RegisterPredicate(new WqlIdPredicate<Issue>("within", arguments => Hierarchy.Below((string)arguments[0])));
+```
+
+The arguments arrive as constants: a string as `string`, a whole number as `long`, any other number as
+`decimal`, `true` and `false` as `bool`, `null` as null and a function such as `today()` as its result.
+A narrower number is read with `Convert.ToInt32(arguments[0])`, since an unboxing cast fails. A call that
+passes an attribute is a parse error, and so is a call the predicate cannot bind: it throws an
+`ArgumentException`, or fails reading its arguments with an invalid cast, a format or overflow error, a
+missing key or a missing index. Any other exception, such as the timeout of a lookup, is no fault of the
+statement: `Parse` passes it on as a `WqlPredicateException` with the original as inner exception, rather
+than reporting an error that would read as an empty result.
+
+A statement prints a call as written, `within('SD-12')`, in a form the parser reads back. The name of a
+predicate has the form of an attribute name and may not be the name of a scalar function, which the
+predicate would hide; registering such a name throws, and so does registering a function under the
+name of a predicate. Registering a predicate name again replaces the predicate, `RemovePredicate(name)`
+removes it. The lookahead offers a predicate where a condition may start, and the names are listed by
+`PredicateNames`.
+
+A statement the `IndexManager` reads as text knows the predicates registered with
 `IndexManager.RegisterWqlPredicate<TIndexItem>(predicate)`, and `CreateWqlParser<TIndexItem>()` of the
-manager returns a parser with them and the registered functions.
+manager returns a parser with them and the registered functions. A REST endpoint of WebApp reads the WQL
+of its clients with the parser from `CreateWqlParser()`, which by default is the parser of the index
+manager; an endpoint registers predicates of its own in an override of that method.
