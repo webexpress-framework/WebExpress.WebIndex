@@ -76,7 +76,11 @@ namespace WebExpress.WebIndex.Wql
 
             if (Filter is not null)
             {
-                filtered = Filter.Apply(indexDocument).Select(x => indexDocument.DocumentStore.GetItem(x)).AsQueryable();
+                // an id set named by a predicate may hold ids no item carries any more
+                filtered = Filter.Apply(indexDocument)
+                    .Select(x => indexDocument.DocumentStore.GetItem(x))
+                    .Where(x => x is not null)
+                    .AsQueryable();
             }
             else
             {

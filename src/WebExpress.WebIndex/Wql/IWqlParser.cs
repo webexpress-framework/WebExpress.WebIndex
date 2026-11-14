@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebIndex.Wql.Condition;
 using WebExpress.WebIndex.Wql.Function;
+using WebExpress.WebIndex.Wql.Predicate;
 
 namespace WebExpress.WebIndex.Wql
 {
@@ -57,5 +58,18 @@ namespace WebExpress.WebIndex.Wql
         /// </summary>
         /// <param name="name">The function name to be derisgistrated.</param>
         void RemoveFunction(string name);
+
+        /// <summary>
+        /// Registers a predicate: a function that stands for a whole condition, such as
+        /// within("SD-12"), and may bind state computed ahead, such as a set of ids.
+        /// </summary>
+        /// <param name="predicate">The predicate.</param>
+        void RegisterPredicate(IWqlPredicate<TIndexItem> predicate);
+
+        /// <summary>
+        /// Removes a registered predicate by name.
+        /// </summary>
+        /// <param name="name">The predicate name.</param>
+        void RemovePredicate(string name);
     }
 }

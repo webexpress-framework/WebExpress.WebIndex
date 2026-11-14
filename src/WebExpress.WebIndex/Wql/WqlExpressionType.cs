@@ -78,6 +78,13 @@
         /// <summary>
         /// Represents the separator character used to delimit values.
         /// </summary>
-        Separator
+        Separator,
+
+        /// <summary>
+        /// Represents the name of a predicate call, which stands for a whole condition. It is a type
+        /// of its own, apart from a scalar function, because a predicate may stand only where a
+        /// condition starts, while a scalar function stands where a value does.
+        /// </summary>
+        Predicate
     }
 }
