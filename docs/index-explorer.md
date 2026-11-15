@@ -40,7 +40,7 @@ The resource contract requires matching keys and format placeholders in both lan
 
 ## Build and validation
 
-The application and its dedicated `WebExpress.WebIndex.WiUI.Test` project require Windows, .NET 10 and the `maui-windows` workload. The test project references the actual application project and exercises its services against isolated persisted indexes. It covers source immutability, CRUD, reverse postings, decimal culture handling, schema protection, WQL, completion, exports, query history, project migration and durable missing references.
+The application and its dedicated `WebExpress.WebIndex.WiUI.Test` project require Windows, .NET 11 and the `maui-windows` workload. The test project references the actual application project and exercises its services against isolated persisted indexes. It covers source immutability, CRUD, reverse postings, decimal culture handling, schema protection, WQL, completion, exports, query history, project migration and durable missing references.
 
 The managed WinUI build imports `src/ManagedWinUI.targets` after the SDK targets. This removes the native `GetVCInstallPath` dependency from the three XAML compilation pipelines for these C# projects. Windows App SDK 1.8 otherwise enumerates a missing MSVC directory when Visual Studio supplies `VsInstallRoot`, even though managed XAML does not use `vcmeta.dll`. No C++ compiler installation or machine-specific path is required for this managed build.
 
@@ -48,5 +48,5 @@ The following commands build and run the native test project from the repository
 
 ```powershell
 dotnet build src/WebExpress.WebIndex.WiUI.Test/WebExpress.WebIndex.WiUI.Test.csproj -c DebugLocal
-& src/WebExpress.WebIndex.WiUI.Test/bin/DebugLocal/net10.0-windows10.0.19041.0/win-x64/WebExpress.WebIndex.WiUI.Test.exe -noLogo
+& src/WebExpress.WebIndex.WiUI.Test/bin/DebugLocal/net11.0-windows10.0.19041.0/win-x64/WebExpress.WebIndex.WiUI.Test.exe -noLogo
 ```
