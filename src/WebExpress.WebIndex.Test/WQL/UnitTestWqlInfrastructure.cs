@@ -24,6 +24,13 @@ namespace WebExpress.WebIndex.Test.WQL
             AssertConverts(5d, typeof(int?), 5);
             AssertConverts(5.5d, typeof(decimal), 5.5m);
             AssertConverts(0.1d, typeof(decimal), 0.1m);
+            AssertConverts(0.1f, typeof(decimal), 0.1m);
+
+            // whole numbers keep their exact value; their shortest text (1.0000001E+10, 1E+23) does not
+            AssertConverts(10000001024f, typeof(long), 10000001024L);
+            AssertConverts(10000001024f, typeof(decimal), 10000001024m);
+            AssertConverts(1152921504606846976d, typeof(long), 1152921504606846976L);
+            AssertConverts(1e23, typeof(decimal), 99999999999999991611392m);
             AssertConverts("42", typeof(long), 42L);
             AssertConverts("4,2", typeof(decimal), 4.2m, CultureInfo.GetCultureInfo("de-DE"));
             AssertConverts(12m, typeof(byte), (byte)12);

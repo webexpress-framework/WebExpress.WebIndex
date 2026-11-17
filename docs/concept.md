@@ -448,7 +448,7 @@ every address after the first changed segment would point into the middle of ano
 |-------|---------|------------------------------------------------------------------------------------
 | `wds` | 1       | document store
 | `wrt` | 2       | term index; since version 2 each posting node stores the height of its subtree
-| `wrn` | 2       | numeric index; since version 2 each posting node stores the height of its subtree
+| `wrn` | 3       | numeric index; since version 2 each posting node stores the height of its subtree; since version 3 a key holds a whole number exactly and a fraction as its shortest round-trip value (0.1, not the binary 0.1000000000000000055511151231), the rule the WQL conversion follows
 
 A reverse index holds derived data only - every value it contains is in the document store as well. When a
 reverse index file of another version is opened, it is therefore not converted but discarded, created anew

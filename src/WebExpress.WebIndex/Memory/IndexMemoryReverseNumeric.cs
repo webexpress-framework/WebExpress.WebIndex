@@ -59,7 +59,10 @@ namespace WebExpress.WebIndex.Memory
         {
             foreach (var term in terms)
             {
-                Numeric = Numeric.AddAndBalance(item.Id, Convert.ToDecimal(term.Value, Culture));
+                if (IndexNumericConverter.TryToDecimal(term?.Value, Culture, out var value))
+                {
+                    Numeric = Numeric.AddAndBalance(item.Id, value);
+                }
             }
         }
 
@@ -112,7 +115,7 @@ namespace WebExpress.WebIndex.Memory
         /// <returns>An enumeration of the data ids.</returns>
         public override IEnumerable<Guid> Retrieve(object input, IndexRetrieveOptions options)
         {
-            if (decimal.TryParse(input?.ToString(), out decimal value))
+            if (IndexNumericConverter.TryToDecimal(input, Culture, out var value))
             {
                 return options.Method switch
                 {

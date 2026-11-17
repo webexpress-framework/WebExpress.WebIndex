@@ -398,5 +398,41 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
             reverseIndex.Dispose();
             Postconditions();
         }
+
+        /// <summary>
+        /// Tests that a fraction and a large whole number are found by the value a query writes:
+        /// WQL hands the index 0.1, not the binary expansion of the double the attribute holds,
+        /// and 10000001024 exactly, not its shortest text 1.0000001E+10.
+        /// </summary>
+        [Theory]
+        [InlineData("0.1", 0.1)]
+        [InlineData("0.3", 0.3)]
+        [InlineData("10000001024", 10000001024d)]
+        public void NumericEqualsTheWrittenNumber(string query, double price)
+        {
+            // arrange
+            Preconditions();
+            var reverseIndex = new IndexStorageReverseNumeric<UnitTestIndexTestDocumentB>(Context, FieldPrice, CultureInfo.GetCultureInfo("en"));
+            var items = new[] { 0.1, 0.3, 10000001024d }
+                .Select(x => new UnitTestIndexTestDocumentB { Id = Guid.NewGuid(), Price = x })
+                .ToList();
+
+            foreach (var item in items)
+            {
+                reverseIndex.Add(item);
+            }
+
+            // act
+            var byDecimal = reverseIndex.Retrieve(decimal.Parse(query, CultureInfo.InvariantCulture), new IndexRetrieveOptions() { Method = IndexRetrieveMethod.Phrase }).ToList();
+            var byDouble = reverseIndex.Retrieve(price, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.Phrase }).ToList();
+
+            // validation
+            Assert.Equal([items.Single(x => x.Price == price).Id], byDecimal);
+            Assert.Equal(byDecimal, byDouble);
+
+            // postconditions
+            reverseIndex.Dispose();
+            Postconditions();
+        }
     }
 }

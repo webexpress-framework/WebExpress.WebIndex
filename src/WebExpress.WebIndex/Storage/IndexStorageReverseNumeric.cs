@@ -18,8 +18,9 @@ namespace WebExpress.WebIndex.Storage
         // file format constants
         private const string _extension = "wrn";
         // increment this when the on-disk format changes; version 2: posting nodes carry the
-        // height of their AVL subtree (one byte more per node)
-        private const byte _version = 2;
+        // height of their AVL subtree (one byte more per node); version 3: a key holds a whole
+        // number exactly and a fraction as its shortest round-trip value (see IndexNumericConverter)
+        private const byte _version = 3;
 
         /// <summary>
         /// Gets the on-disk numeric tree.
@@ -112,7 +113,7 @@ namespace WebExpress.WebIndex.Storage
 
             foreach (var term in terms)
             {
-                if (!TryToDecimal(term?.Value, Culture, out var value))
+                if (!IndexNumericConverter.TryToDecimal(term?.Value, Culture, out var value))
                 {
                     continue;
                 }
@@ -156,7 +157,7 @@ namespace WebExpress.WebIndex.Storage
 
             foreach (var term in terms)
             {
-                if (!TryToDecimal(term?.Value, Culture, out var key))
+                if (!IndexNumericConverter.TryToDecimal(term?.Value, Culture, out var key))
                 {
                     continue;
                 }
@@ -221,7 +222,7 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>An enumerable of matching item ids.</returns>
         public override IEnumerable<Guid> Retrieve(object input, IndexRetrieveOptions options)
         {
-            if (!TryToDecimal(input, Culture, out var value))
+            if (!IndexNumericConverter.TryToDecimal(input, Culture, out var value))
             {
                 return [];
             }
@@ -253,144 +254,6 @@ namespace WebExpress.WebIndex.Storage
                         return [];
                     }
             }
-        }
-
-        /// <summary>
-        /// Attempts to convert an arbitrary token value to decimal using the provided culture.
-        /// Double/float infinities or NaN are rejected; strings are parsed with culture fallback to invariant.
-        /// </summary>
-        /// <param name="value">The token value (string or numeric).</param>
-        /// <param name="culture">The culture used for parsing strings.</param>
-        /// <param name="result">The decimal result if conversion succeeds.</param>
-        /// <returns>True if conversion succeeded; otherwise false.</returns>
-        private static bool TryToDecimal(object value, CultureInfo culture, out decimal result)
-        {
-            result = default;
-
-            if (value is null)
-            {
-                return false;
-            }
-
-            // fast-path numeric types
-            if (value is decimal dec)
-            {
-                result = dec;
-                return true;
-            }
-
-            if (value is double d)
-            {
-                if (double.IsNaN(d) || double.IsInfinity(d))
-                {
-                    return false;
-                }
-                try
-                {
-                    // convert double to decimal (may throw on overflow)
-                    result = Convert.ToDecimal(d);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-
-            if (value is float f)
-            {
-                if (float.IsNaN(f) || float.IsInfinity(f))
-                {
-                    return false;
-                }
-                try
-                {
-                    result = Convert.ToDecimal(f);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-
-            if (value is sbyte sb)
-            {
-                result = sb;
-                return true;
-            }
-
-            if (value is byte b)
-            {
-                result = b;
-                return true;
-            }
-
-            if (value is short s)
-            {
-                result = s;
-                return true;
-            }
-
-            if (value is ushort us)
-            {
-                result = us;
-                return true;
-            }
-
-            if (value is int i)
-            {
-                result = i;
-                return true;
-            }
-
-            if (value is uint ui)
-            {
-                result = ui;
-                return true;
-            }
-
-            if (value is long l)
-            {
-                result = l;
-                return true;
-            }
-
-            if (value is ulong ul)
-            {
-                try
-                {
-                    result = Convert.ToDecimal(ul);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-
-            // parse string with culture, then invariant fallback
-            var text = value.ToString();
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return false;
-            }
-
-            var ci = culture ?? CultureInfo.InvariantCulture;
-
-            if (decimal.TryParse(text, NumberStyles.Any, ci, out var parsed))
-            {
-                result = parsed;
-                return true;
-            }
-
-            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out parsed))
-            {
-                result = parsed;
-                return true;
-            }
-
-            return false;
         }
 
         /// <summary>
