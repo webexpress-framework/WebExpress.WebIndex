@@ -129,70 +129,60 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Adds an item to the store by serializing and chunking its payload.
+        /// Adds an item to the store by serializing and chunking its payload. An item whose id is
+        /// already stored is ignored, as in the memory store; replacing its data is the job of
+        /// <see cref="Update"/>.
         /// </summary>
         /// <param name="item">The item to add.</param>
         public void Add(TIndexItem item)
         {
-            if (item is null)
+            if (item is null || HashMap.GetBucket(item.Id).Any(x => x.Id == item.Id))
             {
                 return;
             }
 
             var chunkSize = (int)IndexStorageSegmentChunk.ChunkSize;
-            var json = JsonSerializer.Serialize(item);
-            var bytes = CompressString(json);
-            IIndexStorageSegmentChunk previousSegment = null;
+            var bytes = CompressString(JsonSerializer.Serialize(item));
 
-            // flag to detect whether we wrote any link update (multi-chunk write path)
-            var wroteLinkedSegments = false;
-
-            for (int i = 0; i < bytes.Length; i += chunkSize)
+            var segment = new IndexStorageSegmentItem(StorageContext, Allocator.Alloc(IndexStorageSegmentItem.SegmentSize))
             {
-                var chunk = bytes.Skip(i).Take(chunkSize).ToArray();
-                IIndexStorageSegmentChunk segment;
+                Id = item.Id,
+                DataChunk = bytes.Take(chunkSize).ToArray()
+            };
 
-                if (i == 0)
+            var chunks = new List<IndexStorageSegmentChunk>();
+            IIndexStorageSegmentChunk previous = segment;
+
+            for (var i = chunkSize; i < bytes.Length; i += chunkSize)
+            {
+                var chunk = new IndexStorageSegmentChunk(StorageContext, Allocator.Alloc(IndexStorageSegmentChunk.SegmentSize))
                 {
-                    // first segment is the item header segment
-                    segment = new IndexStorageSegmentItem(StorageContext, Allocator.Alloc(IndexStorageSegmentItem.SegmentSize))
-                    {
-                        Id = item.Id,
-                        DataChunk = chunk
-                    };
+                    DataChunk = bytes.Skip(i).Take(chunkSize).ToArray()
+                };
 
-                    // add to hash map; if actually added, update statistics
-                    if (HashMap.Add(segment as IndexStorageSegmentItem) == segment)
-                    {
-                        Statistic.Count++;
-                        IndexFile.Write(Statistic);
-                    }
-                }
-                else
-                {
-                    // subsequent chunk segments
-                    segment = new IndexStorageSegmentChunk(StorageContext, Allocator.Alloc(IndexStorageSegmentChunk.SegmentSize))
-                    {
-                        DataChunk = chunk
-                    };
-
-                    // link from previous to current
-                    previousSegment.NextChunkAddr = segment.Addr;
-
-                    // write updated previous and new segment
-                    IndexFile.Write(previousSegment);
-                    IndexFile.Write(segment);
-                    wroteLinkedSegments = true;
-                }
-
-                previousSegment = segment;
+                previous.NextChunkAddr = chunk.Addr;
+                IndexFile.Write(chunk);
+                chunks.Add(chunk);
+                previous = chunk;
             }
 
-            // write the single (first) segment if there was only one loop iteration (no links written)
-            if (!wroteLinkedSegments && previousSegment is not null)
+            // the chunks are complete before the item becomes reachable through the hash map,
+            // so a concurrent reader never follows a link into a chunk that is not yet written
+            if (HashMap.Add(segment) != segment)
             {
-                IndexFile.Write(previousSegment);
+                // another add of the same id won the race between the check above and the insert
+                foreach (var chunk in chunks)
+                {
+                    Allocator.Free(chunk);
+                }
+
+                Allocator.Free(segment);
+
+                return;
             }
+
+            Statistic.Count++;
+            IndexFile.Write(Statistic);
         }
 
         /// <summary>

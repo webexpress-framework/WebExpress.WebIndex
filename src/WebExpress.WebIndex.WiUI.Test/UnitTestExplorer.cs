@@ -38,7 +38,7 @@ public sealed class UnitTestExplorer : IDisposable
         Assert.Same(original, repeated);
         var first = original[0];
         var id = (Guid)ExplorerTable.Value(first, "Id")!;
-        session.Save(ExplorerTable.Json([first]).TrimStart('[').TrimEnd(']'), id);
+        session.Save(ExplorerTable.Json((object[])[first]).TrimStart('[').TrimEnd(']'), id);
         var saved = session.Query("", TestContext.Current.CancellationToken);
         Assert.NotSame(original, saved);
         session.Delete(id);
@@ -214,9 +214,9 @@ public sealed class UnitTestExplorer : IDisposable
         // arrange
         var rows = new object[] { new ExplorerTestItem { Rank = 10, Name = "=SUM(1,2)", Address = new ExplorerTestAddress { City = "Berlin" } }, new ExplorerTestItem { Rank = 2, Name = "a,\"b\"\nc" } };
         // act
-        var sorted = ExplorerTable.Select(rows, ["Name", "Rank"], "", "Rank", false);
-        var filtered = ExplorerTable.Select(rows, ["Address.City"], "berlin", null, false);
-        var csv = ExplorerTable.Csv(rows, ["Name", "Rank"]);
+        var sorted = ExplorerTable.Select(rows, (string[])["Name", "Rank"], "", "Rank", false);
+        var filtered = ExplorerTable.Select(rows, (string[])["Address.City"], "berlin", null, false);
+        var csv = ExplorerTable.Csv(rows, (string[])["Name", "Rank"]);
         // validation
         Assert.Equal(2, ExplorerTable.Value(sorted[0], "Rank"));
         Assert.Single(filtered);

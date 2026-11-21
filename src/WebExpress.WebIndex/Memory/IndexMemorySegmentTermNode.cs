@@ -235,13 +235,25 @@ namespace WebExpress.WebIndex.Memory
                         }
                         break;
                     case '*':
-                        // the "*" itself stands for any run of characters at the current
-                        // node, so the pattern is anchored with a leading ".*" and the
-                        // escaped remainder must match the end of the suffix
+                        // the "*" stands for any run of characters after this node, so the
+                        // pattern is matched against the suffix that follows it
                         var pattern = "^.*" + Regex.Escape(next ?? "").Replace("\\*", ".*").Replace("\\?", ".") + "$";
+
+                        // Terms omits a node that ends a term but has children, since the
+                        // parent reports it; here the node itself is a candidate with an empty
+                        // suffix ("alpha*" has to find "alpha" next to "alphabet")
+                        if (!IsRoot && Postings is not null && Children.Count != 0 && Regex.IsMatch("", pattern, RegexOptions.CultureInvariant))
+                        {
+                            yield return this;
+                        }
+
+                        // the term strings start with this node's own character, which the
+                        // descent already consumed
+                        var consumed = IsRoot ? 0 : 1;
+
                         foreach (var termTuple in Terms)
                         {
-                            if (Regex.IsMatch(termTuple.Item1, pattern, RegexOptions.CultureInvariant))
+                            if (Regex.IsMatch(termTuple.Item1[consumed..], pattern, RegexOptions.CultureInvariant))
                             {
                                 yield return termTuple.Item2;
                             }

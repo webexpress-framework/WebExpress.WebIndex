@@ -17,10 +17,8 @@ namespace WebExpress.WebIndex.Storage
     {
         // file format constants
         private const string _extension = "wrn";
-        // increment this when the on-disk format changes; version 2: posting nodes carry the
-        // height of their AVL subtree (one byte more per node); version 3: a key holds a whole
-        // number exactly and a fraction as its shortest round-trip value (see IndexNumericConverter)
-        private const byte _version = 3;
+        // increment this when the on-disk format changes
+        private const byte _version = 1;
 
         /// <summary>
         /// Gets the on-disk numeric tree.

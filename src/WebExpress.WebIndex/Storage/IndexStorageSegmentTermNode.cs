@@ -182,12 +182,10 @@ namespace WebExpress.WebIndex.Storage
                 var first = subterm.FirstOrDefault();
                 var next = subterm.Length > 1 ? subterm[1..] : null;
 
-                // find nodes
                 foreach (var child in Children)
                 {
                     if (first == child.Character)
                     {
-                        // recursive descent
                         return child[next];
                     }
                 }
@@ -213,17 +211,14 @@ namespace WebExpress.WebIndex.Storage
                 var first = subterm.FirstOrDefault();
                 var next = subterm.Length > 1 ? subterm[1..] : null;
 
-                // find existing nodes
                 foreach (var child in Children)
                 {
                     if (first == child.Character)
                     {
-                        // recursive descent
                         return child.Add(next);
                     }
                 }
 
-                // add new node
                 var node = new IndexStorageSegmentTermNode(Context, Context.Allocator.Alloc(SegmentSize))
                 {
                     Character = first
@@ -239,8 +234,12 @@ namespace WebExpress.WebIndex.Storage
         /// Adds a posting (document id) to this term. Creates the posting tree if missing.
         /// </summary>
         /// <param name="id">The document id to add.</param>
+        /// <param name="inserted">
+        /// True when the document was not yet posted for this term, so that the caller counts a
+        /// term repeated in one document only once.
+        /// </param>
         /// <returns>The posting node segment added or found.</returns>
-        public IndexStorageSegmentPostingNode AddPosting(Guid id)
+        public IndexStorageSegmentPostingNode AddPosting(Guid id, out bool inserted)
         {
             var item = default(IndexStorageSegmentPostingNode);
 
@@ -248,6 +247,7 @@ namespace WebExpress.WebIndex.Storage
             {
                 if (PostingAddr == 0)
                 {
+                    inserted = true;
                     PostingAddr = Context.Allocator.Alloc(IndexStorageSegmentPostingNode.SegmentSize);
                     item = new IndexStorageSegmentPostingNode(Context, PostingAddr)
                     {
@@ -263,7 +263,7 @@ namespace WebExpress.WebIndex.Storage
                 {
                     // the tree balances itself on the way up and may come back with another
                     // root, which is then the one this term has to point at
-                    var root = Posting.Insert(id, out item, out var inserted);
+                    var root = Posting.Insert(id, out item, out inserted);
 
                     if (inserted)
                     {
@@ -435,7 +435,6 @@ namespace WebExpress.WebIndex.Storage
                 {
                     case '?':
                         {
-                            // find nodes
                             foreach (var child in Children)
                             {
                                 foreach (var node in child.GetLeafs(next))
@@ -447,13 +446,25 @@ namespace WebExpress.WebIndex.Storage
                         }
                     case '*':
                         {
-                            // the "*" itself stands for any run of characters at the
-                            // current node, so the pattern is anchored with a leading
-                            // ".*" and the escaped remainder must match the suffix end
+                            // the "*" stands for any run of characters after this node, so
+                            // the pattern is matched against the suffix that follows it
                             var pattern = "^.*" + Regex.Escape(next ?? "").Replace("\\*", ".*").Replace("\\?", ".") + "$";
+
+                            // Terms omits a node that ends a term but has children, since the
+                            // parent reports it; here the node itself is a candidate with an
+                            // empty suffix ("alpha*" has to find "alpha" next to "alphabet")
+                            if (!IsRoot && PostingAddr != 0 && ChildAddr != 0 && Regex.IsMatch("", pattern, RegexOptions.CultureInvariant))
+                            {
+                                yield return this;
+                            }
+
+                            // the term strings start with this node's own character, which the
+                            // descent already consumed
+                            var consumed = IsRoot ? 0 : 1;
+
                             foreach (var termTuple in Terms)
                             {
-                                if (Regex.IsMatch(termTuple.Item1, pattern, RegexOptions.CultureInvariant))
+                                if (Regex.IsMatch(termTuple.Item1[consumed..], pattern, RegexOptions.CultureInvariant))
                                 {
                                     yield return termTuple.Item2;
                                 }
@@ -462,12 +473,10 @@ namespace WebExpress.WebIndex.Storage
                         }
                     default:
                         {
-                            // find nodes
                             foreach (var child in Children)
                             {
                                 if (first == child.Character)
                                 {
-                                    // recursive descent
                                     foreach (var node in child.GetLeafs(next))
                                     {
                                         yield return node;

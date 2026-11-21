@@ -21,9 +21,8 @@ namespace WebExpress.WebIndex.Test.Storage
         }
 
         /// <summary>
-        /// The reverse index files are written in their current format: the term index in
-        /// version 2, whose posting nodes carry their subtree height, the numeric index in
-        /// version 3, whose keys hold the written value of a fraction.
+        /// The reverse index files are written in their current format, version 1 for both
+        /// the term and the numeric index.
         /// </summary>
         [Fact]
         public void ReverseIndexesWriteCurrentVersion()
@@ -35,8 +34,8 @@ namespace WebExpress.WebIndex.Test.Storage
             }
 
             // validation
-            Assert.Equal((byte)2, IndexStorageSegmentHeader.ReadVersion(ReverseFile("wrt"), "wrt"));
-            Assert.Equal((byte)3, IndexStorageSegmentHeader.ReadVersion(ReverseFile("wrn"), "wrn"));
+            Assert.Equal((byte)1, IndexStorageSegmentHeader.ReadVersion(ReverseFile("wrt"), "wrt"));
+            Assert.Equal((byte)1, IndexStorageSegmentHeader.ReadVersion(ReverseFile("wrn"), "wrn"));
         }
 
         /// <summary>
@@ -44,8 +43,8 @@ namespace WebExpress.WebIndex.Test.Storage
         /// is discarded and restored from the document store, so the index answers as before.
         /// </summary>
         [Theory]
-        [InlineData("wrt", "Text = 'alpha'", 2)]
-        [InlineData("wrn", "Count = 5", 3)]
+        [InlineData("wrt", "Text = 'alpha'", 1)]
+        [InlineData("wrn", "Count = 5", 1)]
         public void OutdatedReverseIndexIsRebuiltFromDocumentStore(string extension, string wql, byte current)
         {
             // arrange
@@ -140,6 +139,50 @@ namespace WebExpress.WebIndex.Test.Storage
 
             // validation
             Assert.Equal(alpha.Id, Assert.Single(items).Id);
+        }
+
+        /// <summary>
+        /// A reverse index file cut off before its header reached the disk - a crash right after
+        /// the file was created - is discarded and restored from the document store instead of
+        /// failing to open on every start. A rebuild marker left next to it changes nothing.
+        /// </summary>
+        [Theory]
+        [InlineData("wrt", "Text = 'alpha'", 0, false)]
+        [InlineData("wrt", "Text = 'alpha'", 2, true)]
+        [InlineData("wrn", "Count = 5", 0, true)]
+        [InlineData("wrn", "Count = 5", 3, false)]
+        public void TruncatedReverseIndexIsRebuilt(string extension, string wql, int length, bool marker)
+        {
+            // arrange
+            var alpha = new FormatDocument() { Id = Guid.NewGuid(), Text = "alpha", Count = 5 };
+
+            using (var manager = CreateManager())
+            {
+                manager.Insert(alpha);
+                manager.Insert(new FormatDocument() { Id = Guid.NewGuid(), Text = "beta", Count = 7 });
+            }
+
+            using (var stream = new FileStream(ReverseFile(extension), FileMode.Open, FileAccess.Write))
+            {
+                stream.SetLength(length);
+            }
+
+            if (marker)
+            {
+                File.WriteAllBytes(RebuildMarker(extension), []);
+            }
+
+            // act
+            List<FormatDocument> items;
+
+            using (var reopened = CreateManager())
+            {
+                items = [.. reopened.Retrieve<FormatDocument>(wql)];
+            }
+
+            // validation
+            Assert.Equal(alpha.Id, Assert.Single(items).Id);
+            Assert.False(File.Exists(RebuildMarker(extension)));
         }
 
         /// <summary>

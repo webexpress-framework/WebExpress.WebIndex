@@ -47,11 +47,15 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Increments the counter.
+        /// Ages the entry by one maintenance tick. The counter stops at zero, so an idle entry
+        /// stays the oldest instead of wrapping around to the freshest value.
         /// </summary>
-        public void IncrementCounter()
+        public void Age()
         {
-            _counter--;
+            if (_counter > 0)
+            {
+                _counter--;
+            }
         }
 
         /// <summary>

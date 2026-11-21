@@ -360,6 +360,10 @@ namespace WebExpress.WebIndex.Storage
                     }
                 }
             }
+
+            // the set guards the current path against cycles only; sibling properties of the
+            // same type still contribute their nested fields
+            processedTypes.Remove(type);
         }
 
         /// <summary>

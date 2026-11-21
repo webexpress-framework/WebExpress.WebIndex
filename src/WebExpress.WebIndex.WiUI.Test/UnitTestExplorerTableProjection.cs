@@ -25,7 +25,7 @@ public class UnitTestExplorerTableProjection
         Assert.Equal(2, ExplorerTable.Value(reversed[0], "Rank"));
         Assert.Single(projection.Select(rows, ["Name"], "alpha", null, false));
         Assert.Empty(projection.Select(rows, ["Rank"], "alpha", null, false));
-        Assert.Single(projection.Select([rows[0]], ["Name"], "", null, false));
+        Assert.Single(projection.Select((object[])[rows[0]], ["Name"], "", null, false));
         Assert.Same(rows, projection.Select(rows, ["Name"], "", null, false));
     }
 }
