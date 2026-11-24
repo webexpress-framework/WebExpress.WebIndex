@@ -1178,6 +1178,24 @@ the internationalization files. Besides syntax errors, the following is reported
 A statement with errors cannot be executed: `Apply()` and `ToQuery()` throw an 
 `InvalidOperationException`, and `IndexManager.Retrieve` returns an empty result.
 
+## Limits
+A statement usually comes from a search field or a query parameter, that is from the network.
+The parser descends recursively, and so do the evaluation and the translation of the parsed
+tree; a stack overflow cannot be caught in .NET and ends the whole server process. The parser
+therefore refuses a statement beyond the following limits with an ordinary error, before the
+recursive descent starts. `Parse` and `Analyze` apply them alike.
+
+| Property              | Default | Error key             | Bounds
+|-----------------------|---------|-----------------------|-------------------------------------------------------
+| `MaxInputLength`      | 16384   | `wql.too_long`        | the characters of the statement
+| `MaxNestingDepth`     | 32      | `wql.too_deep`        | nested parentheses: groups, function calls, value lists
+| `MaxLogicalOperators` | 256     | `wql.too_complex`     | `and`, `or`, `not` (`&`, `||`); a chain is as deep as it is long
+
+The content of a quoted value is data and counts against none of them. An application that needs
+longer statements - a long `in` list, say - raises the limit on the parser it creates.
+Keywords are matched independently of the current culture, so `IN` and `IS` are recognized
+under a Turkish culture as well.
+
 ## Execution paths
 A statement can be executed in two ways, which return the same items:
 
