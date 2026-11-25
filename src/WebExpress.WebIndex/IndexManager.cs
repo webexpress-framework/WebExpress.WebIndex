@@ -456,8 +456,18 @@ namespace WebExpress.WebIndex
 
             if (document is not null)
             {
-                document.Drop();
                 document.SchemaChanged -= OnSchemaChanged;
+
+                // the document was unregistered but never released, so whatever the files did not
+                // own - buffers, the stores' handles - stayed open with nobody left to close them
+                try
+                {
+                    document.Drop();
+                }
+                finally
+                {
+                    document.Dispose();
+                }
             }
         }
 
@@ -484,8 +494,15 @@ namespace WebExpress.WebIndex
 
             if (document is not null)
             {
-                await document.DropAsync()
-                    .ConfigureAwait(false);
+                try
+                {
+                    await document.DropAsync()
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    document.Dispose();
+                }
             }
         }
 
