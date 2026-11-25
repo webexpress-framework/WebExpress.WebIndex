@@ -273,7 +273,16 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="reader">The binary reader.</param>
         public override void Read(BinaryReader reader)
         {
-            BucketCount = reader.ReadUInt32();
+            var bucketCount = reader.ReadUInt32();
+
+            // a damaged or foreign file is refused here: no buckets made every lookup divide by
+            // zero, and a count past what an address can reach sent the reads anywhere
+            if (bucketCount == 0 || bucketCount > uint.MaxValue / IndexStorageSegmentBucket.SegmentSize)
+            {
+                throw new InvalidDataException($"The index file holds an invalid bucket count ({bucketCount}).");
+            }
+
+            BucketCount = bucketCount;
         }
 
         /// <summary>
