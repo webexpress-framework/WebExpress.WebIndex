@@ -93,7 +93,7 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// <param name="project">The project receiving new references.</param>
         public static void Discover(Project project)
         {
-            if (project.IsDiscovered || !Directory.Exists(project.IndexPath)) return;
+            if (project.IsDiscovered || IsRemote(project.IndexPath) || !Directory.Exists(project.IndexPath)) return;
             foreach (var path in Directory.EnumerateFiles(project.IndexPath!, "*.ws").Order()) LinkIndex(project, path);
             project.IsDiscovered = true;
         }
@@ -130,6 +130,22 @@ namespace WebExpress.WebIndex.WiUI.Model
         /// <summary>Requires both schema and document store before enabling a file reference.</summary>
         /// <param name="index">The reference to inspect.</param>
         /// <returns>Whether the required files currently exist.</returns>
-        public static bool IsAvailable(ProjectIndex index) => File.Exists(index.Path) && File.Exists(Path.ChangeExtension(index.Path, ".wds"));
+        public static bool IsAvailable(ProjectIndex index) => !IsRemote(index.Path) && File.Exists(index.Path) && File.Exists(Path.ChangeExtension(index.Path, ".wds"));
+
+        /// <summary>
+        /// Tells whether a stored path names a network location.
+        /// </summary>
+        /// <remarks>
+        /// The paths of the project list are probed on every start without asking. Probing a
+        /// UNC path makes windows sign in to that host with the user's credentials, so a project
+        /// list planted or synced from elsewhere leaked them to any host it named. Such paths are
+        /// not probed; they are reported as unavailable.
+        /// </remarks>
+        /// <param name="path">The path.</param>
+        /// <returns>True for a UNC or device path.</returns>
+        public static bool IsRemote(string? path)
+        {
+            return !string.IsNullOrEmpty(path) && (path.StartsWith(@"\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal));
+        }
     }
 }

@@ -156,6 +156,21 @@ public sealed class UnitTestProjectService : IDisposable
         }
     }
 
+    /// <summary>Never probes a network path of a stored project, which would sign in to that host.</summary>
+    [Theory]
+    [InlineData(@"\\attacker\share\index.ws", true)]
+    [InlineData(@"\\?\UNC\attacker\share\index.ws", true)]
+    [InlineData("//attacker/share/index.ws", true)]
+    [InlineData(@"C:\data\index.ws", false)]
+    public void IsAvailable_DoesNotProbeNetworkPaths(string path, bool remote)
+    {
+        // act
+        var available = ProjectService.IsAvailable(new ProjectIndex { Path = path });
+        // validation
+        Assert.Equal(remote, ProjectService.IsRemote(path));
+        Assert.False(available);
+    }
+
     /// <summary>Removes only test-owned temporary files.</summary>
     public void Dispose() => Directory.Delete(_directory, true);
 }
