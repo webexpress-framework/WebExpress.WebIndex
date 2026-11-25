@@ -135,8 +135,8 @@ namespace WebExpress.WebIndex.Term.Pipeline
             foreach (var line in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
             {
                 var split = line.Split('=', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                var key = split[0]?.ToLower();
-                var value = split[1]?.ToLower()?.Split('#')[0]?.TrimEnd();
+                var key = split[0]?.ToLowerInvariant();
+                var value = split[1]?.ToLowerInvariant()?.Split('#')[0]?.TrimEnd();
 
                 if (!string.IsNullOrWhiteSpace(key) && !dict.ContainsKey(key))
                 {
@@ -168,8 +168,8 @@ namespace WebExpress.WebIndex.Term.Pipeline
             foreach (var line in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
             {
                 var split = line.Split('=', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                var key = split[0]?.ToLower();
-                var value = split[1]?.ToLower()?.Split('#')[0]?.TrimEnd();
+                var key = split[0]?.ToLowerInvariant();
+                var value = split[1]?.ToLowerInvariant()?.Split('#')[0]?.TrimEnd();
 
                 if (!string.IsNullOrWhiteSpace(key) && !dict.ContainsKey(key))
                 {

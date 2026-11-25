@@ -90,7 +90,7 @@ namespace WebExpress.WebIndex.Term.Pipeline
 
             foreach (var word in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
             {
-                var w = word.Normalize(System.Text.NormalizationForm.FormKD).ToLower();
+                var w = word.Normalize(System.Text.NormalizationForm.FormKD).ToLowerInvariant();
                 if (!StopWordDictionary[culture].Contains(w))
                 {
                     StopWordDictionary[culture].Add(w);

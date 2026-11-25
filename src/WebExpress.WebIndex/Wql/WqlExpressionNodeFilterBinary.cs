@@ -99,7 +99,7 @@ namespace WebExpress.WebIndex.Wql
             (
                 "({0} {1} {2})",
                 LeftFilter,
-                LogicalOperator.ToString().ToLower(),
+                LogicalOperator.ToString().ToLowerInvariant(),
                 RightFilter
             ).Trim();
         }
