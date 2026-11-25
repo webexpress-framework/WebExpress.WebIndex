@@ -199,6 +199,8 @@ namespace WebExpress.WebIndex.Wi.Test
             // validation
             Assert.Equal(1, count);
             Assert.Equal("new", Value(Assert.Single(Items()), "Name"));
+            // the replaced index was set aside for the time of the import only
+            Assert.Empty(Directory.EnumerateDirectories(_directory, "*.replaced"));
         }
 
         /// <summary>
