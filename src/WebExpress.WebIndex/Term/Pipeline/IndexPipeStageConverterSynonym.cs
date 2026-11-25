@@ -30,7 +30,14 @@ namespace WebExpress.WebIndex.Term.Pipeline
             {
                 var extension = Path.GetExtension(file).Trim('.');
 
-                FillSynonymDictionary(context, CultureInfo.GetCultureInfo(extension));
+                // a stray file - "synonyms.bak" - names no culture and must not stop the index
+                try
+                {
+                    FillSynonymDictionary(file, CultureInfo.GetCultureInfo(extension));
+                }
+                catch (CultureNotFoundException)
+                {
+                }
             }
         }
 
@@ -44,19 +51,23 @@ namespace WebExpress.WebIndex.Term.Pipeline
         {
             var supportedCulture = GetSupportedCulture(culture);
 
-            if (!SynonymDictionary.ContainsKey(supportedCulture))
+            if (!SynonymDictionary.TryGetValue(supportedCulture, out var synonyms))
             {
+                // without the end here the tokens were handed on, the input read a second time,
+                // and the lookup below threw for the culture that has no synonyms
                 foreach (var token in input)
                 {
                     yield return token;
                 }
+
+                yield break;
             }
 
             foreach (var token in input)
             {
                 if (token.Value is string)
                 {
-                    if (SynonymDictionary[supportedCulture].TryGetValue(token.Value.ToString(), out string value))
+                    if (synonyms.TryGetValue(token.Value.ToString(), out string value))
                     {
                         yield return new IndexTermToken()
                         {
@@ -79,15 +90,13 @@ namespace WebExpress.WebIndex.Term.Pipeline
         /// <summary>
         /// Fills the directory with synonyms.
         /// </summary>
-        /// <param name="context">The reference to the context.</param>
+        /// <param name="file">The synonym file.</param>
         /// <param name="culture">The culture.</param>
-        private void FillSynonymDictionary(IIndexContext context, CultureInfo culture)
+        private void FillSynonymDictionary(string file, CultureInfo culture)
         {
-            var fileContent = File.ReadAllLines
-            (
-                Path.Combine(context.IndexDirectory,
-                $"synonyms.{culture.TwoLetterISOLanguageName}")
-            );
+            // the file found is read, not one rebuilt from the culture: a three-letter extension
+            // named a culture whose two-letter file did not exist
+            var fileContent = File.ReadAllLines(file);
 
             if (!SynonymDictionary.ContainsKey(culture))
             {
@@ -96,14 +105,21 @@ namespace WebExpress.WebIndex.Term.Pipeline
 
             var dict = SynonymDictionary[culture];
 
-            foreach (var line in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
+            foreach (var line in fileContent.Select(x => x.Trim()).Where(x => x.Length > 0 && !x.StartsWith('#')))
             {
-                var l = line.Normalize(System.Text.NormalizationForm.FormKD).ToLower();
-                var split = l.Split('=', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                var key = split[0];
-                var value = split[1]?.Split('#')[0]?.TrimEnd();
+                var l = line.Normalize(System.Text.NormalizationForm.FormKD).ToLowerInvariant();
+                var split = l.Split('=', 2, System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
 
-                if (!string.IsNullOrWhiteSpace(key) && !dict.ContainsKey(key))
+                // a line without a pair is skipped rather than failing the whole file
+                if (split.Length < 2)
+                {
+                    continue;
+                }
+
+                var key = split[0];
+                var value = split[1].Split('#')[0].TrimEnd();
+
+                if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(value) && !dict.ContainsKey(key))
                 {
                     dict.Add(key, value);
                 }

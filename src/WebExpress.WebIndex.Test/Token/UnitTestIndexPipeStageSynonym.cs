@@ -46,5 +46,36 @@ namespace WebExpress.WebIndex.Test.Token
 
             Assert.Equal(normalWord, res?.Value);
         }
+
+        /// <summary>
+        /// Tests that a culture without synonyms passes its tokens through once: the stage handed
+        /// them on, read the input a second time and then threw for the missing dictionary. A
+        /// stray file and malformed lines must not stop the stage either.
+        /// </summary>
+        [Fact]
+        public void WithoutSynonymsTokensPassOnce()
+        {
+            // arrange
+            var directory = Path.Combine(Path.GetTempPath(), "wx-synonym-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            File.WriteAllLines(Path.Combine(directory, "synonyms.bak"), ["a = b"]);
+            File.WriteAllLines(Path.Combine(directory, "synonyms.de"), ["", "kein paar", "=", "kfz = auto"]);
+            var culture = CultureInfo.GetCultureInfo("en");
+
+            try
+            {
+                var pipeStage = new IndexPipeStageConverterSynonym(new IndexContext { IndexDirectory = directory });
+
+                // act
+                var res = pipeStage.Process(IndexTermTokenizer.Tokenize("happy days", culture), culture).ToList();
+
+                // validation
+                Assert.Equal(["happy", "days"], res.Select(x => x.Value?.ToString()));
+            }
+            finally
+            {
+                Directory.Delete(directory, true);
+            }
+        }
     }
 }
