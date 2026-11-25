@@ -50,7 +50,7 @@ namespace WebExpress.WebIndex.Wql.Function
         /// <param name="name">The function name</param>
         protected WqlExpressionNodeFilterFunction(string name)
         {
-            Name = name.ToLower();
+            Name = name.ToLowerInvariant();
         }
 
         /// <summary>

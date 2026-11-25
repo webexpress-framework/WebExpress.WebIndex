@@ -15,8 +15,8 @@ namespace WebExpress.WebIndex.Storage
         where TIndexItem : IIndexItem
     {
         private readonly string _extentions = "wrt";
-        // version 2: posting nodes carry the height of their AVL subtree (one byte more per node)
-        private readonly byte _version = 2;
+        // increment this when the on-disk format changes
+        private readonly byte _version = 1;
         private readonly IndexTermMatcher<IndexStorageSegmentPostingNode> _matcher;
 
         /// <summary>
@@ -93,13 +93,16 @@ namespace WebExpress.WebIndex.Storage
         {
             foreach (var term in terms)
             {
-                // add term posting and position if available
-                Term.Add(term.Value.ToString())?
-                    .AddPosting(item.Id)?
-                    .AddPosition(term.Position);
+                // every occurrence adds its position, but only a new posting is counted, the
+                // same unit a delete takes away again
+                var posting = Term.Add(term.Value.ToString()).AddPosting(item.Id, out var inserted);
+                posting?.AddPosition(term.Position);
 
-                Statistic.Count++;
-                IndexFile.Write(Statistic);
+                if (inserted)
+                {
+                    Statistic.Count++;
+                    IndexFile.Write(Statistic);
+                }
             }
         }
 
@@ -128,7 +131,7 @@ namespace WebExpress.WebIndex.Storage
 
                 if (node is not null)
                 {
-                    if (node.RemovePosting(item.Id))
+                    if (node.RemovePosting(item.Id) && Statistic.Count > 0)
                     {
                         Statistic.Count--;
                         IndexFile.Write(Statistic);

@@ -116,6 +116,37 @@ namespace WebExpress.WebIndex.Wql
         public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
 
         /// <summary>
+        /// Returns or sets the longest statement the parser accepts, in characters.
+        /// </summary>
+        /// <remarks>
+        /// A statement usually arrives from a search field or a query parameter, that is from the
+        /// network. The limit bounds the work a single request can cause in the tokenizer and the
+        /// parser before any other limit is checked.
+        /// </remarks>
+        public int MaxInputLength { get; set; } = 16 * 1024;
+
+        /// <summary>
+        /// Returns or sets how deeply parentheses - groups, function calls and value lists - may
+        /// be nested.
+        /// </summary>
+        /// <remarks>
+        /// The parser descends recursively and so do the evaluation and the translation of the
+        /// parsed tree. A stack overflow cannot be caught in .NET and ends the whole process, so
+        /// a statement nested deeper than this is refused as an error before it is parsed.
+        /// </remarks>
+        public int MaxNestingDepth { get; set; } = 32;
+
+        /// <summary>
+        /// Returns or sets how many logical operators ("and", "or", "not") a statement may hold.
+        /// </summary>
+        /// <remarks>
+        /// A chain of conditions becomes a tree that is as deep as the chain is long, and every
+        /// "not" adds a level as well, so the number of operators bounds the depth of the tree
+        /// the evaluation recurses through.
+        /// </remarks>
+        public int MaxLogicalOperators { get; set; } = 256;
+
+        /// <summary>
         /// Returns available index attributes.
         /// </summary>
         protected IEnumerable<IndexFieldData> Attributes { get; private set; }
@@ -195,7 +226,10 @@ namespace WebExpress.WebIndex.Wql
 
             try
             {
+                EnsureWithinLength(input);
+
                 var tokens = Tokenize(input);
+                EnsureWithinLimits(tokens);
 
                 // try parsing the current slice.
                 Parse(input, tokens, ilaQueue, []);
@@ -234,7 +268,11 @@ namespace WebExpress.WebIndex.Wql
 
             try
             {
+                EnsureWithinLength(input);
+
                 var tokens = Tokenize(input);
+                EnsureWithinLimits(tokens);
+
                 var statement = Parse(input, tokens, ilaQueue, errors);
 
                 if (errors.Count > 0)
@@ -823,7 +861,7 @@ namespace WebExpress.WebIndex.Wql
         private static WqlExpressionLogicalOperator ParseLogicalOperator(Queue<WqlToken> tokenQueue, Queue<WqlLookaheadToken> ilaQueue)
         {
             var logicalOperatorToken = PeekToken(tokenQueue);
-            var value = logicalOperatorToken?.Value?.ToLower();
+            var value = logicalOperatorToken?.Value?.ToLowerInvariant();
 
             if (value == "and")
             {
@@ -963,7 +1001,10 @@ namespace WebExpress.WebIndex.Wql
             {
                 throw new WqlParseException("", []);
             }
-            else if (PeekToken(tokenQueue, function.Key ?? functionOrValueToken?.Value, "("))
+            // a quotation mark followed by a quoted "(" is a value, not the call of a function
+            // named after the quotation mark
+            else if (functionOrValueToken?.Value is not ("\"" or "'")
+                && PeekToken(tokenQueue, function.Key ?? functionOrValueToken?.Value, "("))
             {
                 return new WqlExpressionNodeParameter<TIndexItem>
                 {
@@ -1048,7 +1089,7 @@ namespace WebExpress.WebIndex.Wql
                 return parameter;
             }
             else if (functionOrValueToken?.Value is "(" or ")" ||
-                functionOrValueToken?.Value?.ToLower() is "and" or "&" or "or" or "||")
+                functionOrValueToken?.Value?.ToLowerInvariant() is "and" or "&" or "or" or "||")
             {
                 throw new WqlParseException
                 (
@@ -1084,7 +1125,7 @@ namespace WebExpress.WebIndex.Wql
                 Token = token
             };
 
-            switch (token.Value?.ToLower())
+            switch (token.Value?.ToLowerInvariant())
             {
                 case "null":
                     return new WqlExpressionNodeParameter<TIndexItem> { Value = value };
@@ -1751,6 +1792,74 @@ namespace WebExpress.WebIndex.Wql
         }
 
         /// <summary>
+        /// Refuses a statement longer than <see cref="MaxInputLength"/> before it is tokenized.
+        /// </summary>
+        /// <param name="input">The input WQL string.</param>
+        /// <exception cref="WqlParseException">The statement is too long.</exception>
+        private void EnsureWithinLength(string input)
+        {
+            if (input != null && input.Length > MaxInputLength)
+            {
+                throw new WqlParseException("webexpress.webindex:wql.too_long", []);
+            }
+        }
+
+        /// <summary>
+        /// Refuses a statement whose nesting or number of logical operators exceeds the limits.
+        /// </summary>
+        /// <remarks>
+        /// The check runs over the flat token list, before the recursive descent starts, so a
+        /// statement built to exhaust the stack never reaches a recursive call. The content of a
+        /// quoted value is no syntax and is skipped.
+        /// </remarks>
+        /// <param name="tokens">The tokens of the statement.</param>
+        /// <exception cref="WqlParseException">A limit is exceeded.</exception>
+        private void EnsureWithinLimits(IEnumerable<WqlToken> tokens)
+        {
+            var depth = 0;
+            var operators = 0;
+
+            foreach (var token in tokens)
+            {
+                if (token.IsQuotedContent)
+                {
+                    continue;
+                }
+
+                switch (token.Value)
+                {
+                    case "(":
+                        if (++depth > MaxNestingDepth)
+                        {
+                            throw new WqlParseException("webexpress.webindex:wql.too_deep", token);
+                        }
+                        break;
+                    case ")":
+                        // an unbalanced closing parenthesis is a syntax error the parser reports
+                        depth = Math.Max(0, depth - 1);
+                        break;
+                    case "&":
+                    case "||":
+                        operators++;
+                        break;
+                    default:
+                        if (string.Equals(token.Value, "and", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(token.Value, "or", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(token.Value, "not", StringComparison.OrdinalIgnoreCase))
+                        {
+                            operators++;
+                        }
+                        break;
+                }
+
+                if (operators > MaxLogicalOperators)
+                {
+                    throw new WqlParseException("webexpress.webindex:wql.too_complex", token);
+                }
+            }
+        }
+
+        /// <summary>
         /// Tokenizes the input string into a queue of WQL tokens.
         /// </summary>
         /// <param name="input">The input string.</param>
@@ -1799,7 +1908,7 @@ namespace WebExpress.WebIndex.Wql
                 {
                     if (!currentToken.IsEmpty)
                     {
-                        var lastCharacter = currentToken.Value.LastOrDefault();
+                        var lastCharacter = currentToken.LastCharacter;
 
                         if (!(lastCharacter == '=' ||
                               lastCharacter == '~' ||
@@ -1833,7 +1942,7 @@ namespace WebExpress.WebIndex.Wql
                     tokens.Enqueue(currentToken);
 
                     i++;
-                    currentToken = new WqlToken() { Offset = i };
+                    currentToken = new WqlToken() { Offset = i, IsQuotedContent = true };
 
                     // read content until closing quote; a doubled quote stands for the quote
                     // itself, as in 'O''Brien'
@@ -1867,7 +1976,7 @@ namespace WebExpress.WebIndex.Wql
                 }
                 else
                 {
-                    var lastCharacter = currentToken.Value?.LastOrDefault();
+                    var lastCharacter = currentToken.LastCharacter;
 
                     if (lastCharacter == '=' ||
                         lastCharacter == '~' ||
@@ -1916,7 +2025,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>True if matched; otherwise false.</returns>
         private static bool PeekToken(Queue<WqlToken> tokenQueue, string currentToken)
         {
-            return tokenQueue.Count > 0 && tokenQueue.Peek().Value?.ToLower() == currentToken?.ToLower();
+            return tokenQueue.Count > 0 && string.Equals(tokenQueue.Peek().Value, currentToken, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -1934,8 +2043,7 @@ namespace WebExpress.WebIndex.Wql
 
             for (int i = 0; i < tokens.Length; i++)
             {
-                var val = tokenQueue.ElementAt(i).Value?.ToLower();
-                if (val != tokens[i]?.ToLower())
+                if (!string.Equals(tokenQueue.ElementAt(i).Value, tokens[i], StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }
@@ -1952,7 +2060,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>True if matched; otherwise false.</returns>
         private static bool PeekToken(Queue<WqlToken> tokenQueue, Regex regex)
         {
-            return tokenQueue.Count > 0 && regex.IsMatch(tokenQueue.Peek().Value?.ToLower() ?? "");
+            return tokenQueue.Count > 0 && regex.IsMatch(tokenQueue.Peek().Value?.ToLowerInvariant() ?? "");
         }
 
         /// <summary>
@@ -2065,7 +2173,7 @@ namespace WebExpress.WebIndex.Wql
         public void RegisterFunction<TFunction>()
             where TFunction : IWqlExpressionNodeFilterFunction, new()
         {
-            var name = new TFunction().Name?.ToLower();
+            var name = new TFunction().Name?.ToLowerInvariant();
 
             if (name is not null && Predicates.ContainsKey(name))
             {
@@ -2108,7 +2216,7 @@ namespace WebExpress.WebIndex.Wql
                 throw new ArgumentException($"The predicate name '{predicate.Name}' is not a name a statement can call.", nameof(predicate));
             }
 
-            if (Functions.ContainsKey(predicate.Name.ToLower()))
+            if (Functions.ContainsKey(predicate.Name.ToLowerInvariant()))
             {
                 throw new ArgumentException($"The predicate '{predicate.Name}' cannot be registered because a function of that name exists.", nameof(predicate));
             }

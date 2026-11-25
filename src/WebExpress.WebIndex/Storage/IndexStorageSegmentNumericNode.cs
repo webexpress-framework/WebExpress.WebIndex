@@ -16,8 +16,9 @@ namespace WebExpress.WebIndex.Storage
     /// Numeric postings carry no positions: a field holds a single number, so neither the value node
     /// nor its postings record where in a document it occurs. The record on disk is the value
     /// (16 bytes), the addresses of the left and the right child (8 bytes each), the frequency
-    /// (4 bytes) and the address of the posting root (8 bytes). The height used to balance the value
-    /// tree is not part of the record; a node read back from disk starts with the height 1.
+    /// (4 bytes), the address of the posting root (8 bytes) and the height of the subtree (1 byte).
+    /// The height is stored because the balance of a reopened tree depends on it; a byte holds
+    /// it, since a balanced tree of 2^64 nodes is less than 100 levels high.
     /// </remarks>
     /// <param name="context">The reference to the context of the index.</param>
     /// <param name="addr">The address of the segment.</param>
@@ -29,7 +30,7 @@ namespace WebExpress.WebIndex.Storage
         /// <summary>
         /// Gets the amount of space required on the storage device.
         /// </summary>
-        public const uint SegmentSize = sizeof(decimal) + sizeof(ulong) + sizeof(ulong) + sizeof(uint) + sizeof(ulong);
+        public const uint SegmentSize = sizeof(decimal) + sizeof(ulong) + sizeof(ulong) + sizeof(uint) + sizeof(ulong) + sizeof(byte);
 
         /// <summary>
         /// Gets or sets the value of the node.
@@ -117,11 +118,18 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Updates the height of the current node based on the heights of its children.
+        /// Recomputes the height of this node from its children and persists a change, since
+        /// the node may already have been flushed with its previous height.
         /// </summary>
         private void UpdateHeight()
         {
-            Height = Math.Max(GetHeight(Left), GetHeight(Right)) + 1u;
+            var height = Math.Max(GetHeight(Left), GetHeight(Right)) + 1u;
+
+            if (height != Height)
+            {
+                Height = height;
+                Context.IndexFile.Write(this);
+            }
         }
 
         /// <summary>
@@ -484,6 +492,7 @@ namespace WebExpress.WebIndex.Storage
             RightAddr = reader.ReadUInt64();
             Frequency = reader.ReadUInt32();
             PostingAddr = reader.ReadUInt64();
+            Height = reader.ReadByte();
         }
 
         /// <summary>
@@ -497,6 +506,7 @@ namespace WebExpress.WebIndex.Storage
             writer.Write(RightAddr);
             writer.Write(Frequency);
             writer.Write(PostingAddr);
+            writer.Write((byte)Height);
         }
 
         /// <summary>
@@ -535,6 +545,10 @@ namespace WebExpress.WebIndex.Storage
             newRight.LeftAddr = rightAddr1;
             newRight.RightAddr = rightAddr;
 
+            // the lower node first, the height of this node depends on it
+            newRight.UpdateHeight();
+            UpdateHeight();
+
             Context.IndexFile.Write(this);
             Context.IndexFile.Write(newRight);
         }
@@ -563,6 +577,9 @@ namespace WebExpress.WebIndex.Storage
             newLeft.Frequency = frequency;
             newLeft.LeftAddr = leftAddr;
             newLeft.RightAddr = leftAddr1;
+
+            newLeft.UpdateHeight();
+            UpdateHeight();
 
             Context.IndexFile.Write(this);
             Context.IndexFile.Write(newLeft);

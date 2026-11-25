@@ -177,7 +177,7 @@ public partial class MainPage
         var item = await Task.Run(() => _session.Find(id), token);
         token.ThrowIfCancellationRequested();
         QueryEditor.Text = _executedQuery = $"Id = '{id}'";
-        _documents = item == null ? [] : [item];
+        _documents = item == null ? [] : (object[])[item];
         _terms = [];
         _truncated = false;
         _documentAvailability[(_session.Path, id)] = item != null;
@@ -214,7 +214,7 @@ public partial class MainPage
     /// <summary>Creates a named project without requiring a source directory.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event context.</param>
-    private async void OnNewProject(object sender, EventArgs e)
+    private async void OnNewProject(object? sender, EventArgs e)
     {
         await Shell.Current.GoToAsync("//ProjectPage");
         if (Shell.Current.CurrentPage is ProjectPage page) await page.AddProject();
@@ -223,7 +223,7 @@ public partial class MainPage
     /// <summary>Links the selected document persistently using its immutable identity.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event context.</param>
-    private async void OnLinkDocument(object sender, EventArgs e)
+    private async void OnLinkDocument(object? sender, EventArgs e)
     {
         if (_session == null || _selected == null || _view != "Documents") return;
         try
@@ -252,7 +252,7 @@ public partial class MainPage
     /// <summary>Opens project properties in the same application shell.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event context.</param>
-    private async void OnManageProjects(object sender, EventArgs e) => await Shell.Current.GoToAsync("//ProjectPage");
+    private async void OnManageProjects(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//ProjectPage");
 
     /// <summary>Removes a project shortcut without changing its source index files or the open session.</summary>
     /// <param name="project">The project shortcut to manage.</param>
@@ -289,7 +289,7 @@ public partial class MainPage
         }
         else if (action == AppText.LocateIndex)
         {
-            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.Format("LocateFile", Path.GetFileName(index.Path)), FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = [".ws"] }) });
+            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.Format("LocateFile", Path.GetFileName(index.Path)), FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = (string[])[".ws"] }) });
             if (file == null) return;
             if (project.Indexes.Any(x => x != index && string.Equals(x.Path, file.FullPath, StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException(AppText.ThisIndexIsAlreadyLinkedToTheProject);
             index.Path = file.FullPath;

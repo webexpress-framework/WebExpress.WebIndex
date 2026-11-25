@@ -90,7 +90,7 @@ namespace WebExpress.WebIndex.Wql.Condition
         /// <returns>The condition expression as a string.</returns>
         public override string ToString()
         {
-            return string.Format("{0} {1} ({2})", (object)Function ?? Attribute, Operator.ToLower(), string.Join(", ", Parameters ?? [])).Trim();
+            return string.Format("{0} {1} ({2})", (object)Function ?? Attribute, Operator.ToLowerInvariant(), string.Join(", ", Parameters ?? [])).Trim();
         }
     }
 }

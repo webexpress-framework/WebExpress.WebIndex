@@ -1,4 +1,4 @@
-![WebExpress-Framework](https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png)
+﻿![WebExpress-Framework](https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png)
 
 # WebExpress.WebIndex
 The index model provides a reverse index to enable fast and efficient searching. A reverse 
@@ -447,8 +447,8 @@ every address after the first changed segment would point into the middle of ano
 | File  | Version | Layout
 |-------|---------|------------------------------------------------------------------------------------
 | `wds` | 1       | document store
-| `wrt` | 2       | term index; since version 2 each posting node stores the height of its subtree
-| `wrn` | 2       | numeric index; since version 2 each posting node stores the height of its subtree
+| `wrt` | 1       | term index
+| `wrn` | 1       | numeric index; a key holds a whole number exactly and a fraction as its shortest round-trip value (0.1, not the binary 0.1000000000000000055511151231), the rule the WQL conversion follows
 
 A reverse index holds derived data only - every value it contains is in the document store as well. When a
 reverse index file of another version is opened, it is therefore not converted but discarded, created anew
@@ -457,9 +457,11 @@ update without a manual reindex. A reverse index file that is missing while the 
 filled the same way. The rebuilt file carries the current version from its first byte on, so the version cannot
 tell a complete rebuild from an interrupted one; a marker file `*.rebuild` next to it exists for as long as the
 rebuild runs, and a marker found on the next start discards the partial file and rebuilds it again. All reverse
-indexes of a type that need a rebuild are filled from a single pass over the document store. A file that
-carries another identifier is not touched; opening it fails, as it is no index of the expected kind, and the
-file is released again rather than staying locked. The schema file `*.ws` is JSON and carries no version.
+indexes of a type that need a rebuild are filled from a single pass over the document store. A file shorter
+than its header is discarded and rebuilt as well: it was cut off before its header reached the disk, holds
+nothing and could not be opened. Any other file that carries another identifier is not touched; opening it 
+fails, as it is no index of the expected kind, and the file is released again rather than staying locked. The 
+schema file `*.ws` is JSON and carries no version.
 
 Unused memory areas in the file are represented by the `Free` segment, which is located in the body area 
 variable and forms a linked list. The `Allocator` points to the first element of this list.
@@ -944,7 +946,7 @@ The numeric structure contains the root node, which in turn manages the numeric 
 
 ```
          ╔Numeric════════════╗
- 44 Byte ║ NumericNode       ║ the root node
+ 45 Byte ║ NumericNode       ║ the root node
          ╠Data═══════════════╣
          ║                   ║ a variable memory area in which the data is stored
          ╚~~~~~~~~~~~~~~~~~~~╝
@@ -960,11 +962,12 @@ values. Each node has a pointer to a posting tree where the document ids of the 
   8 Byte ║ RightdAddr        ║ address of the right child node or 0 if not right child node exists
   4 Byte ║ Frequency         ║ the number of documents that hold the value
   8 Byte ║ PostingAddr       ║ address of the root of the posting tree or 0 if no document holds the value
+  1 Byte ║ Height            ║ the height of the subtree rooted at this node (1 for a leaf)
          ╚═══════════════════╝
 ```
 
-The height used to balance the value tree is not part of the record; a value node read back from the file starts with
-the height 1.
+The value tree balances itself like the posting tree, so the height is stored in the node for the same reason: a tree
+opened again has to know the heights of its nodes to keep balancing on the next insert.
 
 The posting node segment is designed as a self-balancing binary tree (AVL tree), like the posting tree of a term, and 
 contains the ids of the documents that carry the value. A field holds a single number, so a numeric index stores no 
@@ -1174,6 +1177,24 @@ the internationalization files. Besides syntax errors, the following is reported
 
 A statement with errors cannot be executed: `Apply()` and `ToQuery()` throw an 
 `InvalidOperationException`, and `IndexManager.Retrieve` returns an empty result.
+
+## Limits
+A statement usually comes from a search field or a query parameter, that is from the network.
+The parser descends recursively, and so do the evaluation and the translation of the parsed
+tree; a stack overflow cannot be caught in .NET and ends the whole server process. The parser
+therefore refuses a statement beyond the following limits with an ordinary error, before the
+recursive descent starts. `Parse` and `Analyze` apply them alike.
+
+| Property              | Default | Error key             | Bounds
+|-----------------------|---------|-----------------------|-------------------------------------------------------
+| `MaxInputLength`      | 16384   | `wql.too_long`        | the characters of the statement
+| `MaxNestingDepth`     | 32      | `wql.too_deep`        | nested parentheses: groups, function calls, value lists
+| `MaxLogicalOperators` | 256     | `wql.too_complex`     | `and`, `or`, `not` (`&`, `||`); a chain is as deep as it is long
+
+The content of a quoted value is data and counts against none of them. An application that needs
+longer statements - a long `in` list, say - raises the limit on the parser it creates.
+Keywords are matched independently of the current culture, so `IN` and `IS` are recognized
+under a Turkish culture as well.
 
 ## Execution paths
 A statement can be executed in two ways, which return the same items:

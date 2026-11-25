@@ -401,7 +401,6 @@ namespace WebExpress.WebIndex.Storage
             {
                 foreach (var position in Positions)
                 {
-                    // remove position segment
                     Context.Allocator.Free(position);
                 }
 

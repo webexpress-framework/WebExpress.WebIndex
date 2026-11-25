@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -77,13 +78,13 @@ namespace WebExpress.WebIndex.Term.Pipeline
 
                             foreach (var keyValue in RegularWordDictionary[supportedCulture])
                             {
-                                if (Regex.Match(token.Value.ToString(), keyValue.Key).Success)
+                                if (TryReplace(token.Value.ToString(), keyValue.Key, keyValue.Value, out var singular))
                                 {
                                     treated = true;
 
                                     yield return new IndexTermToken()
                                     {
-                                        Value = Regex.Replace(token.Value.ToString(), keyValue.Key, keyValue.Value),
+                                        Value = singular,
                                         Position = token.Position
                                     };
 
@@ -135,8 +136,8 @@ namespace WebExpress.WebIndex.Term.Pipeline
             foreach (var line in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
             {
                 var split = line.Split('=', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                var key = split[0]?.ToLower();
-                var value = split[1]?.ToLower()?.Split('#')[0]?.TrimEnd();
+                var key = split[0]?.ToLowerInvariant();
+                var value = split[1]?.ToLowerInvariant()?.Split('#')[0]?.TrimEnd();
 
                 if (!string.IsNullOrWhiteSpace(key) && !dict.ContainsKey(key))
                 {
@@ -168,13 +169,54 @@ namespace WebExpress.WebIndex.Term.Pipeline
             foreach (var line in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
             {
                 var split = line.Split('=', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-                var key = split[0]?.ToLower();
-                var value = split[1]?.ToLower()?.Split('#')[0]?.TrimEnd();
+                var key = split[0]?.ToLowerInvariant();
+                var value = split[1]?.ToLowerInvariant()?.Split('#')[0]?.TrimEnd();
 
                 if (!string.IsNullOrWhiteSpace(key) && !dict.ContainsKey(key))
                 {
                     dict.Add(key, value);
                 }
+            }
+        }
+
+        /// <summary>
+        /// The compiled rules, shared by every stage; the assets hold a fixed set of them.
+        /// </summary>
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Regex> _rules = new();
+
+        /// <summary>
+        /// Applies a singular rule of the language assets to a word.
+        /// </summary>
+        /// <remarks>
+        /// The rule is the asset's, the word the indexed text's: a rule that backtracks badly on
+        /// some word must not hold indexing or a query for as long as it likes, so a match that
+        /// runs out of time counts as no match.
+        /// </remarks>
+        /// <param name="word">The word.</param>
+        /// <param name="rule">The pattern of the rule.</param>
+        /// <param name="replacement">The replacement of the rule.</param>
+        /// <param name="singular">Receives the singular form.</param>
+        /// <returns>True when the rule applies.</returns>
+        private static bool TryReplace(string word, string rule, string replacement, out string singular)
+        {
+            singular = null;
+
+            try
+            {
+                var regex = _rules.GetOrAdd(rule, x => new Regex(x, RegexOptions.None, TimeSpan.FromMilliseconds(100)));
+
+                if (!regex.IsMatch(word))
+                {
+                    return false;
+                }
+
+                singular = regex.Replace(word, replacement);
+
+                return true;
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return false;
             }
         }
 

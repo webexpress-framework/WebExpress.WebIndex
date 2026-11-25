@@ -111,11 +111,14 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Adds an item to the hash map in sorted order within its bucket; returns 
-        /// existing item if duplicate.
+        /// Adds an item to the hash map, ordered by id within its bucket. An id identifies one
+        /// document, so an item whose id is already present is not inserted.
         /// </summary>
         /// <param name="segment">The item segment to insert.</param>
-        /// <returns>The inserted item or the existing duplicate.</returns>
+        /// <returns>
+        /// The inserted item, or the item already stored under the same id; the caller owns the
+        /// segment it passed in that case and has to free it.
+        /// </returns>
         public IndexStorageSegmentItem Add(IndexStorageSegmentItem segment)
         {
             var hash = segment.Id.GetHashCode();
@@ -133,26 +136,29 @@ namespace WebExpress.WebIndex.Storage
                 }
                 else
                 {
-                    // check whether it exists (sorted by CompareTo)
+                    // the whole chain is searched for the id: files written before items were
+                    // ordered by id hold their buckets in insertion order, so stopping at the
+                    // first greater id could miss an existing entry
                     var last = default(IndexStorageSegmentItem);
-                    var count = 0u;
+                    var positionFound = false;
 
                     foreach (var i in GetBucket(segment.Id))
                     {
                         var compare = i.CompareTo(segment);
 
-                        if (compare > 0)
+                        if (compare == 0)
                         {
-                            break;
-                        }
-                        else if (compare == 0)
-                        {
-                            // duplicate; return existing
                             return i;
                         }
 
-                        last = i;
-                        count++;
+                        if (compare > 0)
+                        {
+                            positionFound = true;
+                        }
+                        else if (!positionFound)
+                        {
+                            last = i;
+                        }
                     }
 
                     if (last is null)
@@ -209,7 +215,9 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Removes the specified item from its bucket chain, if present.
+        /// Removes the specified item from its bucket chain, if present. The item segment is only
+        /// unlinked, not freed: its chunk chain is still reachable through it, and the owner of
+        /// the item frees both, so freeing here would put the address on the free list twice.
         /// </summary>
         /// <param name="segment">The item to remove.</param>
         /// <returns>True if the item was found and removed; otherwise false.</returns>
@@ -248,9 +256,6 @@ namespace WebExpress.WebIndex.Storage
                             Context.IndexFile.Write(prev);
                         }
 
-                        // free removed item
-                        Context.Allocator.Free(current);
-
                         return true;
                     }
 
@@ -268,7 +273,16 @@ namespace WebExpress.WebIndex.Storage
         /// <param name="reader">The binary reader.</param>
         public override void Read(BinaryReader reader)
         {
-            BucketCount = reader.ReadUInt32();
+            var bucketCount = reader.ReadUInt32();
+
+            // a damaged or foreign file is refused here: no buckets made every lookup divide by
+            // zero, and a count past what an address can reach sent the reads anywhere
+            if (bucketCount == 0 || bucketCount > uint.MaxValue / IndexStorageSegmentBucket.SegmentSize)
+            {
+                throw new InvalidDataException($"The index file holds an invalid bucket count ({bucketCount}).");
+            }
+
+            BucketCount = bucketCount;
         }
 
         /// <summary>

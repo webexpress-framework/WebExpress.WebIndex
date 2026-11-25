@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace WebExpress.WebIndex.Storage
 {
@@ -102,9 +101,8 @@ namespace WebExpress.WebIndex.Storage
         }
 
         /// <summary>
-        /// Compares the current instance with another object of the same type and returns
-        ///  an integer that indicates whether the current instance precedes, follows, or
-        ///  occurs in the same position in the sort order as the other object.
+        /// Compares the current instance with another item by id. The id is what makes an item
+        /// unique in the hash map; the stored data is not, since an update changes it.
         /// </summary>
         /// <param name="obj">An object to compare with this instance.</param>
         /// <returns>
@@ -118,7 +116,7 @@ namespace WebExpress.WebIndex.Storage
         {
             if (obj is IndexStorageSegmentItem item)
             {
-                return DataChunk.SequenceEqual(item.DataChunk) ? 0 : -1;
+                return Id.CompareTo(item.Id);
             }
 
             throw new System.ArgumentException();

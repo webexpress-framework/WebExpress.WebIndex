@@ -25,7 +25,7 @@ public partial class ProjectPage : ContentPage
     /// <summary>Copies settings into the form so typing does not mutate saved entries.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnSelected(object sender, SelectionChangedEventArgs e)
+    private async void OnSelected(object? sender, SelectionChangedEventArgs e)
     {
         if (_restoringSelection) return;
         if (!await CanLeaveProperties())
@@ -45,7 +45,7 @@ public partial class ProjectPage : ContentPage
     /// <summary>Creates a named project before editing its optional discovery settings.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnAdd(object sender, EventArgs e) => await AddProject();
+    private async void OnAdd(object? sender, EventArgs e) => await AddProject();
 
     /// <summary>Opens the project wizard from either navigation entry point.</summary>
     /// <returns>The completion task.</returns>
@@ -81,11 +81,11 @@ public partial class ProjectPage : ContentPage
     /// <summary>Chooses a directory through one of its schema files.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnBrowse(object sender, EventArgs e)
+    private async void OnBrowse(object? sender, EventArgs e)
     {
         try
         {
-            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.ChooseAnIndexSchema, FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = [".ws"] }) });
+            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.ChooseAnIndexSchema, FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = (string[])[".ws"] }) });
             if (file != null) PathInput.Text = Path.GetDirectoryName(file.FullPath);
         }
         catch (Exception error) { StatusLabel.Text = AppText.Diagnostic(error.Message); }
@@ -94,7 +94,7 @@ public partial class ProjectPage : ContentPage
     /// <summary>Validates folder and name before atomically persisting the project list.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnSave(object sender, EventArgs e)
+    private void OnSave(object? sender, EventArgs e)
     {
         if (_selected == null) return;
         try
@@ -158,12 +158,12 @@ public partial class ProjectPage : ContentPage
 
     /// <summary>Chooses a schema using the platform file picker.</summary>
     /// <returns>The selected file, or null after cancellation.</returns>
-    private static Task<FileResult?> PickIndex() => FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.LinkIndexSchema, FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = [".ws"] }) });
+    private static Task<FileResult?> PickIndex() => FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.LinkIndexSchema, FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = (string[])[".ws"] }) });
 
     /// <summary>Persists an index reference without copying its source files.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event context.</param>
-    private async void OnAddIndex(object sender, EventArgs e)
+    private async void OnAddIndex(object? sender, EventArgs e)
     {
         if (_selected == null) return;
         try
@@ -180,7 +180,7 @@ public partial class ProjectPage : ContentPage
     /// <summary>Returns to the project tree after editing workspace settings.</summary>
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event context.</param>
-    private async void OnExplorer(object sender, EventArgs e)
+    private async void OnExplorer(object? sender, EventArgs e)
     {
         if (!await CanLeaveProperties()) return;
         NameInput.Text = _selected?.ProjectName;

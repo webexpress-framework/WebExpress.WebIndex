@@ -131,11 +131,11 @@ public partial class MainPage
     /// <summary>Opens a selected schema and remembers its containing project.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnOpen(object sender, EventArgs e)
+    private async void OnOpen(object? sender, EventArgs e)
     {
         try
         {
-            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.OpenIndexSchema, FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = [".ws"] }) });
+            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = AppText.OpenIndexSchema, FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>> { [DevicePlatform.WinUI] = (string[])[".ws"] }) });
             if (file == null) return;
             LoadFolder(Path.GetDirectoryName(file.FullPath));
             await OpenIndex(file.FullPath);
@@ -151,80 +151,80 @@ public partial class MainPage
     /// <summary>Applies the navigator filter while typing.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnIndexFilterChanged(object sender, TextChangedEventArgs e) => FilterIndexes();
+    private void OnIndexFilterChanged(object? sender, TextChangedEventArgs e) => FilterIndexes();
     /// <summary>Filters the loaded result without executing WQL.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnResultFilterChanged(object sender, TextChangedEventArgs e) { _page = 0; RenderTable(); }
+    private void OnResultFilterChanged(object? sender, TextChangedEventArgs e) { _page = 0; RenderTable(); }
     /// <summary>Debounces parser analysis during typing.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnQueryChanged(object sender, TextChangedEventArgs e) { if (_queryTimer == null) return; _queryTimer.Stop(); _queryTimer.Start(); }
+    private void OnQueryChanged(object? sender, TextChangedEventArgs e) { if (_queryTimer == null) return; _queryTimer.Stop(); _queryTimer.Start(); }
     /// <summary>Updates suggestions when the caret changes.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnCaretChanged(object sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(Editor.CursorPosition) && _queryTimer != null) { _queryTimer.Stop(); _queryTimer.Start(); } }
+    private void OnCaretChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(Editor.CursorPosition) && _queryTimer != null) { _queryTimer.Stop(); _queryTimer.Start(); } }
     /// <summary>Executes the editor expression explicitly.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnRun(object sender, EventArgs e) => await RunOperation(AppText.ExecutingWQL, ExecuteQuery);
+    private async void OnRun(object? sender, EventArgs e) => await RunOperation(AppText.ExecutingWQL, ExecuteQuery);
     /// <summary>Requests cancellation without disposing active storage.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnCancel(object sender, EventArgs e) => _operation?.Cancel();
+    private void OnCancel(object? sender, EventArgs e) => _operation?.Cancel();
     /// <summary>Clears editor text without implicitly executing a query.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnClearQuery(object sender, EventArgs e) => QueryEditor.Text = "";
+    private void OnClearQuery(object? sender, EventArgs e) => QueryEditor.Text = "";
     /// <summary>Shows the last successful query result.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnDocuments(object sender, EventArgs e) => SwitchView("Documents");
+    private void OnDocuments(object? sender, EventArgs e) => SwitchView("Documents");
     /// <summary>Shows schema types and indexing flags.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnSchema(object sender, EventArgs e) => SwitchView("Schema");
+    private void OnSchema(object? sender, EventArgs e) => SwitchView("Schema");
     /// <summary>Shows the selected reverse index.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnTerms(object sender, EventArgs e) { SwitchView("Terms"); await LoadTerms(); }
+    private async void OnTerms(object? sender, EventArgs e) { SwitchView("Terms"); await LoadTerms(); }
     /// <summary>Refreshes terms for the newly selected field.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnTermFieldChanged(object sender, EventArgs e) { if (!_initializing && _view == "Terms") await LoadTerms(); }
+    private async void OnTermFieldChanged(object? sender, EventArgs e) { if (!_initializing && _view == "Terms") await LoadTerms(); }
     /// <summary>Resets pagination after changing the page size.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnPageSizeChanged(object sender, EventArgs e) { if (!_initializing) { _page = 0; RenderTable(); } }
+    private void OnPageSizeChanged(object? sender, EventArgs e) { if (!_initializing) { _page = 0; RenderTable(); } }
     /// <summary>Shows the preceding result page.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnPrevious(object sender, EventArgs e) { _page--; RenderTable(); }
+    private void OnPrevious(object? sender, EventArgs e) { _page--; RenderTable(); }
     /// <summary>Shows the following result page.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnNext(object sender, EventArgs e) { _page++; RenderTable(); }
+    private void OnNext(object? sender, EventArgs e) { _page++; RenderTable(); }
     /// <summary>Exports the loaded view as CSV.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnExportCsv(object sender, EventArgs e) => await Export(true);
+    private async void OnExportCsv(object? sender, EventArgs e) => await Export(true);
     /// <summary>Exports the loaded view as JSON.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnExportJson(object sender, EventArgs e) => await Export(false);
+    private async void OnExportJson(object? sender, EventArgs e) => await Export(false);
     /// <summary>Opens a form with a generated document identifier.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnNew(object sender, EventArgs e) => await EditDocument(true);
+    private async void OnNew(object? sender, EventArgs e) => await EditDocument(true);
     /// <summary>Edits the selected document while preserving its identifier.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnEdit(object sender, EventArgs e) => await EditDocument(false);
+    private async void OnEdit(object? sender, EventArgs e) => await EditDocument(false);
 
     /// <summary>Reopens the source to replace a stale snapshot.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnRefresh(object sender, EventArgs e)
+    private async void OnRefresh(object? sender, EventArgs e)
     {
         if (_session != null) await OpenIndex(_session.Path, _session.Writable, true, forceReload: true);
         else await RunOperation(AppText.RefreshingProjects, token => RefreshLinkedDocuments(token));
@@ -233,7 +233,7 @@ public partial class MainPage
     /// <summary>Reopens using the selected token processing culture.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnCultureChanged(object sender, EventArgs e)
+    private async void OnCultureChanged(object? sender, EventArgs e)
     {
         if (_initializing || _session == null) return;
         try
@@ -248,7 +248,7 @@ public partial class MainPage
     /// <summary>Closes storage and clears every dependent view.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnClose(object sender, EventArgs e) => await RunOperation(AppText.ClosingIndex, async token =>
+    private async void OnClose(object? sender, EventArgs e) => await RunOperation(AppText.ClosingIndex, async token =>
     {
         await Task.Run(() => { _session?.Dispose(); _session = null; }, token);
         ResetResults();
@@ -258,7 +258,7 @@ public partial class MainPage
     /// <summary>Switches explicitly between snapshot inspection and exclusive editing.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnToggleEditing(object sender, EventArgs e)
+    private async void OnToggleEditing(object? sender, EventArgs e)
     {
         if (_session == null) return;
         var writable = !_session.Writable;
@@ -269,7 +269,7 @@ public partial class MainPage
     /// <summary>Deletes only the selected document after confirmation.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnDelete(object sender, EventArgs e)
+    private async void OnDelete(object? sender, EventArgs e)
     {
         if (_session?.Writable != true || _selected == null || _view != "Documents") return;
         var id = (Guid)ExplorerTable.Value(_selected, "Id")!;
@@ -287,7 +287,7 @@ public partial class MainPage
     /// <summary>Shows full selected values and term postings with a copy action.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnDetails(object sender, EventArgs e)
+    private async void OnDetails(object? sender, EventArgs e)
     {
         if (_selected == null) return;
         var text = JsonSerializer.Serialize(_selected, new JsonSerializerOptions { WriteIndented = true });
@@ -307,7 +307,7 @@ public partial class MainPage
     /// <summary>Saves valid WQL as an index scoped favorite.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnFavorite(object sender, EventArgs e)
+    private void OnFavorite(object? sender, EventArgs e)
     {
         if (_session == null) return;
         try
@@ -325,7 +325,7 @@ public partial class MainPage
     /// <summary>Restores a query for review before execution.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnHistorySelected(object sender, EventArgs e)
+    private void OnHistorySelected(object? sender, EventArgs e)
     {
         if (HistoryPicker.SelectedItem is ExplorerQuery query) QueryEditor.Text = query.Query;
     }
@@ -333,7 +333,7 @@ public partial class MainPage
     /// <summary>Removes the selected recent query or favorite.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private void OnRemoveHistory(object sender, EventArgs e)
+    private void OnRemoveHistory(object? sender, EventArgs e)
     {
         if (HistoryPicker.SelectedItem is not ExplorerQuery query) return;
         try { _history.Queries.Remove(query); _history.Save(_historyPath); RefreshHistory(); }
@@ -343,7 +343,7 @@ public partial class MainPage
     /// <summary>Explains WQL using an available text field as an example.</summary>
     /// <param name="sender">The control raising the event.</param>
     /// <param name="e">The event context.</param>
-    private async void OnHelp(object sender, EventArgs e)
+    private async void OnHelp(object? sender, EventArgs e)
     {
         var field = _session?.Schema.Fields.FirstOrDefault(x => x.Type is "String" or "Text")?.Name ?? "Name";
         await WorkspaceDialogs.Confirm(this, AppText.WQLQuickReference, AppText.Format("WqlHelpBody", field), AppText.GotIt);

@@ -77,5 +77,35 @@ namespace WebExpress.WebIndex.Test.Token
 
             Assert.DoesNotContain(tokenStr, res);
         }
+
+        /// <summary>
+        /// Tests that the stop word stage reads the file it finds, skips a stray file and
+        /// filters by the set: "stopwords.bak" failed on a missing "stopwords.ba".
+        /// </summary>
+        [Fact]
+        public void StopWordStageToleratesStrayFiles()
+        {
+            // arrange
+            var directory = Path.Combine(Path.GetTempPath(), "wx-stop-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            File.WriteAllLines(Path.Combine(directory, "stopwords.bak"), ["the"]);
+            File.WriteAllLines(Path.Combine(directory, "stopwords.en"), ["", "# comment", "the", "a"]);
+            var culture = CultureInfo.GetCultureInfo("en");
+
+            try
+            {
+                var pipeStage = new IndexPipeStageFilterStopWord(new IndexContext { IndexDirectory = directory });
+
+                // act
+                var res = pipeStage.Process(IndexTermTokenizer.Tokenize("the happy days", culture), culture).ToList();
+
+                // validation
+                Assert.Equal(["happy", "days"], res.Select(x => x.Value?.ToString()));
+            }
+            finally
+            {
+                Directory.Delete(directory, true);
+            }
+        }
     }
 }

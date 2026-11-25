@@ -314,19 +314,72 @@ namespace WebExpress.WebIndex.Wi.Model
             // fit its own schema fails while the index it would replace is still intact
             var items = CreateItems(runtimeClass, dump.Items);
 
-            if (exists)
+            // the index being replaced is moved aside, not deleted: a failure while the new one is
+            // built - a full disk, a value the index refuses - deleted the old index and left a
+            // partial new one; now the old one is put back
+            var backup = exists ? MoveIndexFilesAside(dump.Name) : null;
+
+            try
+            {
+                CreateIndexFile(objectType);
+
+                foreach (var item in items)
+                {
+                    IndexManager.Insert(runtimeClass, item);
+                }
+            }
+            catch
             {
                 DeleteIndexFiles(dump.Name);
+
+                if (backup is not null)
+                {
+                    RestoreIndexFiles(backup);
+                }
+
+                throw;
             }
 
-            CreateIndexFile(objectType);
-
-            foreach (var item in items)
+            if (backup is not null)
             {
-                IndexManager.Insert(runtimeClass, item);
+                Directory.Delete(backup, true);
             }
 
             return items.Count;
+        }
+
+        /// <summary>
+        /// Moves the files of an index into a directory of their own beside it.
+        /// </summary>
+        /// <param name="name">The index name.</param>
+        /// <returns>The directory holding the files.</returns>
+        private string MoveIndexFilesAside(string name)
+        {
+            CloseIndexFile();
+
+            var backup = Path.Combine(CurrentDirectory, $".{name}.{Guid.NewGuid():N}.replaced");
+            Directory.CreateDirectory(backup);
+
+            foreach (var path in IndexFiles(name))
+            {
+                File.Move(path, Path.Combine(backup, Path.GetFileName(path)));
+            }
+
+            return backup;
+        }
+
+        /// <summary>
+        /// Moves the files of an index back from the directory they were moved aside to.
+        /// </summary>
+        /// <param name="backup">The directory holding the files.</param>
+        private void RestoreIndexFiles(string backup)
+        {
+            foreach (var path in Directory.EnumerateFiles(backup))
+            {
+                File.Move(path, Path.Combine(CurrentDirectory, Path.GetFileName(path)), true);
+            }
+
+            Directory.Delete(backup, true);
         }
 
         /// <summary>
@@ -404,17 +457,26 @@ namespace WebExpress.WebIndex.Wi.Model
             // replacement changes the active index even when file names differ only by casing
             CloseIndexFile();
 
-            var files = new[] { $"{name}.ws", $"{name}.wds" }
+            foreach (var path in IndexFiles(name))
+            {
+                File.Delete(path);
+            }
+        }
+
+        /// <summary>
+        /// Lists the existing files of an index.
+        /// </summary>
+        /// <param name="name">The index name.</param>
+        /// <returns>The file paths.</returns>
+        private List<string> IndexFiles(string name)
+        {
+            return [.. new[] { $"{name}.ws", $"{name}.wds" }
                 .Select(x => Path.Combine(CurrentDirectory, x))
                 .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrt"))
                 .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.wrn"))
                 .Concat(Directory.EnumerateFiles(CurrentDirectory, $"{name}.*.rebuild"))
-                .Distinct();
-
-            foreach (var path in files.Where(File.Exists))
-            {
-                File.Delete(path);
-            }
+                .Distinct()
+                .Where(File.Exists)];
         }
 
         /// <summary>

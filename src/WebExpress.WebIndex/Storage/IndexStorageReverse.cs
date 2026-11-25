@@ -83,10 +83,10 @@ namespace WebExpress.WebIndex.Storage
 
         /// <summary>
         /// Deletes the index file when it carries the expected identifier but another format
-        /// version, or when a rebuild of it did not complete. Reading an outdated file with the
-        /// current layout would misplace every segment once the size of a node changed, so it is
-        /// never opened. A file with a foreign identifier is left alone; opening it reports the
-        /// mismatch.
+        /// version, when it is too short to hold a header, or when a rebuild of it did not
+        /// complete. Reading an outdated file with the current layout would misplace every
+        /// segment once the size of a node changed, so it is never opened. Any other file with a
+        /// foreign identifier is left alone; opening it reports the mismatch.
         /// </summary>
         /// <param name="identifier">The identifier of the index file.</param>
         /// <param name="version">The current format version.</param>
@@ -103,12 +103,18 @@ namespace WebExpress.WebIndex.Storage
 
             var stored = IndexStorageSegmentHeader.ReadVersion(FileName, identifier);
 
-            if (stored is null)
+            // without a readable header the file is either foreign, which opening reports, or
+            // ours and cut short before its header reached the disk: shorter than the header,
+            // or left by a rebuild whose marker is still there. the latter holds nothing worth
+            // keeping and would fail to open on every start
+            var truncated = new FileInfo(FileName).Length < IndexStorageSegmentHeader.SegmentSize;
+
+            if (stored is null && !interrupted && !truncated)
             {
                 return;
             }
 
-            if (interrupted || stored != version)
+            if (stored is null || interrupted || stored != version)
             {
                 // the marker is written before the old file goes, so no moment exists in
                 // which an incomplete file could pass for a complete one

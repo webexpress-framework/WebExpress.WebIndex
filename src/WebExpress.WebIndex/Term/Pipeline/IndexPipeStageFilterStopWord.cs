@@ -30,7 +30,14 @@ namespace WebExpress.WebIndex.Term.Pipeline
             {
                 var extension = Path.GetExtension(file).Trim('.');
 
-                FillStopWordDictionary(context, CultureInfo.GetCultureInfo(extension));
+                // a stray file - "stopwords.bak" - names no culture and must not stop the index
+                try
+                {
+                    FillStopWordDictionary(file, CultureInfo.GetCultureInfo(extension));
+                }
+                catch (CultureNotFoundException)
+                {
+                }
             }
         }
 
@@ -48,9 +55,11 @@ namespace WebExpress.WebIndex.Term.Pipeline
             {
                 foreach (var token in input)
                 {
-                    if (token.Value is string)
+                    // typed as object, the value bound to the linear Enumerable.Contains instead of
+                    // the set's lookup and scanned the whole list for every token
+                    if (token.Value is string text)
                     {
-                        if (!value.Contains(token.Value))
+                        if (!value.Contains(text))
                         {
                             yield return token;
                         }
@@ -73,24 +82,21 @@ namespace WebExpress.WebIndex.Term.Pipeline
         /// <summary>
         /// Fills the directory with stop words.
         /// </summary>
-        /// <param name="context">The reference to the context.</param>
+        /// <param name="file">The stop word file.</param>
         /// <param name="culture">The culture.</param>
-        private void FillStopWordDictionary(IIndexContext context, CultureInfo culture)
+        private void FillStopWordDictionary(string file, CultureInfo culture)
         {
-            var fileContent = File.ReadAllLines
-            (
-                Path.Combine(context.IndexDirectory,
-                $"stopwords.{culture.TwoLetterISOLanguageName}")
-            );
+            // the file found is read, not one rebuilt from the culture's two-letter name
+            var fileContent = File.ReadAllLines(file);
 
             if (!StopWordDictionary.ContainsKey(culture))
             {
                 StopWordDictionary.Add(culture, new HashSet<string>());
             }
 
-            foreach (var word in fileContent.Select(x => x.Trim()).Where(x => !x.StartsWith('#')))
+            foreach (var word in fileContent.Select(x => x.Trim()).Where(x => x.Length > 0 && !x.StartsWith('#')))
             {
-                var w = word.Normalize(System.Text.NormalizationForm.FormKD).ToLower();
+                var w = word.Normalize(System.Text.NormalizationForm.FormKD).ToLowerInvariant();
                 if (!StopWordDictionary[culture].Contains(w))
                 {
                     StopWordDictionary[culture].Add(w);

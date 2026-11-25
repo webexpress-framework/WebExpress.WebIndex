@@ -170,9 +170,19 @@ namespace WebExpress.WebIndex.Storage
 
             lock (_guard)
             {
-                if (!_writeCache.TryAdd(segment.Addr, segment))
+                _writeCache[segment.Addr] = segment;
+
+                // a segment written to a reused address replaces what was cached there, e.g. the
+                // free-list record the allocator read; left in place, the stale instance would
+                // answer the next read instead of the pending write
+                if (_readCache.TryGetValue(segment.Addr, out var cached) && !ReferenceEquals(cached.Segment, segment))
                 {
-                    _writeCache[segment.Addr] = segment;
+                    _readCache.Remove(segment.Addr);
+                }
+
+                if (_imperishableCache.TryGetValue(segment.Addr, out var imperishable) && !ReferenceEquals(imperishable.Segment, segment))
+                {
+                    _imperishableCache.Remove(segment.Addr);
                 }
             }
         }
@@ -240,6 +250,13 @@ namespace WebExpress.WebIndex.Storage
         /// <returns>True if the segment was found in any cache, otherwise false.</returns>
         private bool GetSegment(ulong addr, out IIndexStorageSegment segment)
         {
+            // a pending write is newer than anything on disk or in the read caches
+            if (_writeCache.TryGetValue(addr, out IIndexStorageSegment pending))
+            {
+                segment = pending;
+                return true;
+            }
+
             if (_readCache.TryGetValue(addr, out IndexStorageBufferItem cached))
             {
                 cached.Refresh();
@@ -254,20 +271,16 @@ namespace WebExpress.WebIndex.Storage
                 return true;
             }
 
-            if (_writeCache.TryGetValue(addr, out IIndexStorageSegment res))
-            {
-                segment = res;
-                return true;
-            }
-
             segment = null;
             return false;
         }
 
         /// <summary>
-        /// Ages cached segments and evicts older entries when the cache is above a load threshold.
+        /// Ages cached segments and, above 80% of <see cref="MaxCachedSegments"/>, evicts the
+        /// entries that were used least recently. Below that threshold nothing is evicted, to
+        /// avoid churn while the cache still has room.
         /// </summary>
-        private void ReduceLifetimeAndRemoveExpiredSegments()
+        internal void ReduceLifetimeAndRemoveExpiredSegments()
         {
             lock (_guard)
             {
@@ -277,43 +290,74 @@ namespace WebExpress.WebIndex.Storage
                     return;
                 }
 
-                // under 80% capacity: only age entries, do not remove to avoid churn
-                if (count < 0.8 * MaxCachedSegments)
-                {
-                    // iterate values directly to avoid materializing key/value pairs
-                    foreach (var item in _readCache.Values)
-                    {
-                        // increment age
-                        item.IncrementCounter();
-                    }
-
-                    return;
-                }
-
-                // at/over 80%: evict entries with above-average age. the average is computed
-                // in a single manual pass because the LINQ Average delegate dominated CPU on
-                // this 500ms timer; survivors are kept by removing the rest in place, which
-                // avoids rebuilding and rehashing the whole dictionary on every tick
+                // aging continues under pressure, otherwise the counters stop telling recently
+                // used entries from idle ones exactly when the eviction depends on them. the sum
+                // is taken in the same manual pass because the LINQ Average delegate dominated
+                // CPU on this timer
                 long sum = 0;
                 foreach (var item in _readCache.Values)
                 {
+                    item.Age();
                     sum += item.Counter;
                 }
 
+                var threshold = (int)(0.8 * MaxCachedSegments);
+
+                if (count < threshold)
+                {
+                    return;
+                }
+
+                // a refresh resets the counter to the full lifetime and every tick lowers it,
+                // so the entries below the average are the cold ones
                 var average = (double)sum / count;
 
                 _evictionBuffer.Clear();
                 foreach (var kv in _readCache)
                 {
-                    if (kv.Value.Counter > average)
+                    if (kv.Value.Counter < average)
                     {
                         _evictionBuffer.Add(kv.Key);
                     }
                 }
 
+                // equal counters (a burst read within one tick) carry no order to evict by;
+                // without this the cache would grow past its limit
+                if (count - _evictionBuffer.Count > MaxCachedSegments)
+                {
+                    foreach (var kv in _readCache)
+                    {
+                        if (count - _evictionBuffer.Count <= threshold)
+                        {
+                            break;
+                        }
+
+                        if (kv.Value.Counter >= average)
+                        {
+                            _evictionBuffer.Add(kv.Key);
+                        }
+                    }
+                }
+
+                // survivors are kept by removing the rest in place, which avoids rebuilding and
+                // rehashing the whole dictionary on every tick
                 foreach (var addr in _evictionBuffer)
                 {
                     _readCache.Remove(addr);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of segments in the evictable read cache.
+        /// </summary>
+        internal int ReadCacheCount
+        {
+            get
+            {
+                lock (_guard)
+                {
+                    return _readCache.Count;
                 }
             }
         }

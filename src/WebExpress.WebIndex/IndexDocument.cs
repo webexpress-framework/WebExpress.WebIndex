@@ -15,8 +15,9 @@ namespace WebExpress.WebIndex
     public class IndexDocument<TIndexItem> : IIndexDocument<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        // key: property info of the field; value: reverse index instance.
-        private readonly Dictionary<PropertyInfo, IIndexReverse<TIndexItem>> _dict = [];
+        // keyed by the field path, not the property: Home.City and Work.City share one
+        // PropertyInfo but are separate fields with separate reverse indexes
+        private readonly Dictionary<string, IIndexReverse<TIndexItem>> _dict = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Raised when the schema has changed and migration is required.
@@ -219,7 +220,7 @@ namespace WebExpress.WebIndex
         /// <returns>The opened reverse index, or null when the field is disabled or already indexed.</returns>
         private IIndexReverse<TIndexItem> OpenReverseIndex(IndexFieldData property)
         {
-            if (!property.Enabled || _dict.ContainsKey(property.PropertyInfo))
+            if (!property.Enabled || _dict.ContainsKey(property.Name))
             {
                 return null;
             }
@@ -234,7 +235,7 @@ namespace WebExpress.WebIndex
                     : new IndexStorageReverseTerm<TIndexItem>(Context, property, Culture)
             };
 
-            _dict.Add(property.PropertyInfo, reverseIndex);
+            _dict.Add(property.Name, reverseIndex);
 
             return reverseIndex;
         }
@@ -374,7 +375,7 @@ namespace WebExpress.WebIndex
 
             var tasks = new List<Task>
             {
-                Task.Run(() => DocumentStore.Add(item))
+                Task.Run(() => DocumentStore.Update(item))
             };
 
             var reverseIndexes = Fields
@@ -483,7 +484,7 @@ namespace WebExpress.WebIndex
         /// <returns>The index field or null.</returns>
         public virtual IIndexReverse<TIndexItem> GetReverseIndex(IndexFieldData field)
         {
-            if (_dict.TryGetValue(field.PropertyInfo, out var reverseIndex))
+            if (field?.Name is not null && _dict.TryGetValue(field.Name, out var reverseIndex))
             {
                 return reverseIndex;
             }

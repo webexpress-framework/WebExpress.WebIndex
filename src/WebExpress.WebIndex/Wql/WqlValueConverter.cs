@@ -258,11 +258,11 @@ namespace WebExpress.WebIndex.Wql
             {
                 case double d:
                     approximate = d;
-                    exact = ToDecimal(d);
+                    exact = IndexNumericConverter.ToDecimal(d);
                     return true;
                 case float f:
                     approximate = f;
-                    exact = ToDecimal(f);
+                    exact = IndexNumericConverter.ToDecimal(f);
                     return true;
                 case decimal m:
                     exact = m;
@@ -293,7 +293,7 @@ namespace WebExpress.WebIndex.Wql
                             double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out d))
                         {
                             approximate = d;
-                            exact = ToDecimal(d);
+                            exact = IndexNumericConverter.ToDecimal(d);
                             return true;
                         }
 
@@ -302,23 +302,6 @@ namespace WebExpress.WebIndex.Wql
                 default:
                     return false;
             }
-        }
-
-        /// <summary>
-        /// Converts a double into a decimal, if the double has a decimal form.
-        /// </summary>
-        /// <param name="value">The double.</param>
-        /// <returns>The decimal, or null for infinities, NaN and values beyond the decimal range.</returns>
-        private static decimal? ToDecimal(double value)
-        {
-            // the bounds are excluded, since the double nearest to them already lies beyond the range
-            if (double.IsNaN(value) || double.IsInfinity(value) ||
-                value >= (double)decimal.MaxValue || value <= (double)decimal.MinValue)
-            {
-                return null;
-            }
-
-            return (decimal)value;
         }
 
         /// <summary>

@@ -538,7 +538,7 @@ namespace WebExpress.WebIndex.Wql
             private static Expression Lower(Expression text)
             {
                 return text is ConstantExpression constant
-                    ? Expression.Constant(((string)constant.Value)?.ToLower(), typeof(string))
+                    ? Expression.Constant(((string)constant.Value)?.ToLowerInvariant(), typeof(string))
                     : Expression.Call(text, StringToLowerMethod);
             }
         }

@@ -337,6 +337,37 @@ namespace WebExpress.WebIndex.Memory
         /// </summary>
         /// <param name="id">The unique identifier of the document.</param>
         /// <param name="value">The numeric value to be added to the tree.</param>
+        /// <summary>
+        /// Removes the posting of a document from the node that holds the value. The node itself
+        /// stays in the tree with no postings, which keeps the balance untouched.
+        /// </summary>
+        /// <param name="id">The document id.</param>
+        /// <param name="value">The value the document was added with.</param>
+        /// <returns>True when a posting was removed.</returns>
+        public bool Remove(Guid id, decimal value)
+        {
+            var node = this;
+
+            while (node is not null)
+            {
+                var comparison = value.CompareTo(node.Value);
+
+                if (comparison == 0)
+                {
+                    var remaining = node.Postings.Where(x => !x.DocumentId.Equals(id)).ToList();
+                    var removed = remaining.Count != node.Postings.Count();
+
+                    node.Postings = remaining;
+
+                    return removed;
+                }
+
+                node = comparison < 0 ? node.Left : node.Right;
+            }
+
+            return false;
+        }
+
         private void Add(Guid id, decimal value)
         {
             if (value.CompareTo(Value) < 0)

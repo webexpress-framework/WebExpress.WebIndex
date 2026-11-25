@@ -60,7 +60,7 @@ namespace WebExpress.WebIndex.Wql
         /// <returns>The partitioning expression as a string.</returns>
         public override string ToString()
         {
-            return string.Format("{0} {1}", Operator.ToString().ToLower(), Value).Trim();
+            return string.Format("{0} {1}", Operator.ToString().ToLowerInvariant(), Value).Trim();
         }
     }
 }

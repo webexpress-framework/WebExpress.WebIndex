@@ -274,7 +274,7 @@ namespace WebExpress.WebIndex.Wql
 
             if (IsFuzzy)
             {
-                return IndexFuzzy.CalculateLevenshteinSimilarity(query, term) >= Similarity / 100.0;
+                return IndexFuzzy.IsSimilar(query, term, Similarity / 100.0);
             }
 
             return _patterns[index] is Regex pattern
@@ -298,7 +298,9 @@ namespace WebExpress.WebIndex.Wql
                 .Replace("\\*", ".*")
                 .Replace("\\?", ".");
 
-            return new Regex("^" + pattern + "$", RegexOptions.CultureInvariant);
+            // linear in the text: a query word of many wildcards made the backtracking engine
+            // take exponential time on every word it was compared with
+            return new Regex("^" + pattern + "$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
         }
 
         /// <summary>

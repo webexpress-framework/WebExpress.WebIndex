@@ -125,15 +125,15 @@ public sealed class ExplorerSession : IDisposable
         var expected = _document.Analyze(prefix).ExpectedNextTokens.ToHashSet();
         var result = new List<string>();
         if (expected.Contains(WqlExpressionType.Attribute)) result.AddRange(Schema.Fields.Select(x => x.Name));
-        if (expected.Contains(WqlExpressionType.Operator)) result.AddRange(["=", "!=", ">", ">=", "<", "<=", "~", "contains", "starts with", "ends with", "in (", "between", "is null"]);
-        if (expected.Contains(WqlExpressionType.LogicalOperator)) result.AddRange(["and", "or"]);
+        if (expected.Contains(WqlExpressionType.Operator)) result.AddRange((string[])["=", "!=", ">", ">=", "<", "<=", "~", "contains", "starts with", "ends with", "in (", "between", "is null"]);
+        if (expected.Contains(WqlExpressionType.LogicalOperator)) result.AddRange((string[])["and", "or"]);
         if (expected.Contains(WqlExpressionType.Order)) result.Add("order by");
-        if (expected.Contains(WqlExpressionType.OrderDirection)) result.AddRange(["asc", "desc"]);
-        if (expected.Contains(WqlExpressionType.Partitioning) || expected.Contains(WqlExpressionType.PartitioningOperator)) result.AddRange(["take", "skip"]);
-        if (expected.Contains(WqlExpressionType.Parameter)) result.AddRange(["'value'", "null", "true", "false", "0"]);
+        if (expected.Contains(WqlExpressionType.OrderDirection)) result.AddRange((string[])["asc", "desc"]);
+        if (expected.Contains(WqlExpressionType.Partitioning) || expected.Contains(WqlExpressionType.PartitioningOperator)) result.AddRange((string[])["take", "skip"]);
+        if (expected.Contains(WqlExpressionType.Parameter)) result.AddRange((string[])["'value'", "null", "true", "false", "0"]);
         if (expected.Contains(WqlExpressionType.CloseParenthesis)) result.Add(")");
         if (expected.Contains(WqlExpressionType.Separator)) result.Add(",");
-        if (expected.Contains(WqlExpressionType.Function)) result.AddRange(["len(", "lower(", "upper(", "now()"]);
+        if (expected.Contains(WqlExpressionType.Function)) result.AddRange((string[])["len(", "lower(", "upper(", "now()"]);
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
