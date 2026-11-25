@@ -13,36 +13,94 @@ namespace WebExpress.WebIndex.Utility
         /// <param name="s">The first string to compare.</param>
         /// <param name="t">The second string to compare.</param>
         /// <returns>The number of single-character edits required to change one string into the other.</returns>
-        private static int LevenshteinDistance(string s, string t)
+        /// <summary>
+        /// The longest word compared by edit distance; longer words match only exactly.
+        /// </summary>
+        /// <remarks>
+        /// The comparison costs the product of both lengths and runs once per word of the
+        /// vocabulary. A query term may be thousands of characters long, which made a single fuzzy
+        /// query cost millions of steps per vocabulary word. No real word is this long.
+        /// </remarks>
+        public const int MaxFuzzyLength = 64;
+
+        private static int LevenshteinDistance(string s, string t, int limit = int.MaxValue)
         {
             int n = s.Length;
             int m = t.Length;
-            int[,] d = new int[n + 1, m + 1];
 
             // if first string is empty, the distance is the length of the second string
             if (n == 0) return m;
             // if second string is empty, the distance is the length of the first string
             if (m == 0) return n;
 
-            // initialize the matrix
-            for (int i = 0; i <= n; d[i, 0] = i++) { }
-            for (int j = 0; j <= m; d[0, j] = j++) { }
+            // two rows suffice; the full matrix allocated the product of both lengths per call
+            var previous = new int[m + 1];
+            var current = new int[m + 1];
 
-            // compute the distances
+            for (int j = 0; j <= m; j++) { previous[j] = j; }
+
             for (int i = 1; i <= n; i++)
             {
+                current[0] = i;
+                var rowMinimum = current[0];
+
                 for (int j = 1; j <= m; j++)
                 {
                     int cost = t[j - 1] == s[i - 1] ? 0 : 1;
 
-                    d[i, j] = Math.Min(
-                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-                        d[i - 1, j - 1] + cost);
+                    current[j] = Math.Min(
+                        Math.Min(previous[j] + 1, current[j - 1] + 1),
+                        previous[j - 1] + cost);
+                    rowMinimum = Math.Min(rowMinimum, current[j]);
                 }
+
+                // the distance never falls below the smallest value of a row
+                if (rowMinimum > limit)
+                {
+                    return rowMinimum;
+                }
+
+                (previous, current) = (current, previous);
             }
 
-            // the distance is the value in the bottom right corner of the Levenshtein distance
-            return d[n, m];
+            return previous[m];
+        }
+
+        /// <summary>
+        /// Tells whether two words are at least as similar as the threshold, by edit distance,
+        /// stopping as soon as the outcome is certain.
+        /// </summary>
+        /// <param name="word1">The first word.</param>
+        /// <param name="word2">The second word.</param>
+        /// <param name="threshold">The least similarity, between 0 and 1.</param>
+        /// <returns>True when the words are similar enough.</returns>
+        public static bool IsSimilar(string word1, string word2, double threshold)
+        {
+            word1 ??= string.Empty;
+            word2 ??= string.Empty;
+
+            var maxLength = Math.Max(word1.Length, word2.Length);
+
+            if (maxLength == 0 || string.Equals(word1, word2, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (maxLength > MaxFuzzyLength)
+            {
+                return false;
+            }
+
+            // the similarity is 1 - distance / maxLength, so the threshold bounds the distance;
+            // the length difference alone is a lower bound of it
+            var limit = (int)Math.Floor((1.0 - threshold) * maxLength + 1e-9);
+
+            if (Math.Abs(word1.Length - word2.Length) > limit)
+            {
+                return false;
+            }
+
+            return LevenshteinDistance(word1, word2, limit) <= limit;
         }
 
         /// <summary>

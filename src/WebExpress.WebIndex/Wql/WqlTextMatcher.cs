@@ -274,7 +274,7 @@ namespace WebExpress.WebIndex.Wql
 
             if (IsFuzzy)
             {
-                return IndexFuzzy.CalculateLevenshteinSimilarity(query, term) >= Similarity / 100.0;
+                return IndexFuzzy.IsSimilar(query, term, Similarity / 100.0);
             }
 
             return _patterns[index] is Regex pattern

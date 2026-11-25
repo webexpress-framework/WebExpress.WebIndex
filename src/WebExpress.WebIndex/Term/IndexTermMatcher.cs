@@ -225,7 +225,7 @@ namespace WebExpress.WebIndex.Term
             {
                 var threshold = options.Similarity / 100.0;
 
-                return [.. vocabulary().Where(x => IndexFuzzy.CalculateLevenshteinSimilarity(term, x) >= threshold)];
+                return [.. vocabulary().Where(x => IndexFuzzy.IsSimilar(term, x, threshold))];
             }
 
             return [term];
