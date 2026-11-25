@@ -166,7 +166,11 @@ namespace WebExpress.WebIndex.Test.Storage
                     storageFile.Flush();
                 }, TestContext.Current.CancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                 Assert.True(flushStarted.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
-                await Task.WhenAny(flush, Task.Delay(250, TestContext.Current.CancellationToken));
+
+                // waited for on this thread: an awaited delay resumes through the runner's
+                // synchronization context, which under a full parallel run can hold the
+                // continuation past the guard of the initialization, which then gives up
+                SpinWait.SpinUntil(() => flush.IsCompleted, TimeSpan.FromMilliseconds(250));
             }
             finally
             {
