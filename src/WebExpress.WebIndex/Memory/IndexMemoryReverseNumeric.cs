@@ -85,9 +85,14 @@ namespace WebExpress.WebIndex.Memory
         /// <param name="terms">The terms to add to the reverse index for the given item.</param>
         public override void Delete(TIndexItem item, IEnumerable<IndexTermToken> terms)
         {
+            // nothing was removed, so a deleted or changed document was still found by the value it
+            // had - a range query returning records that no longer hold it, or no longer exist
             foreach (var term in terms)
             {
-                //Numeric.Remove(term.Value.ToString(), item.Id);
+                if (IndexNumericConverter.TryToDecimal(term?.Value, Culture, out var value))
+                {
+                    Numeric.Remove(item.Id, value);
+                }
             }
         }
 

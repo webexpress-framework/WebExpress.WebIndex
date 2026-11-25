@@ -194,6 +194,38 @@ namespace WebExpress.WebIndex.Test.ReverseIndex
         }
 
         /// <summary>
+        /// Tests that a deleted document is no longer found by its value: the numeric index
+        /// removed nothing, so a range query still returned records that no longer existed.
+        /// </summary>
+        [Fact]
+        public void NumericDeleteRemovesTheDocument()
+        {
+            // arrange
+            Preconditions();
+            var reverseIndex = new IndexMemoryReverseNumeric<UnitTestIndexTestDocumentB>(Context, FieldPrice, CultureInfo.GetCultureInfo("en"));
+            var item = Fixture.TestData.First(x => x.Price == 50);
+
+            foreach (var document in Fixture.TestData)
+            {
+                reverseIndex.Add(document);
+            }
+
+            // act
+            reverseIndex.Delete(item);
+            var equal = reverseIndex.Retrieve(50m, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.Phrase });
+            var range = reverseIndex.Retrieve(0m, new IndexRetrieveOptions() { Method = IndexRetrieveMethod.GreaterThan });
+
+            // validation
+            Assert.DoesNotContain(item.Id, equal);
+            Assert.DoesNotContain(item.Id, range);
+            Assert.DoesNotContain(item.Id, reverseIndex.All);
+
+            // postconditions
+            reverseIndex.Dispose();
+            Postconditions();
+        }
+
+        /// <summary>
         /// Tests numeric equals.
         /// </summary>
         [Theory]
