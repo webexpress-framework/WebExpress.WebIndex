@@ -298,7 +298,9 @@ namespace WebExpress.WebIndex.Wql
                 .Replace("\\*", ".*")
                 .Replace("\\?", ".");
 
-            return new Regex("^" + pattern + "$", RegexOptions.CultureInvariant);
+            // linear in the text: a query word of many wildcards made the backtracking engine
+            // take exponential time on every word it was compared with
+            return new Regex("^" + pattern + "$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
         }
 
         /// <summary>

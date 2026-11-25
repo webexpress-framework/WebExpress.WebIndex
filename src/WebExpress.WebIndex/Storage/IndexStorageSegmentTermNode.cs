@@ -448,12 +448,15 @@ namespace WebExpress.WebIndex.Storage
                         {
                             // the "*" stands for any run of characters after this node, so
                             // the pattern is matched against the suffix that follows it
-                            var pattern = "^.*" + Regex.Escape(next ?? "").Replace("\\*", ".*").Replace("\\?", ".") + "$";
+                            // the pattern comes from the query; the backtracking engine took exponential time on
+                        // "*a*a*a*...b", the non-backtracking one is linear in the term, and it is
+                        // built once for all terms instead of once per term
+                        var pattern = new Regex("^.*" + Regex.Escape(next ?? "").Replace("\\*", ".*").Replace("\\?", ".") + "$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
                             // Terms omits a node that ends a term but has children, since the
                             // parent reports it; here the node itself is a candidate with an
                             // empty suffix ("alpha*" has to find "alpha" next to "alphabet")
-                            if (!IsRoot && PostingAddr != 0 && ChildAddr != 0 && Regex.IsMatch("", pattern, RegexOptions.CultureInvariant))
+                            if (!IsRoot && PostingAddr != 0 && ChildAddr != 0 && pattern.IsMatch(""))
                             {
                                 yield return this;
                             }
@@ -464,7 +467,7 @@ namespace WebExpress.WebIndex.Storage
 
                             foreach (var termTuple in Terms)
                             {
-                                if (Regex.IsMatch(termTuple.Item1[consumed..], pattern, RegexOptions.CultureInvariant))
+                                if (pattern.IsMatch(termTuple.Item1[consumed..]))
                                 {
                                     yield return termTuple.Item2;
                                 }

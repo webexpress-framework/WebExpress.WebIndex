@@ -148,6 +148,26 @@ namespace WebExpress.WebIndex.Test.WQL
         }
 
         /// <summary>
+        /// Tests that a query word of many wildcards is matched in linear time: the backtracking
+        /// engine took exponential time for "*a*a*...*b" against a long run of "a".
+        /// </summary>
+        [Fact]
+        public void ManyWildcardsMatchInLinearTime()
+        {
+            // arrange
+            var query = string.Concat(Enumerable.Repeat("*a", 24)) + "*b";
+            var text = new string('a', 4000);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
+            // act
+            var match = Match(text, query, WqlTextMatchMode.Words);
+
+            // validation
+            Assert.False(match);
+            Assert.True(watch.ElapsedMilliseconds < 2000, $"took {watch.ElapsedMilliseconds} ms");
+        }
+
+        /// <summary>
         /// Tests that the matcher exposes its words folded like the index, wildcards included,
         /// so that a query provider can build its own condition from them.
         /// </summary>
